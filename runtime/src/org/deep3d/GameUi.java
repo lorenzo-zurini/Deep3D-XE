@@ -54,6 +54,29 @@ public final class GameUi {
     private static boolean musicPromptHandled;
     private static volatile String selectTarget;   // test pipe: select-by-text
 
+    /* Selection walking waits for the game to act on the previous step:
+       the game polls keys slower than we present frames, so one tap per
+       frame overshoots and oscillates on wrapping menus. */
+    private static final long STEP_COOLDOWN_MS = 120;
+    private static long lastStepAt;
+    private static int lastStepSelected = -1;
+
+    private static boolean stepReady(int selectedIdx) {
+        long now = System.currentTimeMillis();
+        if (selectedIdx != lastStepSelected) {
+            // the game moved: previous step landed
+            lastStepSelected = selectedIdx;
+            return now - lastStepAt >= 30;
+        }
+        return now - lastStepAt >= STEP_COOLDOWN_MS;
+    }
+
+    private static void step(int midpCode, int selectedIdx) {
+        lastStepAt = System.currentTimeMillis();
+        lastStepSelected = selectedIdx;
+        tap(midpCode);
+    }
+
     /* Text entry: the game's (patched) text field ticks this every frame
        while active; typed characters flow through the queue. */
     private static volatile long textEntryUntil;
@@ -161,11 +184,14 @@ public final class GameUi {
         if (targetIdx < 0 || selectedIdx < 0) {
             return;
         }
+        if (!stepReady(selectedIdx)) {
+            return;
+        }
         if (targetIdx == selectedIdx) {
             selectTarget = null;
-            tap(-6);
+            step(-6, selectedIdx);
         } else {
-            tap(targetIdx < selectedIdx ? -1 : -2);
+            step(targetIdx < selectedIdx ? -1 : -2, selectedIdx);
         }
     }
 
@@ -220,11 +246,14 @@ public final class GameUi {
         if (hovered != null && selectedIdx >= 0 && hoveredIdx != selectedIdx) {
             // Walk the game's selection one step per frame toward the cursor;
             // same-row items (multi-column screens) step sideways instead.
+            if (!stepReady(selectedIdx)) {
+                return;
+            }
             Item sel = items.get(selectedIdx);
             if (hovered.y == sel.y) {
-                tap(hovered.x < sel.x ? -3 : -4);
+                step(hovered.x < sel.x ? -3 : -4, selectedIdx);
             } else {
-                tap(hoveredIdx < selectedIdx ? -1 : -2);
+                step(hoveredIdx < selectedIdx ? -1 : -2, selectedIdx);
             }
             return;   // click (if any) fires once the selection arrives
         }
