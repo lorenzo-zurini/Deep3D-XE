@@ -3,28 +3,32 @@
 A desktop (PC) port of **Deep — Submarine Odyssey** (Fishlabs, 2009), the
 J2ME mobile game. The original MIDP 2.0 midlet has been decompiled and
 recompiled against a purpose-built desktop runtime, so the game runs as a
-native Java application — no phone emulator involved.
+native Java application with full PC-game UX — no phone emulator involved.
 
 ![status](https://img.shields.io/badge/status-playable-green)
 
-## What's here
+## PC features
 
-```
-runtime/src/   Desktop compatibility runtime (original code, plus vendored
-               Mascot Capsule implementation adapted from JL-Mod):
-               - javax.microedition.{midlet,lcdui,lcdui.game,rms,media,shell}
-                 reimplemented on Java2D / javax.sound
-               - com.mascotcapsule.micro3d.v3 (HI Corp Mascot Capsule V3 API)
-                 with MBAC/MTRA loaders from JL-Mod and a from-scratch
-                 pure-Java software rasterizer (ru.woesss.j2me.micro3d.Render)
-               - org.deep3d: launcher, window, input mapping
-game/src/      The game logic: decompiled from the original JAR (Vineflower,
-               deobfuscated member names), with minimal desktop patches
-               (resource loading robustness). See legal note below.
-extract-assets.sh  Pulls data/ out of an original Deep JAR you provide;
-                   transcodes AMR sound effects to WAV via ffmpeg if present.
-build.sh / run.sh  Plain-javac build and run scripts (Java 17+).
-```
+- **Native resolution rendering** — the game's adaptive engine renders 3D
+  and lays out its UI at any internal resolution (240×320 up to 600×800),
+  not just upscaled phone pixels.
+- **Resizable window & fullscreen** (F11 / Alt+Enter), aspect-correct
+  letterboxing, smooth or integer scaling, brightness control, FPS limit.
+- **Pause menu on Esc** — mouse, keyboard and controller navigable overlay
+  with Display / Audio / Controls settings; the game freezes cleanly while
+  it is open. Settings persist in `deep3d.cfg` next to the game.
+- **Controller support** (Linux, zero dependencies) — standard gamepads via
+  `/dev/input/js*`, hot-plugged. Left stick / d-pad steer, A fires,
+  B backs out, X confirms, Y docks, RB boosts, triggers switch key 7 /
+  autopilot, Start opens the pause menu.
+- **Rebindable keyboard controls** with sensible PC defaults (WASD +
+  arrows, Space fire, Enter confirm, E dock, Shift boost, Tab autopilot).
+- **Volume mixer** — master / music / effects sliders applied live.
+- **F12 screenshots** to `screenshots/`.
+- **First-run setup** — when launched without game data, a dialog asks for
+  the original JAR and installs its data automatically.
+- **One-command packaging** — a portable folder or a self-contained app
+  image with a bundled Java runtime (`./package.sh`).
 
 ## Building and running
 
@@ -32,28 +36,61 @@ You need a JDK (17 or newer) and an original `Deep` v1.0.8 JAR
 (not included — the game data is copyrighted).
 
 ```sh
-./extract-assets.sh "Deep (2009)(www.fishlabs.net)(v1.0.8).jar"
 ./build.sh
-./run.sh                     # defaults: 240x320 at 2x scale
-./run.sh --scale 3           # bigger window
+./run.sh                 # first run asks for the original JAR
 ```
 
-Save games go to `./saves` (override with `DEEP3D_SAVE_DIR`).
+or set the data up explicitly (also transcodes sound effects with ffmpeg):
 
-## Controls
+```sh
+./extract-assets.sh "Deep (2009)(www.fishlabs.net)(v1.0.8).jar"
+./run.sh [--fullscreen] [--res 480x640]
+```
 
-| Key                | Phone equivalent | Action                    |
-|--------------------|------------------|---------------------------|
-| Arrow keys         | D-pad            | Steer / navigate menus    |
-| Enter              | 5 / Fire         | Select / action           |
-| Q or F1            | Left softkey     | OK / confirm              |
-| W or F2            | Right softkey    | Back                      |
-| 0–9, `*`, `#`      | Keypad           | Weapons, turbo, etc.      |
-| Space              | 0                | Handbrake / action        |
-| Esc or P           | End key          | Pause                     |
-| t/y b/v d/f j/k g/h| QWERTY phone map | Alternative movement keys |
+To make a distributable build:
 
-The game's built-in QWERTY-phone key map also works (it shipped that way).
+```sh
+./package.sh             # -> dist/deep3d (portable), dist/Deep3D (bundled JRE)
+```
+
+Save games go to `saves/` next to the game (override with
+`DEEP3D_SAVE_DIR`), settings to `deep3d.cfg` (override with
+`DEEP3D_CONFIG`), both anchored to the jar's folder when packaged.
+
+## Controls (defaults — rebindable in the pause menu)
+
+| Action                   | Keyboard             | Controller       |
+|--------------------------|----------------------|------------------|
+| Steer                    | WASD / Arrows        | Left stick / d-pad |
+| Fire harpoon / Select    | Space / Ctrl         | A                |
+| OK / Menu                | Enter                | X                |
+| Back                     | Backspace / X        | B                |
+| Dock / interact (0)      | E / 0                | Y                |
+| Booster (3)              | Shift / 3            | RB               |
+| Autopilot (9)            | Tab / 9              | RT               |
+| Key 1 / Key 7            | 1 / 7                | LB / LT          |
+| Pause menu (PC overlay)  | Esc                  | Start            |
+| In-game pause            | P                    | —                |
+| Fullscreen / Screenshot  | F11 / F12            | —                |
+
+Unbound keys fall through as phone characters, so the game's built-in
+QWERTY phone map and name entry keep working.
+
+## Project layout
+
+```
+runtime/src/   Desktop runtime:
+               - javax.microedition.{midlet,lcdui,lcdui.game,rms,media,shell}
+                 reimplemented on Java2D / javax.sound
+               - com.mascotcapsule.micro3d.v3 (HI Corp Mascot Capsule V3 API)
+                 with MBAC/MTRA loaders from JL-Mod and a from-scratch
+                 pure-Java software rasterizer (ru.woesss.j2me.micro3d.Render)
+               - org.deep3d: launcher, window, input, overlay menu, gamepad,
+                 config, first-run setup
+game/src/      Game logic decompiled from the original JAR (Vineflower,
+               deobfuscated member names), with minimal desktop patches.
+extract-assets.sh / build.sh / run.sh / package.sh
+```
 
 ## How the port works
 
@@ -62,8 +99,7 @@ The game's built-in QWERTY-phone key map also works (it shipped that way).
   collisions that are illegal in Java source). Two small patches make
   resource loading desktop-safe; everything else is untouched.
 - **Graphics (2D)**: MIDP `Graphics`/`Image`/`GameCanvas` are backed by
-  Java2D `BufferedImage`s; the frame buffer is presented in a Swing window
-  with integer scaling.
+  Java2D `BufferedImage`s presented with aspect-correct scaling.
 - **Graphics (3D)**: the game uses HI Corporation's Mascot Capsule V3 engine
   (`.mbac` models, `.mtra` animations). The API layer and binary format
   loaders are adapted from the open-source
@@ -72,26 +108,26 @@ The game's built-in QWERTY-phone key map also works (it shipped that way).
   reproduces the same pipeline: two-pass opaque/blended flush, per-vertex
   lighting, color-key transparency, half/add/sub blend modes, point sprites,
   and perspective-correct texturing.
-- **Sound**: MIDI music plays through `javax.sound.midi`. Sound effects are
-  AMR-NB in the original; `extract-assets.sh` transcodes them to WAV (kept
-  under their `.amr` names) with ffmpeg, and the runtime sniffs the actual
-  container. Without ffmpeg, effects are silently stubbed.
+- **Sound**: MIDI music through `javax.sound.midi`; AMR sound effects are
+  transcoded to WAV at setup (ffmpeg) and sniffed by container, silently
+  stubbed otherwise.
 - **Assets**: all game data files are stored head/tail byte-swapped in the
-  JAR; the game's own loader unscrambles them, so the runtime does not need
-  to care.
+  JAR; the game's own loader unscrambles them.
 - **Saves**: MIDP RecordStores are plain files under `saves/`.
 
 ### Headless testing
 
-Set `DEEP3D_INPUT_PIPE=/path/to/fifo` to inject input without a window
-manager: lines `p <midp-keycode>` / `r <midp-keycode>` press/release keys,
-`shot <file.png>` dumps the current frame. `DEEP3D_DEBUG=1` logs key events.
+Set `DEEP3D_INPUT_PIPE=/path/to/fifo`: lines `p <midp-keycode>` /
+`r <midp-keycode>` press/release game keys, `ov <up|down|left|right|enter|
+back|toggle>` drives the pause overlay, `shot <file.png>` dumps the
+composed frame. `DEEP3D_DEBUG=1` logs key events.
 
 ## Known gaps
 
 - The camera-photo gimmick (`capture://video`) is stubbed out — the feature
   degrades gracefully in-game.
-- `Display.vibrate`/backlight are no-ops.
+- Controller rumble and non-Linux controller backends are not implemented
+  (the backend is isolated in `org.deep3d.Gamepad`).
 - The software rasterizer uses Gouraud (per-vertex) lighting where the
   original GPU-era reimplementation shades per-pixel; on these low-poly
   models the difference is minor.
@@ -107,4 +143,5 @@ manager: lines `p <midp-keycode>` / `r <midp-keycode>` press/release keys,
   GmbH (now Deca Games). It is provided for interoperability, preservation
   and study. It is *not* under an open-source license and may not be
   redistributed commercially. The game assets are not included in this
-  repository: you must supply your own original JAR.
+  repository (and `dist/` output containing them must not be shared):
+  you must supply your own original JAR.

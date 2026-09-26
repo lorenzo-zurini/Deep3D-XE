@@ -19,12 +19,12 @@ public class RecordStore {
 
     private static File saveDir() {
         String dir = System.getenv("DEEP3D_SAVE_DIR");
-        if (dir == null || dir.isEmpty()) {
-            dir = "saves";
+        if (dir != null && !dir.isEmpty()) {
+            File f = new File(dir);
+            f.mkdirs();
+            return f;
         }
-        File f = new File(dir);
-        f.mkdirs();
-        return f;
+        return org.deep3d.AppDirs.dir("saves");
     }
 
     private final String name;

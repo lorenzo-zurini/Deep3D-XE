@@ -6,8 +6,5 @@ cd "$(dirname "$0")"
 if [[ ! -d build/classes ]]; then
     ./build.sh
 fi
-if [[ ! -d assets/data ]]; then
-    echo "assets/ missing - run ./extract-assets.sh <original Deep jar> first" >&2
-    exit 1
-fi
+# If assets/ is missing, the game shows a first-run setup dialog.
 exec java -cp build/classes:assets org.deep3d.Main "$@"

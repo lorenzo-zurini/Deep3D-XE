@@ -50,6 +50,15 @@ public final class Manager {
         return new String[]{"file"};
     }
 
+    /** Re-applies the global mixer settings to every open player. */
+    public static void refreshVolumes() {
+        for (Player p : openPlayers) {
+            if (p instanceof org.deep3d.media.BasePlayer) {
+                ((org.deep3d.media.BasePlayer) p).refreshVolume();
+            }
+        }
+    }
+
     /** Called by the runtime on shutdown. */
     public static void closeAll() {
         for (Player p : openPlayers) {

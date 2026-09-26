@@ -89,4 +89,8 @@ public abstract class BasePlayer implements Player {
     public Control[] getControls() {
         return new Control[0];
     }
+
+    /** Re-applies volume after the global mixer settings changed. */
+    public void refreshVolume() {
+    }
 }

@@ -1,0 +1,626 @@
+package org.deep3d;
+
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
+
+import org.deep3d.media.AudioSettings;
+
+/**
+ * Native pause menu: Esc (or Start on a controller) freezes the game and
+ * brings this up. Fully driven by keyboard, mouse or gamepad.
+ */
+public final class Overlay {
+
+    private static final Color BACKDROP = new Color(3, 10, 18, 215);
+    private static final Color ACCENT = new Color(83, 200, 239);
+    private static final Color ACCENT_DIM = new Color(48, 116, 140);
+    private static final Color TEXT = new Color(216, 238, 247);
+    private static final Color TEXT_DIM = new Color(122, 153, 168);
+    private static final Color SELECT_BG = new Color(83, 200, 239, 36);
+
+    private enum Page { ROOT, OPTIONS, DISPLAY, AUDIO, CONTROLS }
+
+    /** One row in a menu page. */
+    private static final class Item {
+        final String label;
+        final Runnable activate;              // BUTTON
+        final Supplier<String> value;         // value text (nullable)
+        final IntConsumer adjust;             // -1/+1 for choices & sliders
+        final IntSupplier slider;             // 0..100, or null
+        final Input.Action bindAction;        // KEYBIND rows
+        String note;
+
+        Item(String label, Runnable activate, Supplier<String> value,
+             IntConsumer adjust, IntSupplier slider, Input.Action bindAction) {
+            this.label = label;
+            this.activate = activate;
+            this.value = value;
+            this.adjust = adjust;
+            this.slider = slider;
+            this.bindAction = bindAction;
+        }
+
+        static Item button(String label, Runnable r) {
+            return new Item(label, r, null, null, null, null);
+        }
+
+        static Item choice(String label, Supplier<String> value, IntConsumer adjust) {
+            return new Item(label, () -> adjust.accept(1), value, adjust, null, null);
+        }
+
+        static Item slider(String label, IntSupplier get, IntConsumer set) {
+            return new Item(label,
+                    null,
+                    () -> get.getAsInt() + "%",
+                    d -> set.accept(Math.max(0, Math.min(100, get.getAsInt() + d * 10))),
+                    get, null);
+        }
+
+        static Item bind(Input.Action action) {
+            return new Item(action.label, null, null, null, null, action);
+        }
+    }
+
+    private static volatile boolean open;
+    private static Page page = Page.ROOT;
+    private static int selected;
+    private static int scroll;
+    private static Input.Action capturing;
+    private static String toast;
+    private static long toastUntil;
+
+    /** Layout of the last frame, for mouse hit-testing: {y, height} rows. */
+    private static int[][] rowBounds = new int[0][];
+    private static int rowsX;
+    private static int rowsW;
+    private static List<Item> currentItems = new ArrayList<>();
+
+    private Overlay() {
+    }
+
+    public static boolean isOpen() {
+        return open;
+    }
+
+    public static synchronized void toggle() {
+        if (open) {
+            close();
+        } else {
+            open = true;
+            page = Page.ROOT;
+            selected = 0;
+            scroll = 0;
+            capturing = null;
+            Runtime.setGamePaused(true);
+        }
+        Runtime.repaintWindow();
+    }
+
+    private static void close() {
+        open = false;
+        capturing = null;
+        Config.save();
+        Runtime.setGamePaused(false);
+    }
+
+    public static void showToast(String message) {
+        toast = message;
+        toastUntil = System.currentTimeMillis() + 2500;
+        Runtime.repaintWindow();
+    }
+
+    // ------------------------------------------------------------------
+    // Model
+    // ------------------------------------------------------------------
+
+    private static List<Item> buildItems() {
+        List<Item> items = new ArrayList<>();
+        switch (page) {
+            case ROOT:
+                items.add(Item.button("Resume", Overlay::toggle));
+                items.add(Item.button("Options", () -> enter(Page.OPTIONS)));
+                items.add(Item.button("Quit to desktop", Runtime::requestQuit));
+                break;
+            case OPTIONS:
+                items.add(Item.button("Display", () -> enter(Page.DISPLAY)));
+                items.add(Item.button("Audio", () -> enter(Page.AUDIO)));
+                items.add(Item.button("Controls", () -> enter(Page.CONTROLS)));
+                items.add(Item.button("Back", Overlay::back));
+                break;
+            case DISPLAY: {
+                items.add(Item.choice("Fullscreen",
+                        () -> Config.fullscreen ? "On" : "Off",
+                        d -> {
+                            Runtime.toggleFullscreen();
+                        }));
+                items.add(Item.choice("Scaling",
+                        () -> Config.integerScaling ? "Integer (sharp)" : "Smooth",
+                        d -> {
+                            Config.integerScaling = !Config.integerScaling;
+                            Runtime.repaintWindow();
+                        }));
+                Item res = Item.choice("Render resolution",
+                        () -> Config.internalWidth + " x " + Config.internalHeight,
+                        Overlay::cycleResolution);
+                res.note = "applies on next launch";
+                items.add(res);
+                items.add(Item.choice("FPS limit",
+                        () -> Config.fpsCap == 0 ? "Off" : String.valueOf(Config.fpsCap),
+                        Overlay::cycleFps));
+                items.add(new Item("Brightness",
+                        null,
+                        () -> Config.brightness + "%",
+                        d -> {
+                            Config.brightness = Math.max(50, Math.min(150,
+                                    Config.brightness + d * 10));
+                            Runtime.repaintWindow();
+                        },
+                        () -> Config.brightness - 50,
+                        null));
+                items.add(Item.button("Back", Overlay::back));
+                break;
+            }
+            case AUDIO:
+                items.add(Item.slider("Master volume",
+                        () -> Config.masterVolume,
+                        v -> {
+                            Config.masterVolume = v;
+                            applyAudio();
+                        }));
+                items.add(Item.slider("Music",
+                        () -> Config.musicVolume,
+                        v -> {
+                            Config.musicVolume = v;
+                            applyAudio();
+                        }));
+                items.add(Item.slider("Sound effects",
+                        () -> Config.sfxVolume,
+                        v -> {
+                            Config.sfxVolume = v;
+                            applyAudio();
+                        }));
+                items.add(Item.button("Back", Overlay::back));
+                break;
+            case CONTROLS:
+                for (Input.Action a : Input.Action.values()) {
+                    items.add(Item.bind(a));
+                }
+                items.add(Item.choice("Controller",
+                        () -> Config.gamepadEnabled ? Gamepad.getStatus() : "Off",
+                        d -> Config.gamepadEnabled = !Config.gamepadEnabled));
+                items.add(Item.button("Reset to defaults", () -> {
+                    Input.resetBindings();
+                    showToast("Bindings reset");
+                }));
+                items.add(Item.button("Back", Overlay::back));
+                break;
+        }
+        return items;
+    }
+
+    private static void applyAudio() {
+        AudioSettings.master = Config.masterVolume;
+        AudioSettings.music = Config.musicVolume;
+        AudioSettings.sfx = Config.sfxVolume;
+        AudioSettings.refresh();
+    }
+
+    private static void cycleResolution(int d) {
+        int[][] presets = {{240, 320}, {360, 480}, {480, 640}, {600, 800}};
+        int cur = 0;
+        for (int i = 0; i < presets.length; i++) {
+            if (presets[i][0] == Config.internalWidth) {
+                cur = i;
+            }
+        }
+        int next = ((cur + d) % presets.length + presets.length) % presets.length;
+        Config.internalWidth = presets[next][0];
+        Config.internalHeight = presets[next][1];
+    }
+
+    private static void cycleFps(int d) {
+        int[] caps = {30, 60, 120, 0};
+        int cur = 1;
+        for (int i = 0; i < caps.length; i++) {
+            if (caps[i] == Config.fpsCap) {
+                cur = i;
+            }
+        }
+        Config.fpsCap = caps[((cur + d) % caps.length + caps.length) % caps.length];
+    }
+
+    private static void enter(Page p) {
+        page = p;
+        selected = 0;
+        scroll = 0;
+        Runtime.repaintWindow();
+    }
+
+    private static void back() {
+        switch (page) {
+            case DISPLAY:
+            case AUDIO:
+            case CONTROLS:
+                enter(Page.OPTIONS);
+                break;
+            case OPTIONS:
+                enter(Page.ROOT);
+                break;
+            case ROOT:
+            default:
+                toggle();
+                break;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Input
+    // ------------------------------------------------------------------
+
+    /** Returns true when the key was consumed by an active rebind capture. */
+    public static synchronized boolean captureKey(int keyCode) {
+        if (!open || capturing == null) {
+            return false;
+        }
+        if (keyCode == KeyEvent.VK_ESCAPE) {
+            capturing = null;
+        } else if (keyCode != KeyEvent.VK_F11 && keyCode != KeyEvent.VK_F12) {
+            Input.rebindPrimary(capturing, keyCode);
+            capturing = null;
+        }
+        Runtime.repaintWindow();
+        return true;
+    }
+
+    public static synchronized void handleKey(int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.VK_UP:
+                move(-1);
+                break;
+            case KeyEvent.VK_DOWN:
+                move(1);
+                break;
+            case KeyEvent.VK_LEFT:
+                adjust(-1);
+                break;
+            case KeyEvent.VK_RIGHT:
+                adjust(1);
+                break;
+            case KeyEvent.VK_ENTER:
+            case KeyEvent.VK_SPACE:
+                activate();
+                break;
+            case KeyEvent.VK_BACK_SPACE:
+                back();
+                break;
+            default:
+                break;
+        }
+    }
+
+    /** Gamepad navigation while the overlay is open. */
+    public static void handleAction(Input.Action a) {
+        switch (a) {
+            case UP:
+                move(-1);
+                break;
+            case DOWN:
+                move(1);
+                break;
+            case LEFT:
+                adjust(-1);
+                break;
+            case RIGHT:
+                adjust(1);
+                break;
+            case FIRE:
+            case OK:
+                activate();
+                break;
+            case BACK:
+                back();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private static synchronized void move(int d) {
+        List<Item> items = buildItems();
+        if (items.isEmpty()) {
+            return;
+        }
+        selected = ((selected + d) % items.size() + items.size()) % items.size();
+        Runtime.repaintWindow();
+    }
+
+    private static synchronized void adjust(int d) {
+        List<Item> items = buildItems();
+        if (selected >= items.size()) {
+            return;
+        }
+        Item it = items.get(selected);
+        if (it.adjust != null) {
+            it.adjust.accept(d);
+            Runtime.repaintWindow();
+        }
+    }
+
+    private static synchronized void activate() {
+        List<Item> items = buildItems();
+        if (selected >= items.size()) {
+            return;
+        }
+        Item it = items.get(selected);
+        if (it.bindAction != null) {
+            capturing = it.bindAction;
+        } else if (it.activate != null) {
+            it.activate.run();
+        } else if (it.adjust != null) {
+            it.adjust.accept(1);
+        }
+        Runtime.repaintWindow();
+    }
+
+    // Mouse support ----------------------------------------------------
+
+    public static synchronized void mouseMoved(int x, int y) {
+        if (!open) {
+            return;
+        }
+        int row = rowAt(x, y);
+        if (row >= 0 && row != selected) {
+            selected = row;
+            Runtime.repaintWindow();
+        }
+    }
+
+    public static synchronized void mouseClicked(int x, int y) {
+        if (!open) {
+            return;
+        }
+        int row = rowAt(x, y);
+        if (row < 0) {
+            return;
+        }
+        selected = row;
+        List<Item> items = currentItems;
+        if (row < items.size() && items.get(row).slider != null) {
+            // Click on a slider: set by horizontal position within the row.
+            int rel = (x - rowsX) * 100 / Math.max(1, rowsW);
+            items.get(row).adjust.accept(0);   // ensure listeners fire
+            setSlider(items.get(row), rel);
+        } else {
+            activate();
+        }
+    }
+
+    public static synchronized void mouseWheel(int rotation) {
+        if (!open) {
+            return;
+        }
+        List<Item> items = currentItems;
+        if (selected < items.size() && items.get(selected).adjust != null) {
+            items.get(selected).adjust.accept(rotation < 0 ? 1 : -1);
+        } else {
+            move(rotation < 0 ? -1 : 1);
+        }
+        Runtime.repaintWindow();
+    }
+
+    private static void setSlider(Item it, int percent) {
+        percent = Math.max(0, Math.min(100, percent));
+        int current = it.slider.getAsInt();
+        it.adjust.accept((percent - current) / 10);
+        Runtime.repaintWindow();
+    }
+
+    private static int rowAt(int x, int y) {
+        for (int i = 0; i < rowBounds.length; i++) {
+            if (y >= rowBounds[i][0] && y < rowBounds[i][0] + rowBounds[i][1]) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    // ------------------------------------------------------------------
+    // Rendering
+    // ------------------------------------------------------------------
+
+    public static synchronized void render(Graphics2D g, int w, int h) {
+        if (!open) {
+            renderToast(g, w, h);
+            return;
+        }
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(BACKDROP);
+        g.fillRect(0, 0, w, h);
+
+        int base = Math.max(13, h / 42);
+        Font titleFont = new Font(Font.DIALOG, Font.BOLD, base * 3);
+        Font subFont = new Font(Font.DIALOG, Font.PLAIN, base);
+        Font itemFont = new Font(Font.DIALOG, Font.BOLD, (int) (base * 1.25));
+        Font noteFont = new Font(Font.DIALOG, Font.PLAIN, (int) (base * 0.85));
+
+        // Title block
+        g.setFont(titleFont);
+        FontMetrics tfm = g.getFontMetrics();
+        String title = "DEEP";
+        int ty = h / 8 + tfm.getAscent();
+        g.setColor(ACCENT);
+        g.drawString(title, (w - tfm.stringWidth(title)) / 2, ty);
+        g.setFont(subFont);
+        FontMetrics sfm = g.getFontMetrics();
+        String sub = pageTitle();
+        g.setColor(TEXT_DIM);
+        g.drawString(sub, (w - sfm.stringWidth(sub)) / 2, ty + sfm.getHeight() + base / 2);
+        int lineY = ty + sfm.getHeight() + base + base / 2;
+        g.setColor(ACCENT_DIM);
+        g.setStroke(new BasicStroke(Math.max(1, base / 8f)));
+        g.drawLine(w / 6, lineY, w * 5 / 6, lineY);
+
+        // Items
+        List<Item> items = buildItems();
+        currentItems = items;
+        g.setFont(itemFont);
+        FontMetrics ifm = g.getFontMetrics();
+        int rowH = (int) (ifm.getHeight() * 1.55);
+        int listTop = lineY + base;
+        int listBottom = h - base * 4;
+        int visible = Math.max(1, (listBottom - listTop) / rowH);
+        if (selected < scroll) {
+            scroll = selected;
+        }
+        if (selected >= scroll + visible) {
+            scroll = selected - visible + 1;
+        }
+        int x = w / 6;
+        int width = w * 2 / 3;
+        rowsX = x;
+        rowsW = width;
+        rowBounds = new int[items.size()][2];
+
+        for (int i = scroll; i < items.size() && i - scroll < visible; i++) {
+            Item it = items.get(i);
+            int y = listTop + (i - scroll) * rowH;
+            rowBounds[i][0] = y;
+            rowBounds[i][1] = rowH;
+            boolean sel = i == selected;
+            if (sel) {
+                g.setColor(SELECT_BG);
+                g.fillRoundRect(x - base, y, width + base * 2, rowH, base, base);
+                g.setColor(ACCENT);
+                g.fillRect(x - base, y + rowH / 5, base / 3, rowH * 3 / 5);
+            }
+            g.setFont(itemFont);
+            g.setColor(sel ? TEXT : TEXT_DIM);
+            int textY = y + (rowH + ifm.getAscent() - ifm.getDescent()) / 2;
+            int valueW = 0;
+            if (it.bindAction != null) {
+                valueW = ifm.stringWidth(capturing == it.bindAction
+                        ? "press a key..." : bindText(it.bindAction));
+            } else if (it.slider != null) {
+                valueW = width / 3 + base * 4;
+            } else if (it.value != null) {
+                valueW = ifm.stringWidth("\u2039 " + it.value.get() + " \u203a");
+            }
+            g.drawString(elide(it.label, ifm, width - valueW - base), x, textY);
+
+            if (it.bindAction != null) {
+                String v = capturing == it.bindAction
+                        ? "press a key..."
+                        : bindText(it.bindAction);
+                g.setColor(capturing == it.bindAction ? ACCENT : (sel ? ACCENT : TEXT_DIM));
+                g.drawString(v, x + width - ifm.stringWidth(v), textY);
+            } else if (it.slider != null) {
+                int barW = width / 3;
+                int barX = x + width - barW;
+                int barY = y + rowH / 2 - base / 6;
+                g.setColor(ACCENT_DIM);
+                g.fillRoundRect(barX, barY, barW, base / 3, base / 3, base / 3);
+                g.setColor(sel ? ACCENT : TEXT_DIM);
+                int fill = barW * it.slider.getAsInt() / 100;
+                g.fillRoundRect(barX, barY, fill, base / 3, base / 3, base / 3);
+                String v = it.value.get();
+                g.setFont(noteFont);
+                g.setColor(sel ? TEXT : TEXT_DIM);
+                g.drawString(v, barX - g.getFontMetrics().stringWidth(v) - base, textY);
+            } else if (it.value != null) {
+                String v = "‹ " + it.value.get() + " ›";
+                g.setColor(sel ? ACCENT : TEXT_DIM);
+                g.drawString(v, x + width - ifm.stringWidth(v), textY);
+                if (it.note != null && sel) {
+                    g.setFont(noteFont);
+                    g.setColor(TEXT_DIM);
+                    g.drawString(it.note, x + width - g.getFontMetrics().stringWidth(it.note),
+                            textY + ifm.getHeight() * 2 / 3);
+                }
+            }
+        }
+
+        // Footer hints, shrunk to fit narrow windows
+        String hints = page == Page.CONTROLS
+                ? "Enter: rebind    Esc: resume    F11: fullscreen    F12: screenshot"
+                : "Arrows / Mouse: navigate    Enter: select    Esc: resume";
+        Font hintFont = noteFont;
+        FontMetrics nfm = g.getFontMetrics(hintFont);
+        while (nfm.stringWidth(hints) > w - base * 2 && hintFont.getSize() > 9) {
+            hintFont = hintFont.deriveFont((float) (hintFont.getSize() - 1));
+            nfm = g.getFontMetrics(hintFont);
+        }
+        g.setFont(hintFont);
+        g.setColor(TEXT_DIM);
+        g.drawString(hints, (w - nfm.stringWidth(hints)) / 2, h - base * 2);
+
+        renderToast(g, w, h);
+    }
+
+    private static void renderToast(Graphics2D g, int w, int h) {
+        if (toast == null || System.currentTimeMillis() > toastUntil) {
+            return;
+        }
+        int base = Math.max(13, h / 42);
+        g.setFont(new Font(Font.DIALOG, Font.BOLD, base));
+        FontMetrics fm = g.getFontMetrics();
+        int tw = fm.stringWidth(toast) + base * 2;
+        int th = fm.getHeight() + base;
+        int x = (w - tw) / 2;
+        int y = h - th - base;
+        g.setColor(new Color(3, 10, 18, 230));
+        g.fillRoundRect(x, y, tw, th, base, base);
+        g.setColor(ACCENT_DIM);
+        g.drawRoundRect(x, y, tw, th, base, base);
+        g.setColor(TEXT);
+        g.drawString(toast, x + base, y + (th + fm.getAscent() - fm.getDescent()) / 2);
+    }
+
+    private static String pageTitle() {
+        switch (page) {
+            case OPTIONS: return "OPTIONS";
+            case DISPLAY: return "DISPLAY";
+            case AUDIO: return "AUDIO";
+            case CONTROLS: return "CONTROLS";
+            case ROOT:
+            default: return "PAUSED";
+        }
+    }
+
+    private static String elide(String text, FontMetrics fm, int maxWidth) {
+        if (fm.stringWidth(text) <= maxWidth) {
+            return text;
+        }
+        String ellipsis = "\u2026";
+        int len = text.length();
+        while (len > 1 && fm.stringWidth(text.substring(0, len) + ellipsis) > maxWidth) {
+            len--;
+        }
+        return text.substring(0, len) + ellipsis;
+    }
+
+    private static String bindText(Input.Action a) {
+        int[] keys = Input.getKeys(a);
+        if (keys.length == 0) {
+            return "unbound";
+        }
+        StringBuilder sb = new StringBuilder(Input.keyName(keys[0]));
+        for (int i = 1; i < keys.length; i++) {
+            sb.append("  /  ").append(Input.keyName(keys[i]));
+        }
+        return sb.toString();
+    }
+}

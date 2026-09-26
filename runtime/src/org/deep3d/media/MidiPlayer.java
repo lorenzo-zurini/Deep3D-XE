@@ -6,6 +6,7 @@ import javax.microedition.media.Control;
 import javax.microedition.media.MediaException;
 import javax.microedition.media.PlayerListener;
 import javax.microedition.media.control.VolumeControl;
+
 import javax.sound.midi.MidiChannel;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Sequence;
@@ -112,7 +113,8 @@ public class MidiPlayer extends BasePlayer implements VolumeControl {
         if (synthesizer == null) {
             return;
         }
-        int value = muted ? 0 : (int) (level * 127L / 100);
+        int value = muted ? 0 : (int) (level * 127L / 100 * AudioSettings.musicFactor());
+        value = Math.max(0, Math.min(127, value));
         for (MidiChannel ch : synthesizer.getChannels()) {
             if (ch != null) {
                 ch.controlChange(7, value);
@@ -141,5 +143,10 @@ public class MidiPlayer extends BasePlayer implements VolumeControl {
     @Override
     public boolean isMuted() {
         return muted;
+    }
+
+    @Override
+    public void refreshVolume() {
+        applyVolume();
     }
 }

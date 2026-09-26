@@ -1,0 +1,118 @@
+package org.deep3d;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Properties;
+
+/**
+ * Persistent settings, stored as a properties file (deep3d.cfg) next to the
+ * game. Everything the pause overlay edits lives here.
+ */
+public final class Config {
+
+    private static final File FILE = System.getenv("DEEP3D_CONFIG") != null
+            ? new File(System.getenv("DEEP3D_CONFIG"))
+            : AppDirs.file("deep3d.cfg");
+
+    private static final Properties props = new Properties();
+
+    /* Display */
+    public static int internalWidth = 360;
+    public static int internalHeight = 480;
+    public static boolean fullscreen = false;
+    public static boolean integerScaling = false;
+    public static int windowWidth = 0;    // 0 = derive from internal size
+    public static int windowHeight = 0;
+    public static int fpsCap = 60;        // 0 = uncapped
+    public static int brightness = 100;   // 50..150 percent
+
+    /* Audio (0..100) */
+    public static int masterVolume = 100;
+    public static int musicVolume = 80;
+    public static int sfxVolume = 100;
+
+    /* Controller */
+    public static boolean gamepadEnabled = true;
+
+    private Config() {
+    }
+
+    public static void load() {
+        if (FILE.isFile()) {
+            try (FileInputStream in = new FileInputStream(FILE)) {
+                props.load(in);
+            } catch (IOException e) {
+                System.err.println("[config] cannot read " + FILE + ": " + e);
+            }
+        }
+        internalWidth = getInt("display.internal_width", internalWidth);
+        internalHeight = getInt("display.internal_height", internalHeight);
+        fullscreen = getBool("display.fullscreen", fullscreen);
+        integerScaling = getBool("display.integer_scaling", integerScaling);
+        windowWidth = getInt("display.window_width", windowWidth);
+        windowHeight = getInt("display.window_height", windowHeight);
+        fpsCap = getInt("display.fps_cap", fpsCap);
+        brightness = Math.max(50, Math.min(150, getInt("display.brightness", brightness)));
+        masterVolume = clamp(getInt("audio.master", masterVolume));
+        musicVolume = clamp(getInt("audio.music", musicVolume));
+        sfxVolume = clamp(getInt("audio.sfx", sfxVolume));
+        gamepadEnabled = getBool("input.gamepad", gamepadEnabled);
+    }
+
+    public static void save() {
+        props.setProperty("display.internal_width", String.valueOf(internalWidth));
+        props.setProperty("display.internal_height", String.valueOf(internalHeight));
+        props.setProperty("display.fullscreen", String.valueOf(fullscreen));
+        props.setProperty("display.integer_scaling", String.valueOf(integerScaling));
+        props.setProperty("display.window_width", String.valueOf(windowWidth));
+        props.setProperty("display.window_height", String.valueOf(windowHeight));
+        props.setProperty("display.fps_cap", String.valueOf(fpsCap));
+        props.setProperty("display.brightness", String.valueOf(brightness));
+        props.setProperty("audio.master", String.valueOf(masterVolume));
+        props.setProperty("audio.music", String.valueOf(musicVolume));
+        props.setProperty("audio.sfx", String.valueOf(sfxVolume));
+        props.setProperty("input.gamepad", String.valueOf(gamepadEnabled));
+        try (FileOutputStream out = new FileOutputStream(FILE)) {
+            props.store(out, "Deep3D-PC settings");
+        } catch (IOException e) {
+            System.err.println("[config] cannot write " + FILE + ": " + e);
+        }
+    }
+
+    /* Key bindings are stored as "bind.<ACTION>=keycode[,keycode...]" */
+    public static String getBinding(String action) {
+        return props.getProperty("bind." + action);
+    }
+
+    public static void setBinding(String action, String value) {
+        props.setProperty("bind." + action, value);
+    }
+
+    public static String get(String key, String def) {
+        return props.getProperty(key, def);
+    }
+
+    public static void set(String key, String value) {
+        props.setProperty(key, value);
+    }
+
+    private static int getInt(String key, int def) {
+        try {
+            String v = props.getProperty(key);
+            return v == null ? def : Integer.parseInt(v.trim());
+        } catch (NumberFormatException e) {
+            return def;
+        }
+    }
+
+    private static boolean getBool(String key, boolean def) {
+        String v = props.getProperty(key);
+        return v == null ? def : Boolean.parseBoolean(v.trim());
+    }
+
+    private static int clamp(int v) {
+        return Math.max(0, Math.min(100, v));
+    }
+}

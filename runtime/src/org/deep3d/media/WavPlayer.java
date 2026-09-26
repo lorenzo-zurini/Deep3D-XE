@@ -101,10 +101,11 @@ public class WavPlayer extends BasePlayer implements VolumeControl {
         }
         try {
             FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-            if (muted || level == 0) {
+            float eff = level * AudioSettings.sfxFactor();
+            if (muted || eff <= 0.5f) {
                 gain.setValue(gain.getMinimum());
             } else {
-                float db = (float) (20.0 * Math.log10(level / 100.0));
+                float db = (float) (20.0 * Math.log10(eff / 100.0));
                 gain.setValue(Math.max(gain.getMinimum(), Math.min(gain.getMaximum(), db)));
             }
         } catch (IllegalArgumentException ignored) {
@@ -132,5 +133,10 @@ public class WavPlayer extends BasePlayer implements VolumeControl {
     @Override
     public boolean isMuted() {
         return muted;
+    }
+
+    @Override
+    public void refreshVolume() {
+        applyVolume();
     }
 }

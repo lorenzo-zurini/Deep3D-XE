@@ -38,6 +38,8 @@ public abstract class GameCanvas extends Canvas {
 
     public void flushGraphics() {
         Runtime.present(buffer);
+        Runtime.framePace();
+        Runtime.pauseBlock();
     }
 
     public void flushGraphics(int x, int y, int w, int h) {
