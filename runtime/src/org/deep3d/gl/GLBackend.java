@@ -407,6 +407,7 @@ public final class GLBackend {
             if (op == Draw2D.OP_BATCH_3D) {
                 gl2d.replay(frame, segStart, i);
                 List<RenderNode> nodes = (List<RenderNode>) frame.objects[frame.ops[i + 1]];
+                gl3d.setFog(Config.fog, gl2d.backgroundColor(), Config.farPlane());
                 gl3d.renderBatch(nodes);
                 segStart = i + len;
             }

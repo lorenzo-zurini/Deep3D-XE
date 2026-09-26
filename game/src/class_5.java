@@ -39,7 +39,11 @@ public final class class_5 {
 
    // $VF: renamed from: a (v) int
    public final int method_171(class_5 var1) {
-      return (this.field_138 * var1.field_138 >> 12) + (this.field_139 * var1.field_139 >> 12) + (this.field_140 * var1.field_140 >> 12);
+      // Deep3D-PC: 64-bit products so extended view distances cannot overflow
+      // (identical results wherever the original int math did not).
+      return (int)(
+         ((long)this.field_138 * var1.field_138 >> 12) + ((long)this.field_139 * var1.field_139 >> 12) + ((long)this.field_140 * var1.field_140 >> 12)
+      );
    }
 
    // $VF: renamed from: b (v) int

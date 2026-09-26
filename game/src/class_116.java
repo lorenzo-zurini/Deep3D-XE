@@ -183,7 +183,7 @@ public final class class_116 extends class_113 {
       this.field_1407 = this.field_1419.field_774;
       this.field_1422 = new class_42();
       this.field_1422.method_418(this.field_1419.field_782);
-      this.field_1408 = class_111.method_899(class_41.field_537, class_41.field_538, 500, 100, 31768);
+      this.field_1408 = class_111.method_899(class_41.field_537, class_41.field_538, 500, 100, org.deep3d.Config.farPlane());
       this.field_1409 = new class_99();
       this.field_1409.method_875(this.field_1408);
       class_41.field_527.method_264(this.field_1408);

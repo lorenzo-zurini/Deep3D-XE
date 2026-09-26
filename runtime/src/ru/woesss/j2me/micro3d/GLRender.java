@@ -72,8 +72,10 @@ public final class GLRender {
 			+ "varying float vIsTransparency;\n"
 			+ "varying float vIsReflect;\n"
 			+ "varying float vAmbIntensity;\n"
+			+ "varying float vDepth;\n"
 			+ "void main() {\n"
 			+ "    gl_Position = uMatrix * aPosition;\n"
+			+ "    vDepth = gl_Position.w;\n"
 			+ "    gl_Position.y = -gl_Position.y;\n"
 			+ "    vNormal = uNormalMatrix * aNormal;\n"
 			+ "    vIsTransparency = aMaterial[2];\n"
@@ -84,6 +86,15 @@ public final class GLRender {
 
 	private static final String TEX_FSH =
 			"#version 120\n"
+			+ "uniform vec3 uFogColor;\n"
+			+ "uniform vec2 uFogRange;\n"
+			+ "uniform float uFogMode;\n"
+			+ "varying float vDepth;\n"
+			+ "vec3 fog(vec3 c) {\n"
+			+ "    if (uFogMode < 0.5) return c;\n"
+			+ "    float f = clamp((vDepth - uFogRange.x) / (uFogRange.y - uFogRange.x), 0.0, 1.0);\n"
+			+ "    return uFogMode < 1.5 ? mix(c, uFogColor, f) : c * (1.0 - f);\n"
+			+ "}\n"
 			+ "uniform sampler2D uTextureUnit;\n"
 			+ "uniform sampler2D uSphereUnit;\n"
 			+ "uniform vec2 uSphereSize;\n"
@@ -103,7 +114,7 @@ public final class GLRender {
 			+ "        discard;\n"
 			+ "    }\n"
 			+ "    if (vAmbIntensity < -0.5) {\n"
-			+ "        gl_FragColor = vec4(color.rgb, 1.0);\n"
+			+ "        gl_FragColor = vec4(fog(color.rgb), 1.0);\n"
 			+ "        return;\n"
 			+ "    }\n"
 			+ "    float lambert_factor = max(dot(normalize(vNormal), uLightDir), 0.0);\n"
@@ -115,7 +126,7 @@ public final class GLRender {
 			+ "    if (uSphereSize.x > -0.5 && vIsReflect > 0.5) {\n"
 			+ "        color.rgb += texture2D(uSphereUnit, (vNormal.xy / 128.0 + 32.0) / uSphereSize).rgb;\n"
 			+ "    }\n"
-			+ "    gl_FragColor = vec4(color.rgb, 1.0);\n"
+			+ "    gl_FragColor = vec4(fog(color.rgb), 1.0);\n"
 			+ "}\n";
 
 	private static final String COLOR_VSH =
@@ -131,8 +142,10 @@ public final class GLRender {
 			+ "varying vec3 vNormal;\n"
 			+ "varying float vIsReflect;\n"
 			+ "varying float vAmbIntensity;\n"
+			+ "varying float vDepth;\n"
 			+ "void main() {\n"
 			+ "    gl_Position = uMatrix * aPosition;\n"
+			+ "    vDepth = gl_Position.w;\n"
 			+ "    gl_Position.y = -gl_Position.y;\n"
 			+ "    vNormal = uNormalMatrix * aNormal;\n"
 			+ "    vColor = aColorData;\n"
@@ -142,6 +155,15 @@ public final class GLRender {
 
 	private static final String COLOR_FSH =
 			"#version 120\n"
+			+ "uniform vec3 uFogColor;\n"
+			+ "uniform vec2 uFogRange;\n"
+			+ "uniform float uFogMode;\n"
+			+ "varying float vDepth;\n"
+			+ "vec3 fog(vec3 c) {\n"
+			+ "    if (uFogMode < 0.5) return c;\n"
+			+ "    float f = clamp((vDepth - uFogRange.x) / (uFogRange.y - uFogRange.x), 0.0, 1.0);\n"
+			+ "    return uFogMode < 1.5 ? mix(c, uFogColor, f) : c * (1.0 - f);\n"
+			+ "}\n"
 			+ "uniform sampler2D uSphereUnit;\n"
 			+ "uniform vec2 uSphereSize;\n"
 			+ "uniform vec3 uLightDir;\n"
@@ -155,7 +177,7 @@ public final class GLRender {
 			+ "varying float vAmbIntensity;\n"
 			+ "void main() {\n"
 			+ "    if (vAmbIntensity < -0.5) {\n"
-			+ "        gl_FragColor = vec4(vColor, 1.0);\n"
+			+ "        gl_FragColor = vec4(fog(vColor), 1.0);\n"
 			+ "        return;\n"
 			+ "    }\n"
 			+ "    float lambert_factor = max(dot(normalize(vNormal), uLightDir), 0.0);\n"
@@ -167,7 +189,7 @@ public final class GLRender {
 			+ "    if (uSphereSize.x > -0.5 && vIsReflect > 0.5) {\n"
 			+ "        color += texture2D(uSphereUnit, (vNormal.xy / 128.0 + 32.0) / uSphereSize).rgb;\n"
 			+ "    }\n"
-			+ "    gl_FragColor = vec4(color, 1.0);\n"
+			+ "    gl_FragColor = vec4(fog(color), 1.0);\n"
 			+ "}\n";
 
 	private static final String SPRITE_VSH =
@@ -176,14 +198,25 @@ public final class GLRender {
 			+ "attribute vec4 aPosition;\n"
 			+ "attribute vec2 aColorData;\n"
 			+ "varying vec2 vTexture;\n"
+			+ "varying float vDepth;\n"
 			+ "void main() {\n"
 			+ "    gl_Position = aPosition;\n"
+			+ "    vDepth = aPosition.w;\n"
 			+ "    gl_Position.y = -gl_Position.y;\n"
 			+ "    vTexture = aColorData / uTexSize;\n"
 			+ "}\n";
 
 	private static final String SPRITE_FSH =
 			"#version 120\n"
+			+ "uniform vec3 uFogColor;\n"
+			+ "uniform vec2 uFogRange;\n"
+			+ "uniform float uFogMode;\n"
+			+ "varying float vDepth;\n"
+			+ "vec3 fog(vec3 c) {\n"
+			+ "    if (uFogMode < 0.5) return c;\n"
+			+ "    float f = clamp((vDepth - uFogRange.x) / (uFogRange.y - uFogRange.x), 0.0, 1.0);\n"
+			+ "    return uFogMode < 1.5 ? mix(c, uFogColor, f) : c * (1.0 - f);\n"
+			+ "}\n"
 			+ "uniform sampler2D uTextureUnit;\n"
 			+ "uniform float uIsTransparency;\n"
 			+ "varying vec2 vTexture;\n"
@@ -192,7 +225,7 @@ public final class GLRender {
 			+ "    if (uIsTransparency > 0.5 && color.a < 0.5) {\n"
 			+ "        discard;\n"
 			+ "    }\n"
-			+ "    gl_FragColor = vec4(color.rgb, 1.0);\n"
+			+ "    gl_FragColor = vec4(fog(color.rgb), 1.0);\n"
 			+ "}\n";
 
 	private static final class Prog {
@@ -212,6 +245,9 @@ public final class GLRender {
 		int uToonHigh;
 		int uToonLow;
 		int uIsTransparency;
+		int uFogColor;
+		int uFogRange;
+		int uFogMode;
 
 		void locate() {
 			aPosition = glGetAttribLocation(id, "aPosition");
@@ -229,6 +265,9 @@ public final class GLRender {
 			uToonHigh = glGetUniformLocation(id, "uToonHigh");
 			uToonLow = glGetUniformLocation(id, "uToonLow");
 			uIsTransparency = glGetUniformLocation(id, "uIsTransparency");
+			uFogColor = glGetUniformLocation(id, "uFogColor");
+			uFogRange = glGetUniformLocation(id, "uFogRange");
+			uFogMode = glGetUniformLocation(id, "uFogMode");
 			glUseProgram(id);
 			int texUnit = glGetUniformLocation(id, "uTextureUnit");
 			if (texUnit >= 0) {
@@ -244,6 +283,47 @@ public final class GLRender {
 	private Prog tex;
 	private Prog colorProg;
 	private Prog sprite;
+
+	/* Distance fog: hides the draw-distance boundary by fading geometry into
+	   the scene's background water colour (set per frame by the backend). */
+	private float fogR, fogG, fogB;
+	private float fogStart = 1e9f, fogEnd = 2e9f;
+	private boolean fogEnabled;
+	private Prog boundProg;
+	private int blendForFog;
+
+	public void setFog(boolean enabled, int rgb, float farPlane) {
+		fogEnabled = enabled;
+		fogR = ((rgb >> 16) & 0xFF) / 255f;
+		fogG = ((rgb >> 8) & 0xFF) / 255f;
+		fogB = (rgb & 0xFF) / 255f;
+		fogStart = farPlane * 0.55f;
+		fogEnd = farPlane * 0.98f;
+	}
+
+	private void use(Prog p) {
+		glUseProgram(p.id);
+		boundProg = p;
+		applyFogUniforms();
+	}
+
+	private void applyFogUniforms() {
+		Prog p = boundProg;
+		if (p == null || p.uFogMode < 0) {
+			return;
+		}
+		float mode;
+		if (!fogEnabled) {
+			mode = 0;
+		} else if (blendForFog == Model.Polygon.BLEND_ADD || blendForFog == Model.Polygon.BLEND_SUB) {
+			mode = 2;   // additive effects fade out instead of turning fog-coloured
+		} else {
+			mode = 1;
+		}
+		glUniform1f(p.uFogMode, mode);
+		glUniform3f(p.uFogColor, fogR, fogG, fogB);
+		glUniform2f(p.uFogRange, fogStart, fogEnd);
+	}
 
 	public void init() {
 		tex = build(TEX_VSH, TEX_FSH);
@@ -278,6 +358,7 @@ public final class GLRender {
 		glFrontFace(GL_CW);          // the y-flip in the shaders mirrors winding
 		glClear(GL_DEPTH_BUFFER_BIT);
 		flushStep = 1;
+		blendForFog = 0;
 		if (DEBUG_LEVEL >= 2) {
 			for (RenderNode node : nodes) {
 				renderNode(node);
@@ -295,6 +376,7 @@ public final class GLRender {
 			glDisableVertexAttribArray(i);
 		}
 		glUseProgram(0);
+		boundProg = null;
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glActiveTexture(GL_TEXTURE0);
@@ -335,6 +417,8 @@ public final class GLRender {
 	}
 
 	private void applyBlending(int blendMode) {
+		blendForFog = blendMode;
+		applyFogUniforms();
 		switch (blendMode) {
 			case Model.Polygon.BLEND_HALF:
 				glEnable(GL_BLEND);
@@ -509,7 +593,7 @@ public final class GLRender {
 
 		if (model.hasPolyT) {
 			Prog p = tex;
-			glUseProgram(p.id);
+			use(p);
 			glEnableVertexAttribArray(p.aPosition);
 			nglVertexAttribPointer(p.aPosition, 3, GL_FLOAT, false, 12, vertsAddr);
 			glEnableVertexAttribArray(p.aColorData);
@@ -536,7 +620,7 @@ public final class GLRender {
 
 		if (model.hasPolyC) {
 			Prog p = colorProg;
-			glUseProgram(p.id);
+			use(p);
 			int offset = model.numVerticesPolyT;
 			glEnableVertexAttribArray(p.aPosition);
 			nglVertexAttribPointer(p.aPosition, 3, GL_FLOAT, false, 12,
@@ -690,7 +774,7 @@ public final class GLRender {
 				break;
 			case Graphics3D.PRIMITVE_POINT_SPRITES: {
 				Prog p = sprite;
-				glUseProgram(p.id);
+				use(p);
 				long va = uploadFloats(node.vertices, false);
 				long ta = uploadBytes(node.texCoords, false);
 				glEnableVertexAttribArray(p.aPosition);
@@ -712,7 +796,7 @@ public final class GLRender {
 
 	private void renderMeshT(RenderNode.PrimitiveNode node) {
 		Prog p = tex;
-		glUseProgram(p.id);
+		use(p);
 		int command = node.command;
 		long va = uploadFloats(node.vertices, false);
 		long ta = uploadBytes(node.texCoords, false);
@@ -748,7 +832,7 @@ public final class GLRender {
 
 	private void renderMeshC(RenderNode.PrimitiveNode node) {
 		Prog p = colorProg;
-		glUseProgram(p.id);
+		use(p);
 		int command = node.command;
 		long va = uploadFloats(node.vertices, false);
 		boolean isLight = (node.attrs & Graphics3D.ENV_ATTR_LIGHTING) != 0
@@ -789,7 +873,7 @@ public final class GLRender {
 
 	private void renderMesh(RenderNode.PrimitiveNode node, int type) {
 		Prog p = colorProg;
-		glUseProgram(p.id);
+		use(p);
 		glVertexAttrib2f(p.aMaterial, 0, 0);
 		setLight(p, null);
 		glDisableVertexAttribArray(p.aNormal);

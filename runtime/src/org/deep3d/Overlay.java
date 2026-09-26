@@ -159,6 +159,19 @@ public final class Overlay {
                                 org.deep3d.gl.GLBackend.updateVirtualSize();
                             }));
                 }
+                if (org.deep3d.gl.GLBackend.isActive()) {
+                    Item vd = Item.choice("View distance",
+                            () -> Config.viewDistance == 1 ? "Original"
+                                    : Config.viewDistance == 8 ? "Max (8x)"
+                                    : Config.viewDistance + "x",
+                            d -> Config.viewDistance = Math.max(1, Math.min(8,
+                                    Config.viewDistance + (d == 0 ? 1 : d))));
+                    vd.note = "applies on next area load";
+                    items.add(vd);
+                    items.add(Item.choice("Distance fog",
+                            () -> Config.fog ? "On" : "Off",
+                            d -> Config.fog = !Config.fog));
+                }
                 items.add(Item.choice("VSync",
                         () -> Config.vsync ? "On" : "Off",
                         d -> {

@@ -186,6 +186,9 @@ public class Graphics {
     }
 
     public void drawRect(int x, int y, int w, int h) {
+        if (w < 0 || h < 0) {
+            return;
+        }
         g2.drawRect(x, y, w, h);
     }
 

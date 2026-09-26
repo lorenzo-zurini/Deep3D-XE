@@ -3,7 +3,7 @@ public final class class_10 {
    // $VF: renamed from: a long
    private long field_169;
    // $VF: renamed from: a am
-   public class_111 field_170 = class_111.method_899(class_41.field_537, class_41.field_538, 800, 100, 31768);
+   public class_111 field_170 = class_111.method_899(class_41.field_537, class_41.field_538, 800, 100, org.deep3d.Config.farPlane());
    // $VF: renamed from: a h
    private class_39 field_171;
    // $VF: renamed from: a int[][]

@@ -197,6 +197,11 @@ public final class GameUi {
         return !visible.isEmpty();
     }
 
+    /** True when a confirm command (OK / Next / Select) is on screen. */
+    public static boolean confirmAvailable() {
+        return barLeftZone != null || !visible.isEmpty();
+    }
+
     private static void applyMouseIntent(List<Item> items) {
         int steps = wheelSteps;
         if (steps != 0) {

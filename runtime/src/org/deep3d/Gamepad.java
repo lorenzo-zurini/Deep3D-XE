@@ -189,10 +189,21 @@ public final class Gamepad {
         return held;
     }
 
+    /* A confirms in menus/dialogs (like Enter) and fires in flight; the
+       action chosen at press time is reused for the release. */
+    private static volatile Input.Action aHeld;
+
     private static void handleButton(int number, boolean pressed) {
         switch (number) {
             case BTN_A:
-                Input.handleAction(Input.Action.FIRE, pressed);
+                if (pressed) {
+                    aHeld = !Overlay.isOpen() && GameUi.confirmAvailable()
+                            ? Input.Action.OK : Input.Action.FIRE;
+                    Input.handleAction(aHeld, true);
+                } else if (aHeld != null) {
+                    Input.handleAction(aHeld, false);
+                    aHeld = null;
+                }
                 break;
             case BTN_B:
                 Input.handleAction(Input.Action.BACK, pressed);

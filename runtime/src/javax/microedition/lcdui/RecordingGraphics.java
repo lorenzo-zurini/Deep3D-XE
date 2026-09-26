@@ -125,11 +125,19 @@ public final class RecordingGraphics extends Graphics {
 
     @Override
     public void fillRect(int x, int y, int w, int h) {
+        // MIDP: non-positive sizes draw nothing (the game relies on it,
+        // e.g. cooldown bars whose computed height goes negative).
+        if (w <= 0 || h <= 0) {
+            return;
+        }
         out().op(Draw2D.OP_FILL_RECT, x, y, w, h);
     }
 
     @Override
     public void drawRect(int x, int y, int w, int h) {
+        if (w < 0 || h < 0) {
+            return;
+        }
         out().op(Draw2D.OP_DRAW_RECT, x, y, w, h);
     }
 
@@ -145,11 +153,17 @@ public final class RecordingGraphics extends Graphics {
 
     @Override
     public void drawArc(int x, int y, int w, int h, int startAngle, int arcAngle) {
+        if (w < 0 || h < 0) {
+            return;
+        }
         out().op(Draw2D.OP_ARC, x, y, w, h, startAngle, arcAngle, 0);
     }
 
     @Override
     public void fillArc(int x, int y, int w, int h, int startAngle, int arcAngle) {
+        if (w <= 0 || h <= 0) {
+            return;
+        }
         out().op(Draw2D.OP_ARC, x, y, w, h, startAngle, arcAngle, 1);
     }
 

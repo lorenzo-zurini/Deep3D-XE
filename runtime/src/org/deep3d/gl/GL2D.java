@@ -82,6 +82,8 @@ public final class GL2D {
     private float scaleX = 1;
     private float scaleY = 1;
     private int color = 0xFFFFFFFF;    // current 2D color, ABGR-packed for the VB
+    private int colorRgb;              // same, as 0xRRGGBB
+    private int backgroundRgb;         // last full-screen fill (scene background)
     private int scissorX, scissorY, scissorW, scissorH;
     private boolean scissorOn;
 
@@ -139,6 +141,8 @@ public final class GL2D {
         scaleY = (float) fbH / virtH;
         glLineWidth(Math.max(1f, Math.min(scaleX, scaleY)));
         color = 0xFF000000;
+        colorRgb = 0;
+        backgroundRgb = 0;
         scissorOn = false;
         glDisable(GL_SCISSOR_TEST);
     }
@@ -164,10 +168,16 @@ public final class GL2D {
             }
             switch (op) {
                 case Draw2D.OP_COLOR:
+                    colorRgb = d.ops[i] & 0xFFFFFF;
                     color = 0xFF000000 | rgbToAbgr(d.ops[i]);
                     i += 1;
                     break;
                 case Draw2D.OP_FILL_RECT:
+                    if (d.ops[i] <= 0 && d.ops[i + 1] <= 0
+                            && d.ops[i] + d.ops[i + 2] >= screenW
+                            && d.ops[i + 1] + d.ops[i + 3] >= screenH) {
+                        backgroundRgb = colorRgb;
+                    }
                     quad(d.ops[i], d.ops[i + 1], d.ops[i + 2], d.ops[i + 3]);
                     i += 4;
                     break;
@@ -244,6 +254,11 @@ public final class GL2D {
             case Draw2D.OP_RGB: return 8;
             default: return 1;
         }
+    }
+
+    /** Colour of the most recent full-screen fill: the scene's backdrop. */
+    public int backgroundColor() {
+        return backgroundRgb;
     }
 
     public int currentScissorX() { return scissorOn ? scissorX : 0; }

@@ -18,6 +18,10 @@ package com.mascotcapsule.micro3d.v3;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class FigureLayout {
+	/* Deep3D-PC: the phone API capped zFar at 32767; the PC renderers have
+	   no such limit, so extended view distances are allowed. */
+	private static final int MAX_FAR = 1 << 22;
+
 	AffineTrans[] affineArray;
 	AffineTrans affine;
 	int scaleX;
@@ -122,7 +126,7 @@ public class FigureLayout {
 	}
 
 	public final void setPerspective(int zNear, int zFar, int angle) {
-		if (zNear >= zFar || zNear < 1 || zFar > 32767 || angle < 1 || angle > 2047) {
+		if (zNear >= zFar || zNear < 1 || zFar > MAX_FAR || angle < 1 || angle > 2047) {
 			throw new IllegalArgumentException();
 		}
 		near = zNear;
@@ -132,7 +136,7 @@ public class FigureLayout {
 	}
 
 	public final void setPerspective(int zNear, int zFar, int width, int height) {
-		if (zNear >= zFar || zNear < 1 || zFar > 32767 || width < 0 || height < 0) {
+		if (zNear >= zFar || zNear < 1 || zFar > MAX_FAR || width < 0 || height < 0) {
 			throw new IllegalArgumentException();
 		}
 		near = zNear;
