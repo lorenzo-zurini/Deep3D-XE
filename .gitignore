@@ -1,0 +1,11 @@
+# Original game distribution — copyrighted, never commit
+*.jar
+*.zip
+assets/
+
+# Build output
+build/
+out/
+
+# Save data
+saves/
