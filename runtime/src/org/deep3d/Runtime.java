@@ -711,6 +711,9 @@ public final class Runtime {
             case "mw":
                 GameUi.mouseWheel(Integer.parseInt(parts[1]));
                 break;
+            case "sel":
+                GameUi.selectByText(parts[1].replace('_', ' '));
+                break;
             case "dump2d":
                 org.deep3d.gl.GLBackend.requestDump2d();
                 break;

@@ -83,8 +83,8 @@ public class Render {
 	public synchronized void bind(Graphics graphics) {
 		targetGraphics = graphics;
 		if (org.deep3d.gl.GLBackend.isActive()) {
-			env.width = org.deep3d.gl.GLBackend.fbWidth;
-			env.height = org.deep3d.gl.GLBackend.fbHeight;
+			env.width = org.deep3d.Runtime.screenWidth;
+			env.height = org.deep3d.Runtime.screenHeight;
 			return;
 		}
 		BufferedImage img = graphics.getTargetImage();

@@ -22,6 +22,8 @@ public final class Config {
     /** "gl" = OpenGL (GPU), "software" = CPU rasterizer fallback. */
     public static String renderer = "gl";
     public static boolean vsync = true;
+    /** GL mode UI scale: 0 = auto (match classic proportions), else 1..6. */
+    public static int uiScale = 0;
     /** Software renderer only: "auto", "half" or "fixed" presets. */
     public static String resolutionMode = "auto";
     public static int internalWidth = 480;
@@ -65,6 +67,7 @@ public final class Config {
         }
         renderer = props.getProperty("display.renderer", renderer);
         vsync = getBool("display.vsync", vsync);
+        uiScale = Math.max(0, Math.min(6, getInt("display.ui_scale", uiScale)));
         resolutionMode = props.getProperty("display.resolution_mode", resolutionMode);
         internalWidth = getInt("display.internal_width", internalWidth);
         internalHeight = getInt("display.internal_height", internalHeight);
@@ -86,6 +89,7 @@ public final class Config {
         props.setProperty("config.version", "2");
         props.setProperty("display.renderer", renderer);
         props.setProperty("display.vsync", String.valueOf(vsync));
+        props.setProperty("display.ui_scale", String.valueOf(uiScale));
         props.setProperty("display.resolution_mode", resolutionMode);
         props.setProperty("display.texture_filter", String.valueOf(textureFilter));
         props.setProperty("display.show_fps", String.valueOf(showFps));

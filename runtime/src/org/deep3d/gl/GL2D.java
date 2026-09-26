@@ -75,8 +75,12 @@ public final class GL2D {
     private final Map<int[], Integer> rgbHash = new IdentityHashMap<>();
     private ByteBuffer scratch = MemoryUtil.memAlloc(1024 * 1024 * 4);
 
-    private int screenW;
+    private int screenW;      // virtual (game) dimensions
     private int screenH;
+    private int realW;        // framebuffer dimensions
+    private int realH;
+    private float scaleX = 1;
+    private float scaleY = 1;
     private int color = 0xFFFFFFFF;    // current 2D color, ABGR-packed for the VB
     private int scissorX, scissorY, scissorW, scissorH;
     private boolean scissorOn;
@@ -126,9 +130,14 @@ public final class GL2D {
     // Frame replay
     // ------------------------------------------------------------------
 
-    public void beginFrame(int w, int h) {
-        screenW = w;
-        screenH = h;
+    public void beginFrame(int virtW, int virtH, int fbW, int fbH) {
+        screenW = virtW;
+        screenH = virtH;
+        realW = fbW;
+        realH = fbH;
+        scaleX = (float) fbW / virtW;
+        scaleY = (float) fbH / virtH;
+        glLineWidth(Math.max(1f, Math.min(scaleX, scaleY)));
         color = 0xFF000000;
         scissorOn = false;
         glDisable(GL_SCISSOR_TEST);
@@ -250,8 +259,12 @@ public final class GL2D {
         scissorOn = !(x <= 0 && y <= 0 && x + w >= screenW && y + h >= screenH);
         if (scissorOn) {
             glEnable(GL_SCISSOR_TEST);
-            // GL scissor origin is bottom-left
-            glScissor(scissorX, screenH - scissorY - scissorH, scissorW, scissorH);
+            // GL scissor origin is bottom-left; convert virtual -> real px
+            int rx = Math.round(scissorX * scaleX);
+            int ry = Math.round(scissorY * scaleY);
+            int rw = Math.round(scissorW * scaleX);
+            int rh = Math.round(scissorH * scaleY);
+            glScissor(rx, realH - ry - rh, rw, rh);
         } else {
             glDisable(GL_SCISSOR_TEST);
         }
@@ -480,15 +493,16 @@ public final class GL2D {
 
     /** Draws an ARGB image (e.g. the overlay) as a full quad, premixed alpha. */
     public void drawOverlay(int tex, int w, int h) {
+        flush();   // pending game-space geometry first
         glUseProgram(program);
-        glUniform2f(uViewport, screenW, screenH);
+        glUniform2f(uViewport, w, h);
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendEquation(GL_FUNC_ADD);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDisable(GL_SCISSOR_TEST);
         texQuad(tex, 0, 0, w, h, 0, 0, 1, 1, 0xFFFFFFFF);
-        flush();
+        flushWith(w, h);
         if (scissorOn) {
             glEnable(GL_SCISSOR_TEST);
         }
@@ -535,11 +549,15 @@ public final class GL2D {
     // ------------------------------------------------------------------
 
     public void flush() {
+        flushWith(screenW, screenH);
+    }
+
+    private void flushWith(float vw, float vh) {
         if (vertCount == 0) {
             return;
         }
         glUseProgram(program);
-        glUniform2f(uViewport, screenW, screenH);
+        glUniform2f(uViewport, vw, vh);
         glDisable(GL_DEPTH_TEST);
         glDepthMask(false);
         glEnable(GL_BLEND);

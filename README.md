@@ -18,6 +18,10 @@ native Java application with full PC-game UX — no phone emulator involved.
   software GL; thousands on a real GPU).
 - **Launches fullscreen at your display's native resolution** in true
   widescreen; VSync toggle, FPS limit (Off/30/60/120), FPS counter.
+- **Resolution-independent UI scale** — the interface keeps its classic
+  relative size at any resolution (auto, or 1x-6x in Options > Display):
+  the game lays out against a virtual screen while 3D renders at full
+  native resolution.
 - **Software fallback renderer** (`display.renderer=software` or the
   Renderer option): the original multithreaded CPU rasterizer, for
   systems without OpenGL.

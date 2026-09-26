@@ -309,14 +309,28 @@ public final class GLRender {
 		glFrontFace(GL_CCW);
 	}
 
+	private long lastNodeError;
+
 	private void renderNode(RenderNode node) {
-		if (node instanceof RenderNode.FigureNode) {
-			RenderNode.FigureNode fn = (RenderNode.FigureNode) node;
-			renderFigure(fn.figure.model, fn.textures, fn.attrs, fn.projMatrix,
-					fn.viewMatrix, fn.vertices, fn.normals, fn.light, fn.specular,
-					fn.toonThreshold, fn.toonHigh, fn.toonLow);
-		} else if (node instanceof RenderNode.PrimitiveNode) {
-			renderPrimitive((RenderNode.PrimitiveNode) node);
+		try {
+			if (node instanceof RenderNode.FigureNode) {
+				RenderNode.FigureNode fn = (RenderNode.FigureNode) node;
+				Model model = fn.figure.model;
+				if (model == null) {
+					return;   // figure disposed between post and replay
+				}
+				renderFigure(model, fn.textures, fn.attrs, fn.projMatrix,
+						fn.viewMatrix, fn.vertices, fn.normals, fn.light, fn.specular,
+						fn.toonThreshold, fn.toonHigh, fn.toonLow);
+			} else if (node instanceof RenderNode.PrimitiveNode) {
+				renderPrimitive((RenderNode.PrimitiveNode) node);
+			}
+		} catch (RuntimeException e) {
+			long now = System.currentTimeMillis();
+			if (now - lastNodeError > 5000) {
+				lastNodeError = now;
+				System.err.println("[gl3d] node render failed: " + e);
+			}
 		}
 	}
 

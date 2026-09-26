@@ -44,6 +44,11 @@ public final class GLBackend {
     /* Framebuffer size, updated by callbacks on the main thread. */
     public static volatile int fbWidth = 1280;
     public static volatile int fbHeight = 720;
+    /* UI scale: the game sees a virtual screen of fb/scale so its interface
+       keeps classic proportions at any resolution. */
+    public static volatile int uiScale = 1;
+    public static volatile int virtWidth = 1280;
+    public static volatile int virtHeight = 720;
     private static volatile float mouseScaleX = 1;
     private static volatile float mouseScaleY = 1;
 
@@ -83,7 +88,7 @@ public final class GLBackend {
     public static javax.microedition.lcdui.Graphics screenGraphics() {
         if (screenGraphics == null) {
             screenGraphics = new javax.microedition.lcdui.RecordingGraphics(
-                    fbWidth, fbHeight);
+                    virtWidth, virtHeight);
         }
         return screenGraphics;
     }
@@ -134,13 +139,23 @@ public final class GLBackend {
         fbWidth = fw[0];
         fbHeight = fh[0];
         updateMouseScale();
-
-        Runtime.screenWidth = fbWidth;
-        Runtime.screenHeight = fbHeight;
+        updateVirtualSize();
 
         installCallbacks();
         glfwShowWindow(window);
         active = true;
+    }
+
+    /** Recomputes UI scale + virtual screen from the framebuffer size. */
+    public static void updateVirtualSize() {
+        int s = Config.uiScale > 0 ? Config.uiScale
+                : Math.max(1, Math.round(fbHeight / 360f));
+        uiScale = s;
+        virtWidth = Math.max(160, fbWidth / s);
+        virtHeight = Math.max(160, fbHeight / s);
+        Runtime.screenWidth = virtWidth;
+        Runtime.screenHeight = virtHeight;
+        markOverlayDirty();
     }
 
     private static void updateMouseScale() {
@@ -157,7 +172,7 @@ public final class GLBackend {
                 fbWidth = w;
                 fbHeight = h;
                 updateMouseScale();
-                overlayDirty = true;
+                updateVirtualSize();
             }
         });
         glfwSetWindowCloseCallback(window, win -> Runtime.requestQuit());
@@ -182,7 +197,7 @@ public final class GLBackend {
             if (Overlay.isOpen()) {
                 Overlay.mouseMoved(px, py);
             } else {
-                GameUi.mouseMoved(px, py);
+                GameUi.mouseMoved(px / uiScale, py / uiScale);
             }
         });
         glfwSetMouseButtonCallback(window, (win, button, action, mods) -> {
@@ -199,7 +214,8 @@ public final class GLBackend {
                     Overlay.mouseClicked(px, py);
                 }
             } else {
-                GameUi.mouseClicked(px, py, button == GLFW_MOUSE_BUTTON_RIGHT);
+                GameUi.mouseClicked(px / uiScale, py / uiScale,
+                        button == GLFW_MOUSE_BUTTON_RIGHT);
             }
         });
         glfwSetScrollCallback(window, (win, dx, dy) -> {
@@ -289,6 +305,19 @@ public final class GLBackend {
 
     /** Called from GameCanvas.flushGraphics on a presenting thread. */
     public static synchronized void endFrame() {
+        try {
+            endFrameInner();
+        } finally {
+            // Always release: the game presents from several threads, and a
+            // context stuck on a thread (e.g. after an exception) would make
+            // every other presenter fail to claim it.
+            glfwMakeContextCurrent(0);
+            GL.setCapabilities(null);
+            ctxOwner = null;
+        }
+    }
+
+    private static void endFrameInner() {
         claimContext();
         if (dump2dNext) {
             dump2dNext = false;
@@ -335,10 +364,10 @@ public final class GLBackend {
         lastFrame = frame.snapshot();
         frame.reset();
         if (screenGraphics != null) {
-            screenGraphics.beginFrame(fbWidth, fbHeight);
+            screenGraphics.beginFrame(virtWidth, virtHeight);
         }
-        Runtime.screenWidth = fbWidth;
-        Runtime.screenHeight = fbHeight;
+        Runtime.screenWidth = virtWidth;
+        Runtime.screenHeight = virtHeight;
 
         // Pause: keep redrawing the last frame + overlay until resumed.
         while (Runtime.isGamePaused() && running) {
@@ -357,11 +386,6 @@ public final class GLBackend {
             }
         }
 
-        // Release the context: the game presents from more than one thread,
-        // and GLX refuses to move a context that is still current elsewhere.
-        glfwMakeContextCurrent(0);
-        GL.setCapabilities(null);
-        ctxOwner = null;
     }
 
     @SuppressWarnings("unchecked")
@@ -372,7 +396,7 @@ public final class GLBackend {
         glDisable(GL_SCISSOR_TEST);
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        gl2d.beginFrame(w, h);
+        gl2d.beginFrame(virtWidth, virtHeight, w, h);
 
         // Replay 2D, splicing 3D batches at their markers.
         int segStart = 0;

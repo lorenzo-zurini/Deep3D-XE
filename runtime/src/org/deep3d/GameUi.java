@@ -52,6 +52,7 @@ public final class GameUi {
     private static volatile int wheelSteps;
 
     private static boolean musicPromptHandled;
+    private static volatile String selectTarget;   // test pipe: select-by-text
 
     /* Text entry: the game's (patched) text field ticks this every frame
        while active; typed characters flow through the queue. */
@@ -132,7 +133,40 @@ public final class GameUi {
         buildingBarRight = null;
 
         autoSkipMusicPrompt(snapshot);
+        applySelectTarget(snapshot);
         applyMouseIntent(snapshot);
+    }
+
+    /** Test hook: walks the selection to the item starting with the text. */
+    public static void selectByText(String prefix) {
+        selectTarget = prefix.toLowerCase();
+    }
+
+    private static void applySelectTarget(List<Item> items) {
+        String target = selectTarget;
+        if (target == null || items.isEmpty()) {
+            return;
+        }
+        int targetIdx = -1;
+        int selectedIdx = -1;
+        for (int i = 0; i < items.size(); i++) {
+            Item it = items.get(i);
+            if (it.text != null && it.text.toLowerCase().startsWith(target)) {
+                targetIdx = i;
+            }
+            if (it.selected) {
+                selectedIdx = i;
+            }
+        }
+        if (targetIdx < 0 || selectedIdx < 0) {
+            return;
+        }
+        if (targetIdx == selectedIdx) {
+            selectTarget = null;
+            tap(-6);
+        } else {
+            tap(targetIdx < selectedIdx ? -1 : -2);
+        }
     }
 
     public static boolean menuVisible() {

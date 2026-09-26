@@ -149,6 +149,16 @@ public final class Overlay {
                             Config.renderer = "gl".equals(Config.renderer) ? "software" : "gl";
                             showToast("Applies on next launch");
                         }));
+                if (org.deep3d.gl.GLBackend.isActive()) {
+                    items.add(Item.choice("UI scale",
+                            () -> Config.uiScale == 0
+                                    ? "Auto (" + org.deep3d.gl.GLBackend.uiScale + "x)"
+                                    : Config.uiScale + "x",
+                            d -> {
+                                Config.uiScale = ((Config.uiScale + d) % 7 + 7) % 7;
+                                org.deep3d.gl.GLBackend.updateVirtualSize();
+                            }));
+                }
                 items.add(Item.choice("VSync",
                         () -> Config.vsync ? "On" : "Off",
                         d -> {
