@@ -1,226 +1,166 @@
-import com.mascotcapsule.micro3d.v3.ActionTable;
-import com.mascotcapsule.micro3d.v3.AffineTrans;
-import com.mascotcapsule.micro3d.v3.Effect3D;
-import com.mascotcapsule.micro3d.v3.Figure;
-import com.mascotcapsule.micro3d.v3.FigureLayout;
-import com.mascotcapsule.micro3d.v3.Light;
-import com.mascotcapsule.micro3d.v3.Vector3D;
+import javax.microedition.m3g.Appearance;
+import javax.microedition.m3g.CompositingMode;
+import javax.microedition.m3g.Mesh;
+import javax.microedition.m3g.PolygonMode;
+import javax.microedition.m3g.Texture2D;
+import javax.microedition.m3g.Transform;
+import javax.microedition.m3g.TriangleStripArray;
+import javax.microedition.m3g.VertexArray;
+import javax.microedition.m3g.VertexBuffer;
 
-// $VF: renamed from: dg
-public final class class_110 extends class_101 {
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.Light
-   public static Light field_1352 = new Light(new Vector3D(1134, 3929, 0), 4096, 1024);
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.Effect3D
-   public static Effect3D field_1353 = null;
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.AffineTrans
-   private static AffineTrans field_1354 = new AffineTrans();
+// $VF: renamed from: cq
+public final class class_110 extends class_108 {
+   // $VF: renamed from: a javax.microedition.m3g.Transform
+   private static Transform field_1384 = new Transform();
+   // $VF: renamed from: b x
+   private static class_3 field_1385 = new class_3();
+   // $VF: renamed from: a javax.microedition.m3g.Appearance
+   private Appearance field_1386;
+   // $VF: renamed from: c int
+   private int field_1387;
+   // $VF: renamed from: a javax.microedition.m3g.Mesh
+   private Mesh field_1388;
    // $VF: renamed from: a int[]
-   private static int[] field_1355 = new int[12];
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.Figure
-   private Figure field_1356;
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.ActionTable
-   private ActionTable field_1357;
-   // $VF: renamed from: f int
-   private int field_1358;
-   // $VF: renamed from: g int
-   private int field_1359;
-   // $VF: renamed from: h int
-   private int field_1360;
-   // $VF: renamed from: i int
-   private int field_1361;
-   // $VF: renamed from: a long
-   private long field_1362;
-   // $VF: renamed from: d boolean
-   private boolean field_1363;
-   // $VF: renamed from: a byte
-   private byte field_1364;
-   // $VF: renamed from: j int
-   private int field_1365 = 0;
-   // $VF: renamed from: f bn
-   private static class_1 field_1366 = new class_1();
-   // $VF: renamed from: g bn
-   private static class_1 field_1367 = new class_1();
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.FigureLayout
-   private FigureLayout field_1368;
+   public int[] field_1389;
+   // $VF: renamed from: b int[]
+   public int[] field_1390;
+   // $VF: renamed from: c int[]
+   private int[] field_1391;
+   // $VF: renamed from: a float
+   private float field_1392;
 
-   public class_110(int var1, String var2, int var3) {
-      if (field_1353 == null) {
-         field_1353 = new Effect3D(field_1352, 0, true, null);
-      }
-
-      super.field_1286 = var1;
-      super.field_1290 = var3;
-
-      try {
-         this.field_1356 = new Figure(class_40.method_413(var2 + ".mbac"));
-      } catch (Exception var6) {
-         this.field_1356 = null;
-      }
-
-      try {
-         byte[] var4;
-         if ((var4 = class_40.method_413(var2 + ".mtra")) != null) {
-            this.field_1357 = new ActionTable(var4);
-            this.field_1363 = true;
-            this.field_1364 = 2;
-            this.field_1358 = this.field_1357.getNumFrames(0) >> 16;
-            this.field_1359 = this.field_1361 = 0;
-            this.field_1360 = this.field_1358;
-            this.field_1362 = -1L;
+   public class_110(int var1, int var2, int var3, int var4, int var5, int var6, int var7, int var8, byte var9) {
+      super.field_1344 = var1;
+      this.field_1386 = new Appearance();
+      if (var9 != 0) {
+         CompositingMode var10 = new CompositingMode();
+         switch (var9) {
+            case 1:
+            case 3:
+               var10.setBlending(64);
+               break;
+            case 2:
+               var10.setBlending(65);
          }
-      } catch (Exception var5) {
-         this.field_1357 = null;
-         this.field_1363 = false;
+
+         var10.setDepthWriteEnable(false);
+         var10.setDepthTestEnable(true);
+         this.field_1386.setCompositingMode(var10);
       }
 
-      this.field_1368 = null;
+      PolygonMode var21;
+      (var21 = new PolygonMode()).setCulling(160);
+      var21.setShading(164);
+      var21.setPerspectiveCorrectionEnable(false);
+      this.field_1386.setPolygonMode(var21);
+      this.field_1387 = var8;
+      this.field_1389 = new int[3 * var8];
+      this.field_1390 = new int[var8];
+
+      for (int var11 = 0; var11 < this.field_1390.length; var11++) {
+         this.field_1390[var11] = -1;
+      }
+
+      VertexBuffer var22 = new VertexBuffer();
+      VertexArray var12 = new VertexArray(4, 3, 1);
+      VertexArray var13 = new VertexArray(4, 2, 2);
+      byte[] var14 = new byte[]{-1, 1, 0, 1, 1, 0, 1, -1, 0, -1, -1, 0};
+      var12.set(0, 4, var14);
+      short[] var15 = new short[]{(short)var3, (short)var4, (short)var5, (short)var4, (short)var5, (short)var6, (short)var3, (short)var6};
+      var13.set(0, 4, var15);
+      float[] var16 = new float[]{0.0F, 0.0F, 0.0F};
+      var22.setPositions(var12, 1.0F, var16);
+      float[] var17 = new float[]{0.0F, 0.0F};
+      var22.setTexCoords(0, var13, 1.0F / var2, var17);
+      int[] var18 = new int[]{0, 2, 1, 3, 2, 0};
+      int[] var19 = new int[]{3, 3};
+      TriangleStripArray var20 = new TriangleStripArray(var18, var19);
+      this.field_1388 = new Mesh(var22, var20, this.field_1386);
+      super.field_1348 = var7 >> 1;
+      this.field_1392 = var7 >> 1;
+      this.field_1391 = null;
    }
 
    public class_110(class_110 var1) {
-      super.field_1290 = var1.field_1290;
-      this.field_1356 = var1.field_1356;
-      this.field_1357 = var1.field_1357;
-      super.field_1294 = var1.field_1294;
-      super.field_1280 = var1.field_1280;
-      this.field_1368 = null;
-      this.field_1363 = var1.field_1363;
-      this.field_1364 = var1.field_1364;
-      this.field_1358 = var1.field_1358;
-      this.field_1359 = var1.field_1359;
-      this.field_1360 = var1.field_1360;
-      this.field_1362 = var1.field_1362;
-      super.field_1286 = var1.field_1286;
+      this.field_1387 = var1.field_1387;
+      this.field_1389 = new int[3 * this.field_1387];
+      this.field_1390 = new int[this.field_1387];
+      System.arraycopy(var1.field_1390, 0, this.field_1390, 0, this.field_1390.length);
+      System.arraycopy(var1.field_1389, 0, this.field_1389, 0, this.field_1389.length);
+      this.field_1388 = var1.field_1388;
+      super.field_1348 = var1.field_1348;
+      this.field_1392 = var1.field_1392;
+      super.field_1338 = var1.field_1338;
+      super.field_1367 = var1.field_1367;
+      if (var1.field_1391 != null) {
+         this.field_1391 = new int[this.field_1387];
+         System.arraycopy(var1.field_1391, 0, this.field_1391, 0, this.field_1391.length);
+      }
    }
 
-   // $VF: renamed from: a () ae
-   public final class_97 method_836() {
+   // $VF: renamed from: a () af
+   public final class_102 method_840() {
       return new class_110(this);
    }
 
-   // $VF: renamed from: a (am, t) void
-   public final void method_833(class_111 var1, class_17 var2) {
-      if (super.field_1280 && var1.method_898(super.field_1285) != 0) {
-         super.field_1295 = var1.field_1284.method_36(super.field_1295);
-         if (this.field_1365 != 0) {
-            field_1366.method_2();
-            field_1366.method_24(0, 0, this.field_1365);
-            field_1367 = super.field_1284.method_6(field_1366, field_1367);
-            super.field_1295.method_4(field_1367);
-         } else {
-            super.field_1295.method_4(super.field_1284);
-         }
-
-         var2.method_270(super.field_1294, this);
-         this.field_1368 = ((class_112)var1).field_1382;
-      }
-   }
-
-   // Deep3D-PC: distance fade for creature models (hides spawn/despawn pop).
-   public final void setDistanceFade(int var1, int var2) {
-      if (this.field_1356 != null) {
-         this.field_1356.setDistanceFade(var1, var2);
-      }
-   }
-
-   // $VF: renamed from: g (int) void
-   public final void method_877(int var1) {
-      this.field_1365 = var1;
-   }
-
-   // $VF: renamed from: b (am, t) void
-   public final void method_834(class_111 var1, class_17 var2) {
-      if (super.field_1280) {
-         super.field_1295 = var1.field_1284.method_36(super.field_1295);
-         super.field_1295.method_4(super.field_1284);
-         var2.method_270(super.field_1294, this);
-         this.field_1368 = ((class_112)var1).field_1382;
-      }
-   }
-
    // $VF: renamed from: c () void
-   public final void method_878() {
-      super.field_1295.method_38(field_1355);
-      field_1354.set(field_1355);
-      this.field_1368.setAffineTrans(field_1354);
-      if (this.field_1357 != null) {
-         if (this.field_1364 == 3) {
-            this.field_1356.setPosture(this.field_1357, 0, this.field_1360 - this.field_1361 << 16);
-         } else {
-            this.field_1356.setPosture(this.field_1357, 0, this.field_1361 << 16);
-         }
+   public final void method_894() {
+      this.field_1386 = null;
+      this.field_1388 = null;
+      this.field_1389 = null;
+      this.field_1390 = null;
+      this.field_1391 = null;
+   }
+
+   // $VF: renamed from: a (an, t) void
+   public final void method_837(class_106 var1, class_4 var2) {
+      if (super.field_1338) {
+         super.field_1368 = var1.field_1342.method_503(super.field_1368);
+         super.field_1368.method_471(super.field_1342);
+         var2.method_30(super.field_1367, this);
       }
-
-      class_27.field_390.renderFigure(this.field_1356, 0, 0, this.field_1368, field_1353);
-   }
-
-   // $VF: renamed from: a (long) void
-   public final void method_885(long var1) {
-      if (this.field_1363) {
-         if (this.field_1362 == -1L) {
-            this.field_1362 = var1;
-         }
-
-         this.field_1361 = this.field_1359 + (int)((var1 - this.field_1362) / super.field_1277);
-         if (this.field_1361 > this.field_1360) {
-            if (this.field_1364 == 2) {
-               this.field_1361 = this.field_1359;
-               this.field_1362 = var1 - (this.field_1361 - this.field_1359) * super.field_1277;
-               return;
-            }
-
-            this.field_1363 = false;
-            this.field_1361 = this.field_1360;
-            this.field_1362 = -1L;
-         }
-      }
-   }
-
-   // $VF: renamed from: e (int) void
-   public final void method_869(int var1) {
-      super.field_1277 = var1 > 0 ? var1 : 1;
-   }
-
-   // $VF: renamed from: e () int
-   public final int method_871() {
-      return this.field_1361;
-   }
-
-   // $VF: renamed from: f (int) void
-   public final void method_870(int var1) {
-      this.field_1361 = var1;
-   }
-
-   // $VF: renamed from: a (int, int) void
-   public final void method_872(int var1, int var2) {
-      this.field_1359 = var1 >= 0 && var1 <= this.field_1358 ? var1 : 0;
-      this.field_1360 = var2 >= 0 && var2 <= this.field_1358 ? var2 : this.field_1358;
-      this.field_1361 = this.field_1361 < var1 ? var1 : (this.field_1361 > var2 ? var2 : this.field_1361);
-      this.field_1362 = -1L;
-   }
-
-   // $VF: renamed from: a (byte) void
-   public final void method_873(byte var1) {
-      this.field_1364 = var1;
-      this.field_1362 = -1L;
-      this.field_1363 = this.field_1358 > 0;
-   }
-
-   // $VF: renamed from: a () void
-   public final void method_874() {
-      this.field_1363 = false;
-   }
-
-   // $VF: renamed from: a (cc) void
-   public final void method_883(class_120 var1) {
-      this.field_1356.setTexture(((class_121)var1).field_1526);
    }
 
    // $VF: renamed from: d () void
-   public final void method_884() {
-      if (this.field_1356 != null) {
-         this.field_1356.dispose();
+   public final void method_887() {
+      int var1 = 0;
+
+      for (int var2 = 0; var2 < this.field_1387; var1 += 3) {
+         field_1385.method_10(this.field_1389[var1], this.field_1389[var1 + 1], this.field_1389[var1 + 2]);
+         field_1385 = super.field_1368.method_506(field_1385);
+         field_1384.setIdentity();
+         field_1384.postTranslate(field_1385.field_37, field_1385.field_38, field_1385.field_39);
+         if (this.field_1391 != null) {
+            field_1384.postScale(this.field_1391[var2] >> 1, this.field_1391[var2] >> 1, this.field_1391[var2] >> 1);
+         } else {
+            field_1384.postScale(this.field_1392, this.field_1392, this.field_1392);
+         }
+
+         this.field_1388.getVertexBuffer().setDefaultColor(this.field_1390[var2]);
+         class_72.field_1016.render(this.field_1388, field_1384);
+         var2++;
+      }
+   }
+
+   // $VF: renamed from: a (cc) void
+   public final void method_893(class_44 var1) {
+      Texture2D var2;
+      (var2 = new Texture2D(((class_45)var1).field_476[0].getImage())).setBlending(227);
+      var2.setFiltering(208, 210);
+      var2.setWrapping(240, 240);
+      this.field_1386.setTexture(0, var2);
+   }
+
+   // $VF: renamed from: a () int[]
+   public final int[] method_897() {
+      if (this.field_1391 == null) {
+         this.field_1391 = new int[this.field_1387];
+
+         for (int var1 = 0; var1 < this.field_1391.length; var1++) {
+            this.field_1391[var1] = (int)this.field_1392;
+         }
       }
 
-      this.field_1356 = null;
+      return this.field_1391;
    }
 }

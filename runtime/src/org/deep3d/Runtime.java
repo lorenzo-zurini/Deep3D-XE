@@ -480,24 +480,37 @@ public final class Runtime {
         }
     }
 
-    /** Frame pacing for the game's free-running render loop. */
+    /**
+     * Frame pacing for the game's free-running render loop. With vsync on
+     * the display paces the GPU renderer; otherwise frames are released on
+     * a fixed deadline schedule (sleep, then spin the last stretch, since
+     * sleeping alone overshoots and drifts below the cap).
+     */
     public static void framePace() {
         int cap = Config.fpsCap;
-        if (cap <= 0) {
+        boolean vsynced = Config.vsync && org.deep3d.gl.GLBackend.isActive();
+        if (cap <= 0 || vsynced) {
             lastFrameNanos = System.nanoTime();
             return;
         }
         long targetNanos = 1_000_000_000L / cap;
+        long deadline = lastFrameNanos + targetNanos;
         long now = System.nanoTime();
-        long sleepNanos = lastFrameNanos + targetNanos - now;
-        if (sleepNanos > 500_000) {
+        if (deadline - now < -targetNanos) {
+            deadline = now;     // fell far behind: don't try to catch up
+        }
+        long sleepNanos = deadline - now - 1_000_000;
+        if (sleepNanos > 0) {
             try {
                 Thread.sleep(sleepNanos / 1_000_000, (int) (sleepNanos % 1_000_000));
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
-        lastFrameNanos = System.nanoTime();
+        while (System.nanoTime() - deadline < 0) {
+            Thread.onSpinWait();
+        }
+        lastFrameNanos = deadline;
     }
 
     // ------------------------------------------------------------------
@@ -527,12 +540,24 @@ public final class Runtime {
         Diagnostics.frame();
         GameUi.commitFrame();
         frameCounter++;
+        totalFrames++;
         long now = System.currentTimeMillis();
         if (now - fpsWindowStart >= 1000) {
             displayFps = frameCounter;
             frameCounter = 0;
             fpsWindowStart = now;
         }
+    }
+
+    private static volatile long totalFrames;
+    private static long statsFrameMark;
+
+    /** Frames presented since the previous call (for per-frame statistics). */
+    static int framesSinceStats() {
+        long now = totalFrames;
+        int n = (int) (now - statsFrameMark);
+        statsFrameMark = now;
+        return n;
     }
 
     public static int getDisplayFps() {
@@ -549,6 +574,7 @@ public final class Runtime {
             g.dispose();
         }
         frameCounter++;
+        totalFrames++;
         long now = System.currentTimeMillis();
         if (now - fpsWindowStart >= 1000) {
             displayFps = frameCounter;
@@ -638,7 +664,19 @@ public final class Runtime {
             javax.microedition.media.Manager.closeAll();
         } catch (Throwable ignored) {
         }
-        System.exit(0);
+        halt(0);
+    }
+
+    /**
+     * Ends the process without running native exit handlers: the GPU
+     * drivers' EGL teardown (run by C exit handlers, even on halt) crashes if the M3G engine's context is still
+     * live on the game thread, and there is nothing left to clean up.
+     */
+    public static void halt(int status) {
+        System.out.flush();
+        System.err.flush();
+        javax.microedition.m3g.Platform.hardExitIfLoaded(status);
+        java.lang.Runtime.getRuntime().halt(status);
     }
 
     // ------------------------------------------------------------------
@@ -746,7 +784,8 @@ public final class Runtime {
                 long perFrame = fps > 0 ? raster / Math.max(1, fps) / 1_000_000 : 0;
                 System.out.println("[fps] " + fps + " @ " + screenWidth + "x" + screenHeight
                         + " raster=" + perFrame + "ms/frame"
-                        + " bg=#" + Integer.toHexString(org.deep3d.gl.GLBackend.lastBackground));
+                        + " bg=#" + Integer.toHexString(org.deep3d.gl.GLBackend.lastBackground)
+                        + " " + org.deep3d.gl.M3GTargets.statsAndReset(framesSinceStats()));
                 break;
             }
             case "shot": {

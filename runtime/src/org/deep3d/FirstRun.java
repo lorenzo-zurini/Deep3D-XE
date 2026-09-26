@@ -14,56 +14,83 @@ import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
- * First-boot experience: when the game data is missing, offer to locate the
- * original "Deep" JAR and extract its data/ folder in place — no scripts
- * needed when the game is launched from the desktop.
+ * First-boot experience: when the game data is missing, ask for the original
+ * "Deep" JARs and install their data/ folders in place — no scripts needed
+ * when the game is launched from the desktop.
+ *
+ * The port runs the Nokia (JSR-184 / M3G) build, whose 3D models only ship
+ * in that JAR; that build was distributed with Russian text only, so the
+ * English text and its font come from the international JAR.
  */
 public final class FirstRun {
+
+    /** Present in a complete install (Nokia 3D data + English text). */
+    private static final String[] MARKERS = {
+            "data/interface/icon.png", "data/3d/manta.m3g", "data/lang/en/main.lang"};
 
     private FirstRun() {
     }
 
     /** Returns true when the game data is (now) available. */
     public static boolean ensureAssets() {
-        if (FirstRun.class.getResource("/data/interface/icon.png") != null) {
+        if (installedOnClasspath()) {
             return true;
         }
         File assetsDir = AppDirs.file("assets");
-        if (new File(assetsDir, "data/interface/icon.png").isFile()) {
+        if (installedIn(assetsDir)) {
             // Data exists but is not on the classpath (misconfigured launch).
             return true;
         }
         if (GraphicsEnvironment.isHeadless()) {
-            System.err.println("Game data not found. Run ./extract-assets.sh <original Deep jar>.");
+            System.err.println("Game data not found. Run ./extract-assets.sh "
+                    + "<Nokia M3G jar> <English jar>.");
             return false;
         }
 
         int choice = JOptionPane.showOptionDialog(null,
-                "Deep — Submarine Odyssey needs the data files from the original\n"
-                        + "J2ME release (\"Deep\" v1.0.8 .jar), which are not included.\n\n"
-                        + "Locate the original JAR to set the game up.",
+                "Deep — Submarine Odyssey needs the data files from two original\n"
+                        + "J2ME releases of \"Deep\" v1.0.8, which are not included:\n\n"
+                        + "  - the Nokia / JSR-184 (M3G) build: its 3D models\n"
+                        + "  - the international build: English text\n\n"
+                        + "Select both .jar files (Ctrl+click) to set the game up.",
                 "Deep — first launch",
                 JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE,
-                null, new Object[]{"Locate JAR...", "Quit"}, "Locate JAR...");
+                null, new Object[]{"Locate JARs...", "Quit"}, "Locate JARs...");
         if (choice != 0) {
             return false;
         }
 
         JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Select the original Deep .jar");
+        fc.setDialogTitle("Select the original Deep .jar files");
+        fc.setMultiSelectionEnabled(true);
         fc.setFileFilter(new FileNameExtensionFilter("J2ME game (*.jar)", "jar"));
         if (fc.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) {
             return false;
         }
 
         try {
-            int files = extractData(fc.getSelectedFile(), assetsDir);
-            if (files == 0) {
+            File m3gJar = null;
+            File englishJar = null;
+            for (File f : fc.getSelectedFiles()) {
+                if (m3gJar == null && contains(f, "data/3d/", ".m3g")) {
+                    m3gJar = f;
+                } else if (englishJar == null && contains(f, "data/lang/en/", "")) {
+                    englishJar = f;
+                }
+            }
+            if (m3gJar == null || englishJar == null) {
                 JOptionPane.showMessageDialog(null,
-                        "That JAR does not contain the game's data/ folder.",
+                        (m3gJar == null
+                                ? "Missing: the Nokia / JSR-184 build (a JAR with data/3d/*.m3g).\n" : "")
+                                + (englishJar == null
+                                ? "Missing: the international build (a JAR with data/lang/en/).\n" : "")
+                                + "\nSelect both JARs at once.",
                         "Deep", JOptionPane.ERROR_MESSAGE);
                 return false;
             }
+            int files = extractData(m3gJar, assetsDir, name -> !name.startsWith("data/lang/"));
+            files += extractData(englishJar, assetsDir, name -> name.startsWith("data/lang/en/")
+                    || name.equals("data/interface/font_deep_white.png"));
             int converted = transcodeSfx(new File(assetsDir, "data/sound"));
             JOptionPane.showMessageDialog(null,
                     "Game data installed (" + files + " files)."
@@ -81,14 +108,47 @@ public final class FirstRun {
         }
     }
 
-    private static int extractData(File jar, File assetsDir) throws IOException {
+    private static boolean installedOnClasspath() {
+        for (String m : MARKERS) {
+            if (FirstRun.class.getResource("/" + m) == null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean installedIn(File assetsDir) {
+        for (String m : MARKERS) {
+            if (!new File(assetsDir, m).isFile()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean contains(File jar, String prefix, String suffix) throws IOException {
+        try (ZipFile zip = new ZipFile(jar)) {
+            Enumeration<? extends ZipEntry> entries = zip.entries();
+            while (entries.hasMoreElements()) {
+                String name = entries.nextElement().getName();
+                if (name.startsWith(prefix) && name.endsWith(suffix)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static int extractData(File jar, File assetsDir,
+                                   java.util.function.Predicate<String> wanted) throws IOException {
         int count = 0;
         try (ZipFile zip = new ZipFile(jar)) {
             Enumeration<? extends ZipEntry> entries = zip.entries();
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
                 String name = entry.getName();
-                if (entry.isDirectory() || !name.startsWith("data/") || name.contains("..")) {
+                if (entry.isDirectory() || !name.startsWith("data/") || name.contains("..")
+                        || !wanted.test(name)) {
                     continue;
                 }
                 File out = new File(assetsDir, name);
@@ -110,7 +170,6 @@ public final class FirstRun {
         return count;
     }
 
-    /** Converts AMR SFX to WAV in place; returns -1 when ffmpeg is missing. */
     private static int transcodeSfx(File soundDir) {
         File[] amrs = soundDir.listFiles((d, n) -> n.endsWith(".amr"));
         if (amrs == null) {

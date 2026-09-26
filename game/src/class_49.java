@@ -1,200 +1,515 @@
-// $VF: renamed from: ds
+import java.io.InputStream;
+
+// $VF: renamed from: bx
 public final class class_49 {
-   // $VF: renamed from: a long
-   private long field_696;
-   // $VF: renamed from: a int
-   private int field_697;
-   // $VF: renamed from: a boolean
-   private boolean field_698;
-   // $VF: renamed from: b boolean
-   private boolean field_699;
-   // $VF: renamed from: a di
-   private class_75 field_700;
-   // $VF: renamed from: a k
-   private class_56 field_701;
-   // $VF: renamed from: a z
-   private class_53 field_702;
-   // $VF: renamed from: a bi
-   private class_2 field_703;
-   // $VF: renamed from: b int
-   private int field_704;
-   // $VF: renamed from: c int
-   private int field_705;
-   // $VF: renamed from: d int
-   private int field_706;
+   // $VF: renamed from: a java.io.InputStream
+   private static InputStream field_539;
+   // $VF: renamed from: a byte[]
+   private static byte[] field_540;
+   // $VF: renamed from: a java.lang.StringBuffer
+   private static StringBuffer field_541;
+   // $VF: renamed from: a char
+   private static char field_542;
+   // $VF: renamed from: b byte[]
+   private static byte[] field_543;
+   // $VF: renamed from: a java.lang.String
+   private static String field_544;
+   // $VF: renamed from: a java.lang.Class
+   public static Class field_545;
+
+   private class_49() {
+   }
+
+   // $VF: renamed from: a (java.lang.String) void
+   private static void method_399(String var0) throws Exception {
+      if (field_544 != var0 || field_540 == null) {
+         field_539 = class_49.class.getResourceAsStream(var0);
+         field_540 = field_539.readAllBytes();
+         field_539.close();
+         field_544 = var0;
+      }
+   }
+
+   // $VF: renamed from: a (int) ao
+   public static final class_86 method_400(int var0) {
+      return method_401(new short[]{(short)var0})[0];
+   }
+
+   // $VF: renamed from: a (short[]) ao[]
+   public static final class_86[] method_401(short[] var0) {
+      class_86[] var1 = new class_86[var0.length];
+
+      try {
+         method_399("/data/txt/stations.txt");
+         field_541 = new StringBuffer(30);
+         String var2 = "";
+         byte[] var3 = new byte[4];
+         int var4 = 0;
+         int var5 = 0;
+         int var6 = 0;
+         boolean var7 = 0 == var0[0];
+
+         for (int var8 = 0; var8 < field_540.length; var8++) {
+            field_542 = (char)field_540[var8];
+            switch (field_542) {
+               case '\t':
+               case '\n':
+               case '\r':
+                  break;
+               case ',':
+                  if (var7) {
+                     if (var4 == 0) {
+                        var2 = field_541.toString();
+                     } else {
+                        var3[var4 - 1] = Byte.parseByte(field_541.toString());
+                     }
+
+                     var4++;
+                  }
+
+                  field_541 = new StringBuffer(30);
+                  break;
+               case ';':
+                  if (var7) {
+                     var3[var4 - 1] = Byte.parseByte(field_541.toString());
+                     var4 = 0;
+                     if (var6 == var0[var5]) {
+                        if (var3[3] == 0) {
+                           var3[3] = -10;
+                        } else if (var3[3] == 100) {
+                           var3[3] = 115;
+                        }
+
+                        var1[var5++] = new class_86(var2, var6, var3[0], var3[1], var3[2], var3[3]);
+                        if (var5 >= var0.length) {
+                           return var1;
+                        }
+                     }
+                  }
+
+                  var6++;
+                  if (var7) {
+                     field_541 = new StringBuffer(30);
+                  }
+
+                  var7 = var6 == var0[var5];
+                  break;
+               default:
+                  if (var7) {
+                     field_541.append(field_542);
+                  }
+            }
+         }
+
+         return var1;
+      } catch (Exception var13) {
+         System.out.println("Error loading stations!");
+         var13.printStackTrace();
+         return var1;
+      } finally {
+         if (field_541 != null) {
+            field_541 = null;
+         }
+      }
+   }
+
+   // $VF: renamed from: a () cj[]
+   public static final class_40[] method_402() {
+      class_40[] var0 = new class_40[class_90.field_1202.length];
+
+      try {
+         method_399("/data/txt/creatures.txt");
+         field_541 = new StringBuffer(30);
+         int var1 = 0;
+         int var2 = 0;
+         int[] var3 = new int[3];
+
+         for (int var4 = 0; var4 < field_540.length; var4++) {
+            field_542 = (char)field_540[var4];
+            switch (field_542) {
+               case '\t':
+               case '\n':
+               case '\r':
+                  break;
+               case ',':
+                  var3[var2] = Integer.parseInt(field_541.toString());
+                  field_541 = new StringBuffer(30);
+                  var2++;
+                  break;
+               case ';':
+                  try {
+                     var3[var2] = Integer.parseInt(field_541.toString());
+                     var0[var1++] = new class_40(var3[0], var3[1], var3[2]);
+                     var2 = 0;
+                     field_541 = new StringBuffer(30);
+                  } catch (NumberFormatException var10) {
+                  }
+
+                  field_541 = new StringBuffer(30);
+                  break;
+               default:
+                  field_541.append(field_542);
+            }
+         }
+      } catch (Exception var11) {
+         System.out.println("Error loading creatures!");
+         var11.printStackTrace();
+      } finally {
+         if (field_541 != null) {
+            field_541 = null;
+         }
+
+         field_540 = null;
+      }
+
+      return var0;
+   }
 
    // $VF: renamed from: a () void
-   public final void method_473() {
-      this.field_700.method_707();
-      this.field_700 = null;
-      this.field_701 = null;
-      this.field_702 = null;
-      this.field_699 = false;
-      ;
+   public static final void method_403() {
+      field_543 = null;
+      field_540 = null;
    }
 
-   // $VF: renamed from: b () void
-   public final void method_474() {
-      this.field_704 = 0;
-      this.field_698 = false;
-      this.field_700 = new class_75(new String[]{class_41.field_533.method_297(266), class_41.field_533.method_297(267)}, class_41.field_533.method_297(235));
-      this.field_701 = new class_56();
-      this.field_702 = new class_53(20, class_41.field_538 / 3, class_41.field_537 - 40);
-      class_3.method_150();
-      this.field_700.method_715(0, class_46.method_453(class_3.method_108().field_445, class_3.method_110().field_836));
-      class_3.method_108().method_371(class_46.method_452(this.field_700.field_1080, true));
-      class_3.method_110().field_836 = class_46.method_452(this.field_700.field_1080, false);
-      this.field_700.method_715(1, class_9.method_199());
-      ;
-      this.field_699 = true;
-   }
-
-   // $VF: renamed from: a (int) boolean
-   public final boolean method_475(int var1) {
-      this.field_703 = (class_2)this.field_700.method_694();
-      if (var1 == 256) {
-         if (this.field_698) {
-            this.field_698 = false;
-            return true;
-         }
-
-         if (this.field_704 == 0) {
-            this.field_700.method_719();
-         } else if (this.field_704 == 2) {
-            this.field_704 = 0;
-         } else if (this.field_704 == 1) {
-            this.field_704 = 0;
-         }
-      }
-
-      if (var1 == 4 && this.field_704 == 0) {
-         this.field_700.method_699();
-      }
-
-      if (var1 == 32 && this.field_704 == 0) {
-         this.field_700.method_700();
-      }
-
-      if (var1 == 2) {
-         if (this.field_704 == 0) {
-            this.field_700.method_697();
-         } else if (this.field_704 == 2) {
-            this.field_701.method_526(this.field_697);
-         }
-      }
-
-      if (var1 == 64) {
-         if (this.field_704 == 0) {
-            this.field_700.method_698();
-         } else if (this.field_704 == 2) {
-            this.field_701.method_527(this.field_697);
-         }
-      }
-
-      if (var1 == 8192) {
-         if (this.field_704 == 0 && !this.field_700.method_716()) {
-            return false;
-         }
-
-         if (this.field_704 == 2) {
-            this.field_704 = 0;
-         }
-      }
-
-      if (var1 == 16384) {
-         if (this.field_704 == 0 && !this.field_700.method_716()) {
-            if (this.field_703 != null) {
-               this.field_704 = 2;
-               this.field_701.method_525(this.field_703, this.field_700.field_1057 == 0);
-            }
-         } else if (this.field_704 == 1) {
-            this.field_704 = 0;
-         }
-      }
-
-      return this.field_698 ? true : true;
-   }
-
-   // $VF: renamed from: a (int, int) boolean
-   public final boolean method_476(int var1, int var2) {
-      if (!this.field_699) {
-         return true;
+   // $VF: renamed from: a () byte[]
+   public static final byte[] method_404() {
+      if (field_543 != null) {
+         return field_543;
       } else {
-         this.field_696 += var2;
-         this.field_697 = var2;
-         this.method_477();
-         if (this.field_700.method_694() != null) {
-            this.field_703 = (class_2)this.field_700.method_694();
-         }
+         field_543 = new byte[800];
 
-         if (this.field_698) {
-            return true;
-         } else {
-            if (this.field_704 == 0) {
-               if ((var1 & 4) == 0) {
-                  this.field_705 = 0;
-               } else {
-                  this.field_705 += var2;
-               }
+         try {
+            method_399("/data/txt/stations.txt");
+            field_541 = new StringBuffer(30);
+            int var0 = 0;
 
-               if ((var1 & 32) == 0) {
-                  this.field_706 = 0;
-               } else {
-                  this.field_706 += var2;
-               }
+            for (int var1 = 0; var1 < field_540.length; var1++) {
+               field_542 = (char)field_540[var1];
+               switch (field_542) {
+                  case '\t':
+                  case '\n':
+                  case '\r':
+                     break;
+                  case ',':
+                  case ';':
+                     try {
+                        field_543[var0] = Byte.parseByte(field_541.toString());
+                        if (var0 % 4 == 0) {
+                           if (field_543[var0] == 0) {
+                              field_543[var0] = -15;
+                           } else if (field_543[var0] == 100) {
+                              field_543[var0] = 115;
+                           }
+                        }
 
-               if (this.field_705 > 500) {
-                  this.field_700.method_717();
-                  this.field_705 = 0;
-               }
+                        var0++;
+                     } catch (NumberFormatException var7) {
+                     }
 
-               if (this.field_706 > 500) {
-                  this.field_700.method_718();
-                  this.field_706 = 0;
+                     field_541 = new StringBuffer(30);
+                     break;
+                  default:
+                     field_541.append(field_542);
                }
             }
-
-            return true;
+         } catch (Exception var8) {
+            System.out.println("Error loading stations!");
+            var8.printStackTrace();
+         } finally {
+            if (field_541 != null) {
+               field_541 = null;
+            }
          }
+
+         return field_543;
       }
    }
 
-   // $VF: renamed from: c () void
-   public final void method_477() {
-      class_69.method_663();
-      if (this.field_704 == 0) {
-         this.field_700.method_711();
+   // $VF: renamed from: a () ac[]
+   public static final class_120[] method_405() {
+      try {
+         method_399("/data/txt/goods.txt");
+         field_541 = new StringBuffer(30);
+         int var0 = 0;
+
+         for (int var1 = 0; var1 < field_540.length; var1++) {
+            field_542 = (char)field_540[var1];
+            switch (field_542) {
+               case ';':
+                  var0++;
+                  break;
+            }
+         }
+
+         class_120[] var17 = new class_120[var0];
+         byte[] var2 = new byte[var0];
+         byte[] var3 = new byte[var0];
+         int var4 = 0;
+         int var5 = 0;
+         int var6 = 0;
+         int var7 = 0;
+         int[] var8 = new int[7];
+         int var9 = 0;
+
+         while (var9 < field_540.length) {
+            field_542 = (char)field_540[var9];
+            switch (field_542) {
+               case '\u000b':
+               case '\f':
+               default:
+                  if (field_542 == ',') {
+                     if (var7 == 6) {
+                        var8[var7] = Integer.parseInt(field_541.toString());
+                        var7 = 7;
+                     } else if (var7 == 7) {
+                        var2[var5++] = Byte.parseByte(field_541.toString());
+                        var7 = 8;
+                     } else {
+                        var8[var7] = Integer.parseInt(field_541.toString());
+                        var7++;
+                     }
+
+                     field_541 = new StringBuffer(30);
+                  } else if (field_542 == ' ') {
+                     if (var7 == 7) {
+                        var2[var5++] = Byte.parseByte(field_541.toString());
+                     } else if (var7 == 8) {
+                        var3[var6++] = Byte.parseByte(field_541.toString());
+                     }
+
+                     field_541 = new StringBuffer(30);
+                  } else if (field_542 == ';') {
+                     if (var7 == 8) {
+                        var3[var6++] = Byte.parseByte(field_541.toString());
+                     } else {
+                        var8[var7] = Integer.parseInt(field_541.toString());
+                     }
+
+                     byte[] var10 = new byte[var5];
+                     byte[] var11 = new byte[var6];
+                     if (var6 == 0 && var5 == 0) {
+                        var10 = null;
+                        var11 = null;
+                     } else {
+                        System.arraycopy(var2, 0, var10, 0, var5);
+                        System.arraycopy(var3, 0, var11, 0, var6);
+                     }
+
+                     var17[var4++] = new class_120(var8[0], var8[1], var8[2], var8[3], var8[4], var8[5], var8[6], var10, var11);
+                     field_541 = new StringBuffer(30);
+                     var7 = 0;
+                     var5 = 0;
+                     var6 = 0;
+                     var2 = new byte[var0];
+                     var3 = new byte[var0];
+                  } else {
+                     field_541.append(field_542);
+                  }
+               case '\t':
+               case '\n':
+               case '\r':
+                  var9++;
+            }
+         }
+
+         return var17;
+      } catch (Exception var15) {
+         System.out.println("Error loading cargo!");
+      } finally {
+         if (field_541 != null) {
+            field_541 = null;
+         }
+
+         field_540 = null;
       }
 
-      if (this.field_704 == 2) {
-         this.field_701.method_528();
+      return null;
+   }
+
+   // $VF: renamed from: a () dn[]
+   public static final class_19[] method_406() {
+      try {
+         method_399("/data/txt/equipment.txt");
+         field_541 = new StringBuffer(30);
+         int var0 = 0;
+
+         for (int var1 = 0; var1 < field_540.length; var1++) {
+            field_542 = (char)field_540[var1];
+            switch (field_542) {
+               case ';':
+                  var0++;
+                  break;
+            }
+         }
+
+         class_19[] var11 = new class_19[var0];
+         int var2 = 0;
+         int var3 = 0;
+         int[] var4 = new int[9];
+         int var5 = 0;
+
+         while (var5 < field_540.length) {
+            field_542 = (char)field_540[var5];
+            switch (field_542) {
+               case '\u000b':
+               case '\f':
+               default:
+                  if (field_542 == ',') {
+                     var4[var3] = Integer.parseInt(field_541.toString());
+                     var3++;
+                     field_541 = new StringBuffer(30);
+                  } else if (field_542 == ';') {
+                     var4[var3] = Integer.parseInt(field_541.toString());
+                     var11[var2++] = new class_19(var4[0], var4[1], var4[2], var4[3], var4[4], var4[5], var4[6], var4[7], var4[8]);
+                     field_541 = new StringBuffer(30);
+                     var3 = 0;
+                  } else {
+                     field_541.append(field_542);
+                  }
+               case '\t':
+               case '\n':
+               case '\r':
+                  var5++;
+            }
+         }
+
+         return var11;
+      } catch (Exception var9) {
+         System.out.println("Error loading equipment!");
+      } finally {
+         if (field_541 != null) {
+            field_541 = null;
+         }
+
+         field_540 = null;
       }
 
-      if (this.field_704 == 1 || this.field_700.method_716()) {
-         class_69.method_669("", "");
-      } else if (this.field_704 == 0) {
-         class_69.method_669(class_41.field_533.method_297(226), class_41.field_533.method_297(65));
+      return null;
+   }
+
+   // $VF: renamed from: a () bd[]
+   public static final class_68[] method_407() {
+      try {
+         method_399("/data/txt/ships.txt");
+         field_541 = new StringBuffer(30);
+         int var0 = 0;
+
+         for (int var1 = 0; var1 < field_540.length; var1++) {
+            field_542 = (char)field_540[var1];
+            switch (field_542) {
+               case ';':
+                  var0++;
+                  break;
+            }
+         }
+
+         class_68[] var11 = new class_68[var0];
+         int var2 = 0;
+         int var3 = 0;
+         int[] var4 = new int[6];
+         int var5 = 0;
+
+         while (var5 < field_540.length) {
+            field_542 = (char)field_540[var5];
+            switch (field_542) {
+               case '\u000b':
+               case '\f':
+               default:
+                  if (field_542 == ',') {
+                     var4[var3] = Integer.parseInt(field_541.toString());
+                     field_541 = new StringBuffer(30);
+                     var3++;
+                  } else if (field_542 == ';') {
+                     var4[var3] = Integer.parseInt(field_541.toString());
+                     var11[var2++] = new class_68(var4[0], var4[1], var4[2], var4[3], var4[4], var4[5] / 100.0F);
+                     field_541 = new StringBuffer(30);
+                     var3 = 0;
+                  } else {
+                     field_541.append(field_542);
+                  }
+               case '\t':
+               case '\n':
+               case '\r':
+                  var5++;
+            }
+         }
+
+         return var11;
+      } catch (Exception var9) {
+         System.out.println("Error loading ships!");
+      } finally {
+         if (field_541 != null) {
+            field_541 = null;
+         }
+
+         field_540 = null;
+      }
+
+      return null;
+   }
+
+   // $VF: renamed from: a (int, boolean) java.lang.String[]
+   public static final String[] method_408(int var0, boolean var1) {
+      Object var2 = null;
+      if (var0 == 3) {
+         var2 = class_84.field_1079[1] + "_" + (var1 ? "m" : "f") + ".txt";
       } else {
-         class_69.method_669("", class_41.field_533.method_297(65));
+         var2 = class_84.field_1079[0] + "_" + (var1 ? "m" : "f") + ".txt";
       }
 
-      if (this.field_704 == 1) {
-         this.field_700.method_711();
-         this.field_702.method_518();
+      String[] var3 = null;
+
+      try {
+         method_399((String)var2);
+         field_541 = new StringBuffer(30);
+         int var4 = 0;
+
+         for (int var5 = 0; var5 < field_540.length; var5++) {
+            field_542 = (char)field_540[var5];
+            switch (field_542) {
+               case ';':
+                  var4++;
+                  break;
+            }
+         }
+
+         var3 = new String[var4];
+         int var13 = 0;
+
+         for (int var6 = 0; var6 < field_540.length; var6++) {
+            field_542 = (char)field_540[var6];
+            switch (field_542) {
+               case '\t':
+               case '\n':
+               case '\r':
+                  break;
+               case ';':
+                  var3[var13++] = field_541.toString();
+                  field_541 = new StringBuffer(30);
+                  break;
+               default:
+                  field_541.append(field_542);
+            }
+         }
+      } catch (Exception var10) {
+         System.out.println("Error loading names!");
+      } finally {
+         if (field_541 != null) {
+            field_541 = null;
+         }
+
+         field_540 = null;
       }
 
-      if (this.field_698) {
-         this.field_702.method_518();
-      }
+      return var3;
    }
 
-   // $VF: renamed from: a () int
-   public final int method_478() {
-      return this.field_700.field_1057;
-   }
-
-   // $VF: renamed from: a () boolean
-   public final boolean method_479() {
-      return this.field_704 == 0 && !this.field_700.method_716();
+   // $VF: renamed from: a (java.lang.String) java.lang.Class
+   public static final Class method_409(String var0) {
+      try {
+         return Class.forName(var0);
+      } catch (ClassNotFoundException var2) {
+         throw new NoClassDefFoundError(var2.getMessage());
+      }
    }
 }

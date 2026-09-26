@@ -1,451 +1,208 @@
-import java.io.DataInputStream;
-import java.io.InputStream;
-
-// $VF: renamed from: e
+// $VF: renamed from: dh
 public final class class_22 {
-   // $VF: renamed from: a short[][]
-   public static final short[][] field_314 = new short[][]{
-      {574, 575},
-      {576, 577},
-      {578, 579},
-      {580, 581},
-      {582, 583},
-      {584, 585},
-      {586, 587},
-      {588, 589},
-      {590, 591},
-      {592, 593},
-      {594, 595},
-      {596, 597},
-      {598, 599},
-      {600, 601},
-      {602, 603},
-      {604, 605},
-      {606, 607},
-      {608, 609},
-      {610, 611},
-      {612, 613},
-      {614, 615},
-      {616, 617},
-      {618, 619},
-      {620, 621}
-   };
-   // $VF: renamed from: a short[]
-   public static final short[] field_315 = new short[]{19, 62, 81, 37, 328, 235, 267, 73, 64, 63};
-   // $VF: renamed from: b short[]
-   public static final short[] field_316 = new short[]{630, 353, 354, 356, 355, 357, 358, 361, 363, 364};
-   // $VF: renamed from: c short[]
-   public static final short[] field_317 = new short[]{135, 136};
-   // $VF: renamed from: d short[]
-   public static final short[] field_318 = new short[]{7, 8, 9, 15};
-   // $VF: renamed from: e short[]
-   public static final short[] field_319 = new short[]{146, 147, 148, 149, 150, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162};
-   // $VF: renamed from: b short[][]
-   public static final short[][] field_320 = new short[][]{
-      {486, 487},
-      {488, 489},
-      {490, 491},
-      {492, 493},
-      {494, 495},
-      {496, 497},
-      {498, 499},
-      {500, 501},
-      {502, 503},
-      {504, 505},
-      {506, 507},
-      {508, 509},
-      {510, 511},
-      {512, 513},
-      {514, 515},
-      {516, 517},
-      {518, 519},
-      {520, 521},
-      {522, 523},
-      {524, 525},
-      {526, 527},
-      {528, 529},
-      {530, 531},
-      {532, 533},
-      {534, 535},
-      {536, 537},
-      {538, 539},
-      {540, 541},
-      {542, 543},
-      {544, 545},
-      {546, 547},
-      {548, 549},
-      {550, 551},
-      {552, 553},
-      {554, 555},
-      {556, 557},
-      {558, 559},
-      {560, 561},
-      {562, 563},
-      {564, 565},
-      {566, 567},
-      {568, 569},
-      {570, 571},
-      {572, 573}
-   };
-   // $VF: renamed from: c short[][]
-   public static final short[][] field_321 = new short[][]{
-      {93, 444},
-      {94, 445},
-      {95, 446},
-      {96, 447},
-      {97, 448},
-      {98, 449},
-      {99, 450},
-      {100, 451},
-      {101, 452},
-      {102, 453},
-      {103, 454},
-      {104, 455},
-      {105, 456},
-      {106, 457},
-      {107, 458},
-      {108, 459},
-      {109, 460},
-      {110, 461},
-      {111, 462},
-      {112, 463},
-      {113, 464},
-      {114, 465},
-      {115, 466},
-      {116, 467},
-      {117, 468},
-      {118, 469},
-      {119, 470},
-      {120, 471},
-      {121, 472},
-      {122, 473},
-      {123, 474},
-      {124, 475},
-      {125, 476},
-      {126, 477},
-      {127, 478},
-      {128, 479},
-      {129, 480},
-      {130, 481},
-      {131, 482},
-      {132, 483},
-      {133, 484},
-      {134, 485}
-   };
-   // $VF: renamed from: d short[][]
-   public static final short[][] field_322 = new short[][]{
-      {422, 423}, {424, 425}, {426, 427}, {428, 429}, {430, 431}, {432, 433}, {434, 435}, {436, 437}, {438, 439}, {440, 441}, {442, 443}
-   };
-   // $VF: renamed from: f short[]
-   public static final short[] field_323 = new short[]{236, 237, 236, 237};
-   // $VF: renamed from: g short[]
-   public static final short[] field_324 = new short[]{
-      420,
-      420,
-      420,
-      366,
-      368,
-      368,
-      420,
-      370,
-      420,
-      372,
-      374,
-      420,
-      376,
-      378,
-      380,
-      382,
-      384,
-      420,
-      386,
-      388,
-      420,
-      390,
-      420,
-      392,
-      420,
-      394,
-      396,
-      398,
-      420,
-      400,
-      420,
-      402,
-      420,
-      404,
-      404,
-      404,
-      420,
-      404,
-      420,
-      409,
-      409,
-      409,
-      412,
-      414,
-      420,
-      416,
-      420,
-      418
-   };
-   // $VF: renamed from: h short[]
-   public static final short[] field_325 = new short[]{
-      421,
-      421,
-      421,
-      367,
-      369,
-      369,
-      421,
-      371,
-      421,
-      373,
-      375,
-      421,
-      377,
-      379,
-      381,
-      383,
-      385,
-      421,
-      387,
-      389,
-      421,
-      391,
-      421,
-      393,
-      421,
-      395,
-      397,
-      399,
-      421,
-      401,
-      421,
-      403,
-      421,
-      405,
-      406,
-      407,
-      421,
-      408,
-      421,
-      410,
-      410,
-      411,
-      413,
-      415,
-      421,
-      417,
-      421,
-      419
-   };
-   // $VF: renamed from: i short[]
-   public static final short[] field_326 = new short[]{168, 165, 167, 166, 172, 173, 175, 176, 174, 169, 170, 177, 178, 171, 164};
-   // $VF: renamed from: j short[]
-   public static final short[] field_327 = new short[]{183, 180, 182, 181, 187, 188, 190, 191, 189, 184, 185, 192, 193, 186, 179};
-   // $VF: renamed from: k short[]
-   public static final short[] field_328 = new short[]{198, 195, 197, 196, 202, 203, 205, 206, 204, 199, 200, 207, 208, 201, 194};
-   // $VF: renamed from: l short[]
-   public static final short[] field_329 = new short[]{215, 216, 217, 218, 219};
-   // $VF: renamed from: m short[]
-   public static final short[] field_330 = new short[]{210, 211, 212, 213, 214};
-   // $VF: renamed from: n short[]
-   public static final short[] field_331 = new short[]{220, 221, 222, 223, 224};
-   // $VF: renamed from: o short[]
-   public static final short[] field_332 = new short[]{277, 278, 279};
-   // $VF: renamed from: a int[]
-   private static final int[] field_333 = new int[]{
-      12,
-      5,
-      1,
-      2,
-      8,
-      5,
-      5,
-      5,
-      5,
-      6,
-      8,
-      17,
-      19,
-      9,
-      9,
-      4,
-      9,
-      12,
-      8,
-      12,
-      14,
-      9,
-      3,
-      14,
-      19,
-      9,
-      27,
-      5,
-      4,
-      13,
-      6,
-      17,
-      2,
-      9,
-      4,
-      7,
-      2,
-      10,
-      2,
-      4,
-      8,
-      6,
-      12,
-      12,
-      7,
-      9,
-      32
-   };
-   // $VF: renamed from: a java.lang.String[]
-   private static String[] field_334 = new String[422];
-   // $VF: renamed from: b java.lang.String[]
-   private static String[] field_335 = new String[22];
-   // $VF: renamed from: c java.lang.String[]
-   private static String[] field_336 = new String[42];
-   // $VF: renamed from: d java.lang.String[]
-   private static String[] field_337 = new String[88];
-   // $VF: renamed from: e java.lang.String[]
-   private static String[] field_338 = new String[48];
-   // $VF: renamed from: a java.lang.String[][]
-   private static String[][] field_339 = new String[47][];
-   // $VF: renamed from: a int
-   private static int field_340 = class_41.field_501;
-   // $VF: renamed from: a java.lang.String
-   private static String field_341;
    // $VF: renamed from: b int
-   private static int field_342;
+   private int field_222;
    // $VF: renamed from: c int
-   private static int field_343;
+   private int field_223;
    // $VF: renamed from: d int
-   private static int field_344;
+   private int field_224;
+   // $VF: renamed from: a cz
+   private class_26 field_225;
+   // $VF: renamed from: a dh[]
+   private class_22[] field_226;
+   // $VF: renamed from: a int
+   public int field_227;
 
-   // $VF: renamed from: a (int) void
-   public final void method_295(int var1) {
-      field_341 = "/data/lang/";
-      field_340 = var1;
-      switch (field_340) {
+   public class_22(int var1, int var2, class_26 var3) {
+      this.field_222 = var1;
+      this.field_223 = var2;
+      this.field_225 = var3;
+   }
+
+   public class_22(int var1, int var2, int var3, class_26 var4) {
+      this(var1, var2, var4);
+      this.field_224 = var3;
+      if (var1 == 13) {
+         this.field_227 = var3;
+      }
+   }
+
+   // $VF: renamed from: a (int) boolean
+   public final boolean method_222(int var1) {
+      boolean var2 = true;
+      if (this.field_226 != null) {
+         for (int var3 = 0; var3 < this.field_226.length; var3++) {
+            var2 = var2 && this.field_226[var3].method_222(var1);
+         }
+
+         if (var2) {
+            return true;
+         }
+      }
+
+      switch (this.field_222) {
          case 0:
-            field_341 = field_341 + "de/";
-            break;
-         case 1:
-            field_341 = field_341 + "en/";
-            break;
-         case 2:
-            field_341 = field_341 + "es/";
-            break;
-         case 3:
-            field_341 = field_341 + "fr/";
-            break;
-         case 4:
-            field_341 = field_341 + "it/";
-            break;
-         case 5:
-            field_341 = field_341 + "cz/";
-            break;
-         case 6:
-            field_341 = field_341 + "ru/";
-            break;
-         case 7:
-            field_341 = field_341 + "pl/";
-            break;
-         case 8:
-            field_341 = field_341 + "pt/";
-      }
-
-      this.method_296(field_334, "main");
-      this.method_298();
-   }
-
-   // $VF: renamed from: a (java.lang.String[], java.lang.String) void
-   private void method_296(String[] var1, String var2) {
-      Object var3 = null;
-
-      try {
-         var3 = this.getClass().getResourceAsStream(field_341 + var2 + ".lang");
-         DataInputStream var4 = new DataInputStream((InputStream)var3);
-
-         for (int var8 = 0; var8 < var1.length; var8++) {
-            var1[var8] = org.deep3d.GameUi.filterText(var4.readUTF());
-         }
-
-         var4.close();
-      } catch (Exception var6) {
-         for (int var5 = 0; var5 < var1.length; var5++) {
-            var1[var5] = "<ERROR|LANG>";
-         }
-      }
-   }
-
-   // $VF: renamed from: a (int) java.lang.String
-   public final String method_297(int var1) {
-      if (var1 < 422) {
-         return field_334[var1];
-      } else if (var1 < 444) {
-         field_342 = var1 - 422;
-         if (field_335[field_342] == null) {
-            this.method_296(field_335, "ships");
-         }
-
-         return field_335[field_342];
-      } else if (var1 < 486) {
-         field_342 = var1 - 444;
-         if (field_336[field_342] == null) {
-            this.method_296(field_336, "cargo");
-         }
-
-         return field_336[field_342];
-      } else if (var1 < 574) {
-         field_342 = var1 - 486;
-         if (field_337[field_342] == null) {
-            this.method_296(field_337, "items");
-         }
-
-         return field_337[field_342];
-      } else if (var1 < 622) {
-         field_342 = var1 - 574;
-         if (field_338[field_342] == null) {
-            this.method_296(field_338, "medals");
-         }
-
-         return field_338[field_342];
-      } else {
-         field_342 = var1 - 622;
-         field_343 = 0;
-
-         for (int var2 = 0; var2 < field_333.length; var2++) {
-            field_343 = field_343 + field_333[var2];
-            if (field_342 < field_343) {
-               field_344 = field_342 - (field_343 - field_333[var2]);
-               field_343 = var2;
-               break;
+            if (var2 && this.field_225.field_281 == 0) {
+               return true;
             }
-         }
 
-         if (field_339[field_343][field_344] == null) {
-            this.method_296(field_339[field_343], "" + field_343);
-         }
+            return false;
+         case 1:
+            if (var2 && this.field_225.field_273[this.field_223].method_800()) {
+               return true;
+            }
 
-         return field_339[field_343][field_344];
+            return false;
+         case 2:
+            if (var2 && this.field_225.field_277.method_111().field_1298) {
+               return true;
+            }
+
+            return false;
+         case 3:
+            if (var2 && var1 > this.field_223) {
+               return true;
+            }
+
+            return false;
+         case 4:
+            if (var2 && this.field_225.field_280[this.field_223].field_184) {
+               return true;
+            }
+
+            return false;
+         case 5:
+            if (var2 && this.field_225.field_282 == 0) {
+               return true;
+            }
+
+            return false;
+         case 6:
+            if (var2 && this.field_225.field_274[this.field_223].method_800()) {
+               return true;
+            }
+
+            return false;
+         case 7:
+            class_91[] var14 = this.field_225.field_273;
+            int var4 = 0;
+
+            for (int var15 = 0; var15 < this.field_223; var15++) {
+               if (var14[var15].method_800()) {
+                  var4++;
+               }
+            }
+
+            if (var4 == this.field_223) {
+               return true;
+            }
+
+            return false;
+         case 8:
+            class_91[] var5 = this.field_225.field_275;
+            int var17 = 0;
+
+            for (int var18 = 0; var18 < var5.length; var18++) {
+               if (var5[var18].method_800()) {
+                  var17++;
+               }
+            }
+
+            if (var17 > this.field_223) {
+               return true;
+            }
+
+            return false;
+         case 9:
+            class_91[] var7 = this.field_225.field_275;
+            int var16 = 0;
+
+            for (int var19 = 0; var19 < var7.length; var19++) {
+               if (((class_101)var7[var19]).field_1326) {
+                  var16++;
+               }
+
+               if (var19 >= this.field_223) {
+                  if (var16 >= this.field_223) {
+                     return true;
+                  }
+
+                  return false;
+               }
+            }
+            break;
+         case 10:
+            class_91[] var8 = this.field_225.field_275;
+            boolean var6 = false;
+
+            for (int var20 = 0; var20 < var8.length; var20++) {
+               if (var8[var20].method_800() && !((class_101)var8[var20]).field_1326) {
+                  return true;
+               }
+
+               if (var20 >= this.field_223) {
+                  return false;
+               }
+            }
+            break;
+         case 11:
+            return ((class_96)this.field_225.field_273[this.field_223]).method_815();
+         case 12:
+            return ((class_96)this.field_225.field_273[this.field_223]).field_1285;
+         case 13:
+            class_91[] var9 = this.field_225.field_275;
+            int var10 = 0;
+
+            for (int var21 = 0; var21 < var9.length; var21++) {
+               class_101 var23;
+               if ((var23 = (class_101)var9[var21]).field_1312.field_391 == this.field_223 && (var9[var21].method_800() || ((class_101)var9[var21]).field_1326)
+                  )
+                {
+                  var10++;
+               }
+            }
+
+            this.field_227 = this.field_224 - var10;
+            if (var10 >= this.field_224) {
+               return true;
+            }
+
+            return false;
+         case 14:
+            if (this.field_225.field_287 >= this.field_223) {
+               return true;
+            }
+
+            return false;
+         case 15:
+            return this.field_225.field_273[this.field_223].field_1225.field_375;
+         case 16:
+            class_91[] var11 = this.field_225.field_273;
+
+            for (int var22 = 0; var22 < var11.length; var22++) {
+               if (!((class_96)var11[var22]).method_815()) {
+                  return false;
+               }
+            }
+
+            return true;
+         case 17:
+            class_91[] var12 = this.field_225.field_273;
+
+            for (int var13 = 0; var13 < var12.length; var13++) {
+               if (((class_96)var12[var13]).field_1285) {
+                  return true;
+               }
+            }
+
+            return false;
       }
+
+      return false;
    }
 
-   // $VF: renamed from: a () void
-   public final void method_298() {
-      for (int var1 = 0; var1 < field_339.length; var1++) {
-         field_339[var1] = new String[field_333[var1]];
-      }
-
-      field_335 = new String[22];
-      field_336 = new String[42];
-      field_337 = new String[88];
-      field_338 = new String[48];
+   // $VF: renamed from: a () boolean
+   public final boolean method_223() {
+      return this.field_222 == 3;
    }
 }

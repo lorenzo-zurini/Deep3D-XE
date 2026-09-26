@@ -114,25 +114,22 @@ public final class GLBackend {
         }
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-
-        long monitor = glfwGetPrimaryMonitor();
-        org.lwjgl.glfw.GLFWVidMode mode = glfwGetVideoMode(monitor);
-        int w;
-        int h;
-        if (Config.fullscreen && mode != null) {
-            w = mode.width();
-            h = mode.height();
-            window = glfwCreateWindow(w, h, "Deep — Submarine Odyssey", monitor, 0);
-        } else {
-            w = Config.windowWidth > 0 ? Config.windowWidth
-                    : (mode != null ? mode.width() * 3 / 4 : 1280);
-            h = Config.windowHeight > 0 ? Config.windowHeight
-                    : (mode != null ? mode.height() * 3 / 4 : 720);
-            window = glfwCreateWindow(w, h, "Deep — Submarine Odyssey", 0, 0);
-        }
+        window = createWindow();
         if (window == 0) {
             glfwTerminate();
             throw new IllegalStateException("window creation failed");
+        }
+        // On X11 the M3G engine runs its contexts over GLX, sharing objects
+        // with this window's context: 3D passes arrive as textures instead
+        // of being read back through the CPU.
+        if (glfwGetPlatform() == GLFW_PLATFORM_X11
+                && System.getenv("DEEP3D_M3G_READBACK") == null) {
+            long dpy = org.lwjgl.glfw.GLFWNativeX11.glfwGetX11Display();
+            long ctx = org.lwjgl.glfw.GLFWNativeGLX.glfwGetGLXContext(window);
+            if (dpy != 0 && ctx != 0) {
+                javax.microedition.m3g.Platform.setShareContext(dpy, ctx);
+                System.out.println("[gl] 3D engine shares the window's GLX context");
+            }
         }
 
         int[] fw = new int[1];
@@ -146,6 +143,24 @@ public final class GLBackend {
         installCallbacks();
         glfwShowWindow(window);
         active = true;
+    }
+
+    private static long createWindow() {
+        long monitor = glfwGetPrimaryMonitor();
+        org.lwjgl.glfw.GLFWVidMode mode = glfwGetVideoMode(monitor);
+        int w;
+        int h;
+        if (Config.fullscreen && mode != null) {
+            w = mode.width();
+            h = mode.height();
+            return glfwCreateWindow(w, h, "Deep — Submarine Odyssey", monitor, 0);
+        } else {
+            w = Config.windowWidth > 0 ? Config.windowWidth
+                    : (mode != null ? mode.width() * 3 / 4 : 1280);
+            h = Config.windowHeight > 0 ? Config.windowHeight
+                    : (mode != null ? mode.height() * 3 / 4 : 720);
+            return glfwCreateWindow(w, h, "Deep — Submarine Odyssey", 0, 0);
+        }
     }
 
     /** Recomputes UI scale + virtual screen from the framebuffer size. */
@@ -365,6 +380,7 @@ public final class GLBackend {
 
         lastFrame = frame.snapshot();
         frame.reset();
+        M3GTargets.frameDone();
         if (screenGraphics != null) {
             screenGraphics.beginFrame(virtWidth, virtHeight);
         }
@@ -434,6 +450,8 @@ public final class GLBackend {
             case Draw2D.OP_REGION: return 10;
             case Draw2D.OP_RGB: return 9;
             case Draw2D.OP_BATCH_3D: return 2;
+            case Draw2D.OP_M3G:
+            case Draw2D.OP_M3G_TEX: return 13;
             default: throw new IllegalStateException("op " + op);
         }
     }

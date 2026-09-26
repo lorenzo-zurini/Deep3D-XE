@@ -1,83 +1,276 @@
-import com.mascotcapsule.micro3d.v3.AffineTrans;
-import com.mascotcapsule.micro3d.v3.Effect3D;
-import com.mascotcapsule.micro3d.v3.Figure;
-import com.mascotcapsule.micro3d.v3.FigureLayout;
+// $VF: renamed from: af
+public abstract class class_102 {
+   // $VF: renamed from: a int
+   public int field_1335 = 32;
+   // $VF: renamed from: a v
+   public class_103 field_1336 = null;
+   // $VF: renamed from: b af
+   public class_102 field_1337;
+   // $VF: renamed from: a boolean
+   public boolean field_1338;
+   // $VF: renamed from: b boolean
+   public boolean field_1339;
+   // $VF: renamed from: c boolean
+   public boolean field_1340;
+   // $VF: renamed from: a bn
+   public class_57 field_1341;
+   // $VF: renamed from: b bn
+   public class_57 field_1342;
+   // $VF: renamed from: a du
+   public class_15 field_1343;
+   // $VF: renamed from: b int
+   public int field_1344;
 
-// $VF: renamed from: g
-public final class class_102 extends class_101 {
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.Effect3D
-   public static Effect3D field_1296 = new Effect3D(null, 0, true, null);
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.AffineTrans
-   private static AffineTrans field_1297 = new AffineTrans();
-   // $VF: renamed from: a int[]
-   private static int[] field_1298 = new int[12];
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.Figure
-   private Figure field_1299;
-   // $VF: renamed from: a com.mascotcapsule.micro3d.v3.FigureLayout
-   private FigureLayout field_1300;
-
-   public class_102(int var1, String var2) {
-      super.field_1286 = var1;
-      super.field_1290 = 0;
-
-      try {
-         this.field_1299 = new Figure(class_40.method_413(var2 + ".mbac"));
-         System.out.println("loading V3-mesh: " + var2 + ".mbac");
-      } catch (Exception var4) {
-         this.field_1299 = null;
-      }
-
-      this.field_1300 = null;
+   public class_102() {
+      this.field_1338 = true;
+      this.field_1341 = new class_57();
+      this.field_1342 = new class_57();
+      this.field_1343 = new class_15();
+      this.field_1339 = true;
+      this.field_1340 = true;
+      this.field_1344 = 0;
    }
 
    public class_102(class_102 var1) {
-      super.field_1290 = 0;
-      this.field_1299 = var1.field_1299;
-      super.field_1294 = var1.field_1294;
-      super.field_1286 = var1.field_1286;
-      this.field_1300 = null;
-      super.field_1280 = var1.field_1280;
+      this.field_1338 = var1.field_1338;
+      this.field_1341 = new class_57(var1.field_1341);
+      this.field_1342 = new class_57(var1.field_1342);
+      this.field_1343 = new class_15(var1.field_1343);
+      this.field_1339 = true;
+      this.field_1340 = true;
+      this.field_1344 = var1.field_1344;
    }
 
-   // $VF: renamed from: a () ae
-   public final class_97 method_836() {
-      return new class_102(this);
-   }
+   // $VF: renamed from: a (an, t) void
+   public abstract void method_837(class_106 var1, class_4 var2);
 
-   // $VF: renamed from: a (am, t) void
-   public final void method_833(class_111 var1, class_17 var2) {
-      if (super.field_1280) {
-         super.field_1295 = var1.field_1284.method_36(super.field_1295);
-         var2.method_270(super.field_1294, this);
-         this.field_1300 = ((class_112)var1).field_1382;
+   // $VF: renamed from: b (an, t) void
+   public abstract void method_838(class_106 var1, class_4 var2);
+
+   // $VF: renamed from: a (boolean) void
+   public abstract void method_839(boolean var1);
+
+   // $VF: renamed from: a () af
+   public abstract class_102 method_840();
+
+   // $VF: renamed from: b () void
+   public final void method_841() {
+      this.field_1340 = true;
+      if (this.field_1336 != null) {
+         this.field_1336.method_841();
       }
    }
 
-   // $VF: renamed from: b (am, t) void
-   public final void method_834(class_111 var1, class_17 var2) {
-      this.method_833(var1, var2);
+   public final String toString() {
+      return this.method_842("" + this.field_1344, 0);
    }
 
-   // $VF: renamed from: c () void
-   public final void method_878() {
-      super.field_1295.method_38(field_1298);
-      field_1297.set(field_1298);
-      field_1297.m03 = field_1297.m13 = field_1297.m23 = 0;
-      this.field_1300.setAffineTrans(field_1297);
-      class_27.field_390.renderFigure(this.field_1299, 0, 0, this.field_1300, field_1296);
+   // $VF: renamed from: a (java.lang.String, int) java.lang.String
+   public abstract String method_842(String var1, int var2);
+
+   // $VF: renamed from: a (int, int, int) void
+   public final void method_843(int var1, int var2, int var3) {
+      this.field_1341.method_474(var1, var2, var3);
+      this.field_1339 = true;
+      this.method_841();
    }
 
-   // $VF: renamed from: a (cc) void
-   public final void method_883(class_120 var1) {
-      this.field_1299.setTexture(((class_121)var1).field_1526);
+   // $VF: renamed from: a (x) void
+   public final void method_844(class_3 var1) {
+      this.field_1341.method_475(var1);
+      this.field_1339 = true;
+      this.method_841();
    }
 
-   // $VF: renamed from: d () void
-   public final void method_884() {
-      if (this.field_1299 != null) {
-         this.field_1299.dispose();
-      }
+   // $VF: renamed from: b (int, int, int) void
+   public void method_845(int var1, int var2, int var3) {
+      this.field_1341.method_476(var1, var2, var3);
+      this.field_1339 = true;
+      this.method_841();
+   }
 
-      this.field_1299 = null;
+   // $VF: renamed from: b (x) void
+   public final void method_846(class_3 var1) {
+      this.field_1341.method_477(var1);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: a (int) void
+   public final void method_847(int var1) {
+      this.field_1341.method_478(var1);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: a (x) x
+   public final class_3 method_848(class_3 var1) {
+      return this.field_1341.method_479(var1);
+   }
+
+   // $VF: renamed from: b (x) x
+   public final class_3 method_849(class_3 var1) {
+      return this.field_1342.method_479(var1);
+   }
+
+   // $VF: renamed from: a () x
+   public final class_3 method_850() {
+      return this.field_1341.method_480();
+   }
+
+   // $VF: renamed from: b () x
+   public final class_3 method_851() {
+      return this.field_1342.method_480();
+   }
+
+   // $VF: renamed from: a () int
+   public final int method_852() {
+      return this.field_1341.field_698;
+   }
+
+   // $VF: renamed from: b () int
+   public final int method_853() {
+      return this.field_1341.field_699;
+   }
+
+   // $VF: renamed from: c () int
+   public final int method_854() {
+      return this.field_1341.field_700;
+   }
+
+   // $VF: renamed from: c (x) x
+   public final class_3 method_855(class_3 var1) {
+      return this.field_1341.method_481(var1);
+   }
+
+   // $VF: renamed from: d (x) x
+   public final class_3 method_856(class_3 var1) {
+      return this.field_1341.method_482(var1);
+   }
+
+   // $VF: renamed from: c () x
+   public final class_3 method_857() {
+      return this.field_1341.method_483();
+   }
+
+   // $VF: renamed from: e (x) x
+   public final class_3 method_858(class_3 var1) {
+      return this.field_1341.method_484(var1);
+   }
+
+   // $VF: renamed from: a (short) void
+   public final void method_859(short var1) {
+      this.field_1341.method_485(var1);
+      this.field_1342.method_485(var1);
+   }
+
+   // $VF: renamed from: c (int, int, int) void
+   public final void method_860(int var1, int var2, int var3) {
+      this.field_1341.method_486(var1, var2, var3);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: b (int) void
+   public final void method_861(int var1) {
+      this.field_1341.method_487(var1);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: c (int) void
+   public final void method_862(int var1) {
+      this.field_1341.method_489(var1);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: d (int) void
+   public final void method_863(int var1) {
+      this.field_1341.method_488(var1);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: d (int, int, int) void
+   public final void method_864(int var1, int var2, int var3) {
+      this.field_1341.method_491(var1, var2, var3);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: a () a
+   public final class_123 method_865() {
+      return this.field_1341.method_499();
+   }
+
+   // $VF: renamed from: d () int
+   public final int method_866() {
+      return this.field_1341.method_492();
+   }
+
+   // $VF: renamed from: a (a) void
+   public final void method_867(class_123 var1) {
+      this.field_1341.method_495(var1);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: e (int, int, int) void
+   public final void method_868(int var1, int var2, int var3) {
+      this.field_1341.method_500(var1, var2, var3);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: f (int, int, int) void
+   public final void method_869(int var1, int var2, int var3) {
+      this.field_1341.method_501(var1, var2, var3);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: a (bn) void
+   public final void method_870(class_57 var1) {
+      this.field_1341.method_470(var1);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: a (bn) bn
+   public final class_57 method_871(class_57 var1) {
+      return this.field_1341.method_503(var1);
+   }
+
+   // $VF: renamed from: a (x, x, x) void
+   public final void method_872(class_3 var1, class_3 var2, class_3 var3) {
+      this.field_1341.method_504(var1, var2, var3);
+      this.field_1339 = true;
+      this.method_841();
+   }
+
+   // $VF: renamed from: e (int) void
+   public void method_873(int var1) {
+   }
+
+   // $VF: renamed from: f (int) void
+   public void method_874(int var1) {
+   }
+
+   // $VF: renamed from: e () int
+   public int method_875() {
+      return 0;
+   }
+
+   // $VF: renamed from: a (int, int) void
+   public void method_876(int var1, int var2) {
+   }
+
+   // $VF: renamed from: a (byte) void
+   public void method_877(byte var1) {
+   }
+
+   // $VF: renamed from: a () void
+   public void method_878() {
    }
 }

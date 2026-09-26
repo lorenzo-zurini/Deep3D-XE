@@ -1,107 +1,187 @@
-// $VF: renamed from: cq
-public final class class_42 {
-   // $VF: renamed from: a dk[]
-   private class_31[] field_545;
-   // $VF: renamed from: a dk
-   public class_31 field_546;
-   // $VF: renamed from: a java.lang.String[]
-   private String[] field_547;
-   // $VF: renamed from: a byte[]
-   private byte[] field_548;
-   // $VF: renamed from: a long
-   private long field_549;
-   // $VF: renamed from: a int
-   private int field_550;
-   // $VF: renamed from: a java.lang.String
-   private String field_551;
+// $VF: renamed from: ce
+public final class class_42 implements class_0 {
+   // $VF: renamed from: a af
+   public class_102 field_452;
+   // $VF: renamed from: b af
+   public class_102 field_453;
+   // $VF: renamed from: c af
+   public class_102 field_454;
+   // $VF: renamed from: a x
+   public class_3 field_455;
+   // $VF: renamed from: b x
+   public class_3 field_456;
+   // $VF: renamed from: c x
+   public class_3 field_457;
+   // $VF: renamed from: d x
+   public class_3 field_458;
+   // $VF: renamed from: e x
+   public class_3 field_459;
+   // $VF: renamed from: a boolean
+   public boolean field_460;
+   // $VF: renamed from: f x
+   private class_3 field_461 = new class_3();
+   // $VF: renamed from: g x
+   private class_3 field_462 = new class_3();
+   // $VF: renamed from: a s
+   private class_5 field_463;
+   // $VF: renamed from: b boolean
+   private boolean field_464 = false;
+   // $VF: renamed from: c boolean
+   private boolean field_465;
+
+   public class_42(class_102 var1, class_102 var2) {
+      this(var1, var2, null);
+   }
+
+   public class_42(class_102 var1, class_102 var2, class_3 var3) {
+      this.field_452 = var1;
+      this.field_454 = var2;
+      this.field_460 = true;
+      this.field_459 = var3;
+      if (var3 != null) {
+         this.field_459.method_22();
+      }
+
+      if (this.field_455 == null) {
+         this.field_455 = new class_3();
+      }
+
+      if (this.field_456 == null) {
+         this.field_456 = new class_3();
+      }
+
+      if (this.field_457 == null) {
+         this.field_457 = new class_3();
+      }
+
+      if (this.field_458 == null) {
+         this.field_458 = new class_3();
+      }
+
+      if (var1 != null && var2 != null) {
+         this.field_463 = new class_5(var1, var2);
+         this.field_453 = var1;
+
+         while (this.field_453.field_1336 != null) {
+            this.field_453 = this.field_453.field_1336;
+         }
+
+         Object var4 = var2;
+
+         while (((class_102)var4).field_1336 != null) {
+            var4 = ((class_102)var4).field_1336;
+         }
+
+         if (var4 == this.field_453) {
+            this.field_453 = null;
+         }
+
+         this.field_465 = var2 instanceof class_106;
+         this.field_462 = var2.method_850().method_16(var1.method_850(), new class_3());
+      }
+   }
+
+   // $VF: renamed from: a (af) void
+   public final void method_368(class_102 var1) {
+      this.field_452 = var1;
+      if (this.field_463 == null && var1 != null) {
+         this.field_463 = new class_5(var1, this.field_454);
+      }
+
+      if (this.field_463 != null) {
+         this.field_463.field_45 = var1;
+      }
+   }
+
+   // $VF: renamed from: b (af) void
+   public final void method_369(class_102 var1) {
+      this.field_454 = var1;
+      if (this.field_463 == null && var1 != null) {
+         this.field_463 = new class_5(this.field_452, var1);
+      }
+
+      if (this.field_463 != null) {
+         this.field_463.field_48 = var1;
+      }
+
+      this.field_465 = var1 instanceof class_106;
+   }
+
+   // $VF: renamed from: a (x) void
+   public final void method_370(class_3 var1) {
+      this.field_457.method_9(var1);
+   }
+
+   // $VF: renamed from: b () void
+   public final void method_371() {
+      this.field_464 = true;
+      this.field_457 = this.field_452.field_1342.method_507(this.field_462, this.field_457);
+      this.field_454.method_846(this.field_457);
+   }
+
+   // $VF: renamed from: c () void
+   public final void method_372() {
+      this.field_464 = false;
+   }
 
    // $VF: renamed from: a () void
-   public final void method_417() {
-      this.field_545 = null;
-      this.field_546 = null;
-   }
+   public final void method_0() {
+      if (this.field_460) {
+         if (this.field_464) {
+            this.field_463.method_0();
+            return;
+         }
 
-   // $VF: renamed from: a (dk[]) void
-   public final void method_418(class_31[] var1) {
-      this.field_545 = var1;
-      if (var1 != null) {
-         for (int var2 = 0; var2 < var1.length; var2++) {
-            var1[var2].field_412 = this;
+         if (this.field_452 != null) {
+            this.field_455 = this.field_452.method_857();
+            this.field_455.method_22();
+            this.field_456 = this.field_452.field_1342.method_507(this.field_462, this.field_456);
+            this.field_457.field_37 = this.field_457.field_37 - (this.field_457.field_37 - this.field_456.field_37 >> 8);
+            this.field_457.field_38 = this.field_457.field_38 - (this.field_457.field_38 - this.field_456.field_38 >> 8);
+            this.field_457.field_39 = this.field_457.field_39 - (this.field_457.field_39 - this.field_456.field_39 >> 8);
+            this.field_456 = this.field_452.field_1342.method_507(this.field_461, this.field_456);
+            this.field_456.field_37 = this.field_456.field_37 - this.field_457.field_37;
+            this.field_456.field_38 = this.field_456.field_38 - this.field_457.field_38;
+            this.field_456.field_39 = this.field_456.field_39 - this.field_457.field_39;
+            if (this.field_465) {
+               this.field_456.field_37 = -this.field_456.field_37;
+               this.field_456.field_38 = -this.field_456.field_38;
+               this.field_456.field_39 = -this.field_456.field_39;
+            }
+
+            this.field_456.method_22();
+            this.field_458 = this.field_455.method_13(this.field_456, this.field_458);
+            this.field_455 = this.field_456.method_13(this.field_458, this.field_455);
+            this.field_458.method_22();
+            this.field_454.method_872(this.field_458, this.field_455, this.field_456);
+            this.field_454.method_846(this.field_457);
          }
       }
    }
 
-   // $VF: renamed from: a (int) dk
-   public final class_31 method_419(int var1) {
-      return this.field_545[var1];
+   // $VF: renamed from: a () boolean
+   public final boolean method_1() {
+      return this.field_460;
    }
 
-   // $VF: renamed from: a (long, bb) void
-   public final void method_420(long var1, class_16 var3) {
-      if (this.field_545 != null) {
-         for (int var4 = 0; var4 < this.field_545.length; var4++) {
-            if (this.field_545[var4].method_362(var1, var3)) {
-               this.field_548 = class_24.field_374[this.field_545[var4].field_414];
-               if (this.field_548 == null) {
-                  this.field_548 = class_3.method_145();
-               }
-
-               class_119.method_926(this.field_548);
-               this.field_547 = class_50.method_499(
-                  class_3.method_149(class_41.field_533.method_297(this.field_545[var4].field_413), class_3.method_143()),
-                  class_41.field_537 - class_119.field_1504 - 10
-               );
-               this.field_549 = var1;
-               this.field_550 = this.field_547.length * 2000 + 1500;
-               class_41.field_539.method_427(10);
-               return;
-            }
-         }
-      }
+   // $VF: renamed from: a (boolean) void
+   public final void method_373(boolean var1) {
+      this.field_460 = var1;
+      this.field_463.field_53 = var1;
    }
 
-   // $VF: renamed from: b (long, bb) void
-   public final void method_421(long var1, class_16 var3) {
-      if (this.field_546 == null) {
-         this.method_420(var1, var3);
-      } else {
-         if (var1 > this.field_549 + 2000L) {
-            try {
-               int var4 = this.field_546.field_414;
-               this.field_551 = class_24.field_375[var4];
-               if (this.field_551 == "Colonist") {
-                  this.field_551 = class_41.field_533.method_297(238);
-               } else if (this.field_551 == "Rebel") {
-                  this.field_551 = class_41.field_533.method_297(239);
-               } else if (this.field_551 == "Pirate") {
-                  this.field_551 = class_41.field_533.method_297(240);
-               }
+   // $VF: renamed from: b (x) void
+   public final void method_374(class_3 var1) {
+      this.field_457.method_9(var1);
+   }
 
-               class_69.method_668(
-                  var4 == 0 ? class_3.method_143() : this.field_551,
-                  0,
-                  0,
-                  class_41.field_537 - 1,
-                  class_124.method_942(class_119.field_1505 + 16, (this.field_547.length + 2) * class_50.method_494()),
-                  true
-               );
-            } catch (Exception var5) {
-               var5.printStackTrace();
-            }
+   // $VF: renamed from: c (x) void
+   public final void method_375(class_3 var1) {
+      this.field_461.method_9(var1);
+   }
 
-            if (this.field_548 == null && class_3.method_147() != null) {
-               class_41.field_534.drawImage(class_3.method_147(), 3, 13, 0);
-            } else {
-               class_119.method_928(this.field_548, 3, 13, 0);
-            }
-
-            class_50.method_488(this.field_547, class_119.field_1504 + 8, 13, 0);
-            if (var1 > this.field_549 + 2000L + this.field_550) {
-               this.field_549 = 0L;
-               this.field_546.method_361();
-               this.field_546 = null;
-            }
-         }
-      }
+   // $VF: renamed from: d (x) void
+   public final void method_376(class_3 var1) {
+      this.field_462.method_9(var1);
    }
 }

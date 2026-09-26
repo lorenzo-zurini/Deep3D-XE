@@ -1,149 +1,115 @@
-// $VF: renamed from: aw
-public abstract class class_83 {
-   // $VF: renamed from: a short
-   public short field_1101 = 0;
-   // $VF: renamed from: a cm
-   public class_96 field_1102;
-   // $VF: renamed from: a ay
-   public class_101 field_1103;
+// $VF: renamed from: ar
+public final class class_83 {
    // $VF: renamed from: a int
-   public int field_1104;
+   public int field_1072 = 120;
+   // $VF: renamed from: a int[]
+   private int[] field_1073;
+   // $VF: renamed from: b int[]
+   private int[] field_1074;
+   // $VF: renamed from: c int[]
+   private int[] field_1075;
+   // $VF: renamed from: a ax
+   private class_108 field_1076;
+   // $VF: renamed from: a x
+   private class_3 field_1077 = new class_3();
    // $VF: renamed from: a boolean
-   public boolean field_1105;
-   // $VF: renamed from: a cy
-   public class_57 field_1106;
-   // $VF: renamed from: a dr
-   public class_13 field_1107;
-   // $VF: renamed from: a ao
-   public class_8 field_1108;
-   // $VF: renamed from: a v
-   public class_5 field_1109 = new class_5();
-   // $VF: renamed from: b v
-   public class_5 field_1110 = new class_5();
-   // $VF: renamed from: b int
-   public int field_1111;
-   // $VF: renamed from: c int
-   public int field_1112;
-   // $VF: renamed from: d int
-   public int field_1113;
-   // $VF: renamed from: b boolean
-   public boolean field_1114;
-   // $VF: renamed from: c boolean
-   public boolean field_1115;
-   // $VF: renamed from: d boolean
-   public boolean field_1116;
-   // $VF: renamed from: a aa
-   public class_46 field_1117;
+   private boolean field_1078 = false;
 
-   public class_83(int var1, boolean var2, class_96 var3, class_101 var4, int var5, int var6, int var7) {
-      this.field_1102 = var3;
-      this.field_1103 = var4;
-      this.field_1104 = var1;
-      this.field_1105 = var2;
-      if (this.field_1103 != null) {
-         this.field_1103.method_841(var5, var6, var7);
-         this.field_1103.method_860(0, 0, 0);
-         this.field_1102.field_1270 = var4.field_1283;
-      }
+   public class_83() {
+      this.field_1076 = class_108.method_892(0, 12, (byte)2);
+      this.field_1076.method_893(class_43.method_380(2));
+      this.field_1076.field_1367 = 2;
+      this.field_1074 = new int[144];
+      this.field_1073 = new int[144];
+      int var1 = 19;
+      int var2 = 20;
+      this.field_1075 = new int[96];
 
-      this.field_1102.field_1272 = this;
-      this.field_1111 = var5;
-      this.field_1112 = var6;
-      this.field_1113 = var7;
-      this.field_1115 = false;
-      this.field_1116 = false;
-      this.field_1114 = false;
-      if (this.field_1109 == null) {
-         this.field_1109 = new class_5();
+      for (int var3 = 8; var3 < this.field_1075.length; var3 += 8) {
+         this.field_1075[var3] = 83;
+         this.field_1075[var3 + 1] = var1;
+         this.field_1075[var3 + 2] = 84;
+         this.field_1075[var3 + 3] = var1;
+         this.field_1075[var3 + 4] = 84;
+         this.field_1075[var3 + 5] = var2;
+         this.field_1075[var3 + 6] = 83;
+         this.field_1075[var3 + 7] = var2;
+         var1++;
+         var2++;
       }
    }
 
    // $VF: renamed from: a () void
-   public void method_741() {
-      this.field_1102 = null;
-      if (this.field_1103 != null) {
-         this.field_1103.method_884();
+   public final void method_731() {
+      this.field_1076.method_894();
+      this.field_1076 = null;
+   }
+
+   // $VF: renamed from: a (int, int, int, int, int, int) void
+   public final void method_732(int var1, int var2, int var3, int var4, int var5, int var6) {
+      this.field_1074[0] = var1 - this.field_1072;
+      this.field_1074[1] = var2;
+      this.field_1074[2] = var3;
+      this.field_1074[3] = var1 + this.field_1072;
+      this.field_1074[4] = var2;
+      this.field_1074[5] = var3;
+      this.field_1074[6] = var4 + this.field_1072;
+      this.field_1074[7] = var5;
+      this.field_1074[8] = var6;
+      this.field_1074[9] = var4 - this.field_1072;
+      this.field_1074[10] = var5;
+      this.field_1074[11] = var6;
+
+      for (int var7 = this.field_1074.length - 1; var7 >= 23; var7 -= 12) {
+         this.field_1074[var7] = this.field_1074[var7 - 12];
+         this.field_1074[var7 - 1] = this.field_1074[var7 - 13];
+         this.field_1074[var7 - 2] = this.field_1074[var7 - 14];
+         this.field_1074[var7 - 3] = this.field_1074[var7 - 15];
+         this.field_1074[var7 - 4] = this.field_1074[var7 - 16];
+         this.field_1074[var7 - 5] = this.field_1074[var7 - 17];
+         this.field_1074[var7 - 6] = this.field_1074[var7 - 18];
+         this.field_1074[var7 - 7] = this.field_1074[var7 - 19];
+         this.field_1074[var7 - 8] = this.field_1074[var7 - 20];
+         this.field_1074[var7 - 9] = this.field_1074[var7 - 21];
+         this.field_1074[var7 - 10] = this.field_1074[var7 - 22];
+         this.field_1074[var7 - 11] = this.field_1074[var7 - 23];
       }
 
-      this.field_1103 = null;
-      this.field_1106 = null;
-      this.field_1107 = null;
-      if (this.field_1108 != null) {
-         this.field_1108.method_193();
+      for (int var8 = 0; var8 < this.field_1074.length; var8 += 3) {
+         this.field_1073[var8] = this.field_1074[var8] - var1;
+         this.field_1073[var8 + 1] = this.field_1074[var8 + 1] - var2;
+         this.field_1073[var8 + 2] = this.field_1074[var8 + 2] - var3;
       }
 
-      this.field_1108 = null;
+      this.field_1076.method_845(var1, var2, var3);
+      ((class_109)this.field_1076).method_896(this.field_1073, this.field_1075);
    }
 
-   // $VF: renamed from: a (boolean) void
-   public void method_742(boolean var1) {
-      this.field_1102.field_1268 = var1;
+   // $VF: renamed from: a (x) void
+   public final void method_733(class_3 var1) {
+      if (this.field_1078) {
+         this.field_1077.method_9(var1);
+         this.field_1078 = false;
+      }
+
+      this.method_732(var1.field_37, var1.field_38, var1.field_39, this.field_1077.field_37, this.field_1077.field_38, this.field_1077.field_39);
+      this.field_1077.method_9(var1);
    }
 
-   // $VF: renamed from: a (int) void
-   public void method_743(int var1) {
+   // $VF: renamed from: b (x) void
+   public final void method_734(class_3 var1) {
+      for (int var2 = 0; var2 < this.field_1074.length; var2 += 3) {
+         this.field_1074[var2] = var1.field_37;
+         this.field_1074[var2 + 1] = var1.field_38;
+         this.field_1074[var2 + 2] = var1.field_39;
+      }
+
+      this.field_1077.method_9(var1);
+      this.field_1078 = true;
    }
 
-   // $VF: renamed from: a (cm[]) void
-   public final void method_744(class_96[] var1) {
-      this.field_1102.method_802(var1);
-   }
-
-   // $VF: renamed from: a (o, int) void
-   public final void method_745(class_19 var1, int var2) {
-      this.field_1102.method_825(var1, var2);
-   }
-
-   // $VF: renamed from: a (v) v
-   public class_5 method_746(class_5 var1) {
-      return this.field_1103.method_847();
-   }
-
-   // $VF: renamed from: a () boolean
-   public final boolean method_747() {
-      return this.field_1101 == 4;
-   }
-
-   // $VF: renamed from: b () boolean
-   public final boolean method_748() {
-      return this.field_1101 == 3;
-   }
-
-   // $VF: renamed from: d () void
-   public final void method_749() {
-      this.field_1101 = 4;
-   }
-
-   // $VF: renamed from: e () void
-   public final void method_750() {
-      this.field_1101 = 5;
-      this.field_1102.field_1268 = false;
-   }
-
-   // $VF: renamed from: f () void
-   public final void method_751() {
-      this.field_1101 = 1;
-      this.field_1102.field_1268 = true;
-   }
-
-   // $VF: renamed from: a (long) void
-   public abstract void method_752(long var1);
-
-   // $VF: renamed from: a (int, int, int) boolean
-   public abstract boolean method_753(int var1, int var2, int var3);
-
-   // $VF: renamed from: a (v) boolean
-   public boolean method_754(class_5 var1) {
-      return false;
-   }
-
-   // $VF: renamed from: b (v) v
-   public class_5 method_755(class_5 var1) {
-      return null;
-   }
-
-   // $VF: renamed from: c () void
-   public void method_756() {
-      class_41.field_527.method_265(this.field_1103);
+   // $VF: renamed from: b () void
+   public final void method_735() {
+      class_84.field_1110.method_25(this.field_1076);
    }
 }

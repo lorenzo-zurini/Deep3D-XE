@@ -1,57 +1,49 @@
-// $VF: renamed from: bq
+// $VF: renamed from: h
 public final class class_12 {
-   // $VF: renamed from: a do
-   public class_113 field_179 = null;
-   // $VF: renamed from: a DeepMIDlet
-   private DeepMIDlet field_180;
-   // $VF: renamed from: a cr
-   public class_94 field_181;
+   // $VF: renamed from: a dd
+   private class_23 field_118 = new class_23(5, 12, class_84.field_1120 - 10, class_84.field_1121 - 30, "");
+   // $VF: renamed from: a int
+   private int field_119;
 
-   public class_12(DeepMIDlet var1, class_94 var2) {
-      this.field_180 = var1;
-      this.field_181 = var2;
+   public class_12() {
+      this.field_118.method_226(class_90.field_1206, "M.A.I.", true);
    }
 
-   // $VF: renamed from: a (do) void
-   public final void method_213(class_113 var1) {
-      if (this.field_179 != null) {
-         if (this.field_181 != null) {
-            this.field_181.method_788(true);
+   // $VF: renamed from: a (java.lang.String) void
+   public final void method_58(String var1) {
+      this.field_118.method_225(var1);
+      this.field_118.method_224();
+   }
+
+   // $VF: renamed from: a (int) boolean
+   public final boolean method_59(int var1) {
+      return var1 != 131072;
+   }
+
+   // $VF: renamed from: a (int, int) boolean
+   public final boolean method_60(int var1, int var2) {
+      this.field_119 += var2;
+      if (this.field_119 > 200) {
+         if ((var1 & 2) != 0) {
+            this.field_119 = 0;
+            this.field_118.method_230(var2);
          }
 
-         class_41.field_533.method_298();
-         this.field_179.method_903();
+         if ((var1 & 64) != 0) {
+            this.field_119 = 0;
+            this.field_118.method_229(var2);
+         }
       }
 
-      this.field_179 = var1;
+      this.method_61();
+      return true;
    }
 
    // $VF: renamed from: a () void
-   public final void method_214() {
-      this.field_180.quit();
-   }
-
-   // $VF: renamed from: a (int) void
-   public final void method_215(int var1) {
-      if (this.field_179 != null) {
-         this.field_179.method_901(var1);
-      }
-   }
-
-   // $VF: renamed from: b (int) void
-   public final void method_216(int var1) {
-      if (this.field_179 != null) {
-         if (this.field_179.method_904()) {
-            this.field_179.method_900(var1);
-            return;
-         }
-
-         this.field_179.method_902();
-         if (this.field_179.method_904() && this.field_181 != null) {
-            this.field_181.method_787();
-         }
-
-         ;
-      }
+   public final void method_61() {
+      class_67.method_587();
+      class_67.method_588(class_84.field_1116.method_4(4));
+      this.field_118.method_231();
+      class_67.method_601("0: " + class_84.field_1116.method_4(65), "0: " + class_84.field_1116.method_4(65), false);
    }
 }

@@ -1,242 +1,177 @@
-import java.io.InputStream;
-import javax.microedition.lcdui.AlertType;
-import javax.microedition.media.Manager;
-import javax.microedition.media.Player;
-import javax.microedition.media.PlayerListener;
-import javax.microedition.media.control.VolumeControl;
-
-// $VF: renamed from: ak
-public final class class_43 implements PlayerListener {
-   // $VF: renamed from: a java.lang.String[]
-   private static final String[] field_552 = new String[]{"/data/sound/station.mid", "/data/sound/station.mid"};
-   // $VF: renamed from: b java.lang.String[]
-   private static final String[] field_553 = new String[]{
-      "/data/sound/echolot.amr",
-      "/data/sound/traktor.amr",
-      "/data/sound/message.amr",
-      "/data/sound/gate.amr",
-      "/data/sound/alert.amr",
-      "/data/sound/harpoon.amr",
-      "/data/sound/explosion.amr",
-      "/data/sound/turbo.amr",
-      "/data/sound/water.amr",
-      "/data/sound/tiertot.amr",
-      "/data/sound/signal.amr",
-      "/data/sound/mine.amr",
-      "/data/sound/amb02.amr",
-      "/data/sound/amb03.amr",
-      "/data/sound/harpoon_hit.amr",
-      "/data/sound/beep.amr"
-   };
+// $VF: renamed from: cd
+public final class class_43 {
    // $VF: renamed from: a int[]
-   public static final int[] field_554 = new int[]{0, 8, 12, 13};
-   // $VF: renamed from: b int
-   private static int field_555;
-   // $VF: renamed from: a long
-   private static long field_556;
-   // $VF: renamed from: a long[]
-   private static final long[] field_557 = new long[]{
-      1300L, 2500L, 1100L, 3000L, 1400L, 900L, 2800L, 3200L, 2800L, 1000L, 1000L, 300L, 1500L, 1500L, 150L, 90L
-   };
-   // $VF: renamed from: a short[]
-   private static short[] field_558 = new short[]{0, 95, 100, 100, 100, 90, 100, 100, 0, 100, 100, 80, 80, 80, 90, 80};
-   // $VF: renamed from: a javax.microedition.media.Player
-   private static Player field_559;
-   // $VF: renamed from: a javax.microedition.media.Player[]
-   private Player[] field_560;
-   // $VF: renamed from: a javax.microedition.media.control.VolumeControl
-   private VolumeControl field_561;
-   // $VF: renamed from: a int
-   public int field_562;
-   // $VF: renamed from: a boolean
-   private boolean field_563 = false;
-   // $VF: renamed from: c int
-   private int field_564;
+   private static int[] field_466;
+   // $VF: renamed from: a cc[]
+   private static class_44[] field_467;
+   // $VF: renamed from: a java.lang.String[]
+   private static String[] field_468;
+   // $VF: renamed from: a boolean[]
+   private static boolean[] field_469;
+   // $VF: renamed from: b int[]
+   private static int[] field_470;
+   // $VF: renamed from: a ax[]
+   private static class_108[] field_471;
+   // $VF: renamed from: c int[]
+   private static int[] field_472;
+   // $VF: renamed from: b java.lang.String[]
+   private static String[] field_473;
+   // $VF: renamed from: b boolean[]
+   private static boolean[] field_474;
+   // $VF: renamed from: d int[]
+   private static int[] field_475;
 
-   public class_43() {
-      this.field_562 = 100;
-      this.field_560 = new Player[field_553.length];
+   // $VF: renamed from: a (int, java.lang.String) void
+   public static final void method_377(int var0, String var1) {
+      if (field_468 == null) {
+         field_468 = new String[1];
+         field_468[0] = var1;
+         field_467 = new class_44[1];
+         field_466 = new int[1];
+         field_466[0] = var0;
+         field_469 = new boolean[1];
+         field_469[0] = false;
+      } else {
+         String[] var2 = new String[field_468.length + 1];
+         System.arraycopy(field_468, 0, var2, 0, field_468.length);
+         var2[field_468.length] = var1;
+         field_468 = var2;
+         class_44[] var3 = new class_44[field_467.length + 1];
+         System.arraycopy(field_467, 0, var3, 0, field_467.length);
+         field_467 = var3;
+         int[] var4 = new int[field_466.length + 1];
+         System.arraycopy(field_466, 0, var4, 0, field_466.length);
+         var4[field_466.length] = var0;
+         field_466 = var4;
+         boolean[] var5 = new boolean[field_469.length + 1];
+         System.arraycopy(field_469, 0, var5, 0, field_469.length);
+         var5[field_469.length] = false;
+         field_469 = var5;
+      }
    }
 
-   // $VF: renamed from: a (int) void
-   public final void method_422(int var1) {
-      if (field_559 != null && field_559.getState() != 0) {
-         this.field_561 = (VolumeControl)field_559.getControl("VolumeControl");
-         this.field_561.setLevel(var1);
+   // $VF: renamed from: a (int, java.lang.String, int, int) void
+   public static final void method_378(int var0, String var1, int var2, int var3) {
+      if (field_473 == null) {
+         field_473 = new String[1];
+         field_473[0] = var1;
+         field_472 = new int[1];
+         field_472[0] = var2;
+         field_471 = new class_108[1];
+         field_470 = new int[1];
+         field_470[0] = var0;
+         field_474 = new boolean[1];
+         field_474[0] = false;
+         field_475 = new int[1];
+         field_475[0] = var3;
+      } else {
+         String[] var4 = new String[field_473.length + 1];
+         System.arraycopy(field_473, 0, var4, 0, field_473.length);
+         var4[field_473.length] = var1;
+         field_473 = var4;
+         int[] var5 = new int[field_472.length + 1];
+         System.arraycopy(field_472, 0, var5, 0, field_472.length);
+         var5[field_472.length] = var2;
+         field_472 = var5;
+         class_108[] var6 = new class_108[field_471.length + 1];
+         System.arraycopy(field_471, 0, var6, 0, field_471.length);
+         field_471 = var6;
+         int[] var7 = new int[field_470.length + 1];
+         System.arraycopy(field_470, 0, var7, 0, field_470.length);
+         var7[field_470.length] = var0;
+         field_470 = var7;
+         boolean[] var8 = new boolean[field_474.length + 1];
+         System.arraycopy(field_474, 0, var8, 0, field_474.length);
+         var8[field_474.length] = false;
+         field_474 = var8;
+         int[] var9 = new int[field_475.length + 1];
+         System.arraycopy(field_475, 0, var9, 0, field_475.length);
+         var9[field_475.length] = var3;
+         field_475 = var9;
       }
+   }
 
-      if (this.field_560 != null) {
-         for (int var2 = 0; var2 < this.field_560.length; var2++) {
-            if (this.field_560[var2] != null && this.field_560[var2].getState() != 0) {
-               this.field_561 = (VolumeControl)this.field_560[var2].getControl("VolumeControl");
-               this.field_561.setLevel(var1);
+   // $VF: renamed from: a (int, java.lang.String, int) void
+   public static final void method_379(int var0, String var1, int var2) {
+      method_378(var0, var1, -1, var2);
+   }
+
+   // $VF: renamed from: a (int) cc
+   public static final class_44 method_380(int var0) {
+      for (int var1 = 0; var1 < field_466.length; var1++) {
+         if (var0 == field_466[var1]) {
+            field_469[var1] = true;
+            if (field_467[var1] == null) {
+               String[] var2 = new String[]{field_468[var1]};
+               return field_467[var1] = class_44.method_386(var2);
             }
+
+            return field_467[var1];
          }
       }
 
-      this.field_562 = var1;
+      return null;
+   }
+
+   // $VF: renamed from: a (int) ax
+   public static final class_108 method_381(int var0) {
+      for (int var1 = 0; var1 < field_470.length; var1++) {
+         if (var0 == field_470[var1]) {
+            field_474[var1] = true;
+            if (field_471[var1] == null) {
+               if (field_472[var1] == -1) {
+                  field_471[var1] = class_108.method_891(field_470[var1], field_473[var1]);
+               } else {
+                  field_471[var1] = class_108.method_889(field_470[var1], field_473[var1], field_472[var1]);
+               }
+
+               if (field_471[var1] != null && field_475[var1] != Integer.MIN_VALUE) {
+                  field_471[var1].method_893(method_380(field_475[var1]));
+               }
+
+               return field_471[var1];
+            }
+
+            return (class_108)field_471[var1].method_840();
+         }
+      }
+
+      System.out.println("ERROR | AEResourceManager.getGeometryResource(" + var0 + ") not found !");
+      return null;
    }
 
    // $VF: renamed from: a () void
-   public final void method_423() {
-      if (field_559 != null) {
-         if (field_559.getState() != 0) {
-            field_559.deallocate();
-         }
-
-         field_559.close();
-         field_559 = null;
-      }
-
-      this.field_561 = null;
-   }
-
-   // $VF: renamed from: a () boolean
-   public final boolean method_424() {
-      if (!class_41.field_497) {
-         return false;
-      } else {
-         return field_559 == null ? false : field_559.getState() == 400;
-      }
-   }
-
-   // $VF: renamed from: b (int) void
-   public final void method_425(int var1) {
-      if (class_41.field_497) {
-         this.method_430();
-
-         try {
-            field_559 = Manager.createPlayer(this.getClass().getResourceAsStream(field_552[var1]), "audio/midi");
-            field_559.addPlayerListener(this);
-            field_559.setLoopCount(-1);
-            field_559.start();
-            class_41.field_532 = var1;
-            VolumeControl var3 = (VolumeControl)field_559.getControl("VolumeControl");
-
-            try {
-               var3.setMute(false);
-            } catch (Exception var5) {
-            }
-
-            class_41.field_531 = false;
-         } catch (Exception var6) {
-            class_41.field_531 = true;
-            if (field_559 != null) {
-               field_559.deallocate();
-               field_559.close();
-            }
-
-            field_559 = null;
-         }
-      }
-   }
-
-   // $VF: renamed from: a (int, int) void
-   public final void method_426(int var1, int var2) {
-      if (class_41.field_497) {
-         if (System.currentTimeMillis() > field_556 + field_557[field_555] || field_558[var1] >= field_558[field_555]) {
-            try {
-               if (this.field_560[var1] == null) {
-                  try {
-                     InputStream var3 = this.getClass().getResourceAsStream(field_553[var1]);
-                     this.field_560[var1] = Manager.createPlayer(var3, "audio/amr");
-                     this.field_560[var1].setLoopCount(1);
-                     this.field_560[var1].prefetch();
-                  } catch (Exception var4) {
-                     var4.printStackTrace();
-                  }
-               }
-
-               ((VolumeControl)this.field_560[var1].getControl("VolumeControl")).setLevel(var2);
-               this.field_560[var1].stop();
-               this.field_560[var1].setMediaTime(0L);
-               this.field_560[var1].start();
-               field_555 = var1;
-               field_556 = System.currentTimeMillis();
-               return;
-            } catch (Exception var5) {
-               var5.printStackTrace();
-            }
-         }
-      }
-   }
-
-   // $VF: renamed from: c (int) void
-   public final void method_427(int var1) {
-      this.method_426(var1, this.field_562);
+   public static final void method_382() {
+      method_383();
+      method_385();
    }
 
    // $VF: renamed from: b () void
-   public final void method_428() {
-      try {
-         try {
-            VolumeControl var1 = (VolumeControl)field_559.getControl("VolumeControl");
-            this.field_564 = var1.getLevel();
-            var1.setMute(true);
-         } catch (Exception var2) {
+   public static final void method_383() {
+      for (int var0 = 0; var0 < field_471.length; var0++) {
+         if (field_471[var0] != null) {
+            field_471[var0].method_894();
+            field_471[var0] = null;
          }
-
-         field_559.stop();
-
-         for (int var4 = 0; var4 < this.field_560.length; var4++) {
-            if (this.field_560[var4] != null) {
-               this.field_560[var4].stop();
-            }
-         }
-      } catch (Exception var3) {
       }
    }
 
    // $VF: renamed from: c () void
-   public final void method_429() {
-      try {
-         if (class_41.field_497) {
-            try {
-               VolumeControl var1;
-               (var1 = (VolumeControl)field_559.getControl("VolumeControl")).setMute(false);
-               AlertType.ERROR.playSound(class_41.field_529);
-               var1.setLevel(this.field_564);
-            } catch (Exception var4) {
-            }
-
-            field_559.start();
+   public static final void method_384() {
+      for (int var0 = 0; var0 < field_471.length; var0++) {
+         if (field_471[var0] != null) {
+            field_471[var0].method_870(new class_57());
          }
-
-         class_41.field_531 = false;
-      } catch (Exception var5) {
-         class_41.field_531 = true;
-         if (field_559 != null) {
-            try {
-               field_559.deallocate();
-               field_559.close();
-            } catch (Exception var3) {
-            }
-         }
-
-         field_559 = null;
       }
    }
 
    // $VF: renamed from: d () void
-   public final void method_430() {
-      try {
-         if (field_559.getState() == 400) {
-            field_559.stop();
-            field_559.deallocate();
-            field_559.close();
+   public static final void method_385() {
+      for (int var0 = 0; var0 < field_467.length; var0++) {
+         if (field_467[var0] != null) {
+            field_467[var0].method_387();
+            field_467[var0] = null;
          }
-      } catch (Exception var2) {
-      }
-   }
-
-   public final void playerUpdate(Player var1, String var2, Object var3) {
-      if (var2.compareTo("deviceUnavailable") == 0 && field_559 != null && field_559.getState() != 0) {
-         this.field_563 = true;
-      }
-
-      if (var2.compareTo("deviceAvailable") == 0 && this.field_563) {
-         this.field_563 = false;
-         class_41.field_531 = true;
       }
    }
 }

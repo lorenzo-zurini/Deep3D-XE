@@ -17,3 +17,7 @@ screenshots/
 *.sf2
 *.dls
 logs/
+
+# JVM crash reports / core dumps
+hs_err_pid*.log
+core.*

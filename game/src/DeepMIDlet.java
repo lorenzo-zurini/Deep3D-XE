@@ -3,41 +3,41 @@ import javax.microedition.midlet.MIDlet;
 
 public class DeepMIDlet extends MIDlet implements Runnable {
    // $VF: renamed from: a int
-   public int field_1040;
-   // $VF: renamed from: a dd
-   private class_54 field_1041;
+   public int field_1525;
+   // $VF: renamed from: a de
+   private class_124 field_1526;
    // $VF: renamed from: a javax.microedition.lcdui.Display
-   private Display field_1042;
+   private Display field_1527;
    // $VF: renamed from: a boolean
-   private boolean field_1043 = false;
+   private boolean field_1528 = false;
    // $VF: renamed from: b boolean
-   private boolean field_1044 = false;
+   private boolean field_1529 = false;
    // $VF: renamed from: a java.lang.Thread
-   private Thread field_1045;
+   private Thread field_1530;
 
    public DeepMIDlet() {
       try {
-         this.field_1042 = Display.getDisplay(this);
-         class_41.field_529 = this.field_1042;
-         class_41.field_536 = this;
-         this.field_1041 = new class_54(this);
-         this.field_1045 = new Thread(this);
-         this.field_1040 = 1;
+         this.field_1527 = Display.getDisplay(this);
+         class_84.field_1112 = this.field_1527;
+         class_84.field_1119 = this;
+         this.field_1526 = new class_124(this);
+         this.field_1530 = new Thread(this);
+         this.field_1525 = 1;
       } catch (Exception var2) {
       }
    }
 
    public Display getDisplay() {
-      return this.field_1042;
+      return this.field_1527;
    }
 
    public void startApp() {
       try {
-         this.field_1042.setCurrent(this.field_1041);
-         this.field_1041.setFullScreenMode(true);
-         if (!this.field_1043) {
-            this.field_1045.start();
-            this.field_1043 = true;
+         this.field_1527.setCurrent(this.field_1526);
+         this.field_1526.setFullScreenMode(true);
+         if (!this.field_1528) {
+            this.field_1530.start();
+            this.field_1528 = true;
          }
       } catch (Exception var2) {
       }
@@ -48,17 +48,17 @@ public class DeepMIDlet extends MIDlet implements Runnable {
    }
 
    public void resume() {
-      this.field_1040 = 2;
+      this.field_1525 = 2;
    }
 
    public void pause() {
-      this.field_1040 = 4;
+      this.field_1525 = 4;
    }
 
    public void destroyApp(boolean var1) {
       try {
-         this.field_1044 = true;
-         this.field_1041.method_522();
+         this.field_1529 = true;
+         this.field_1526.method_950();
          this.notifyDestroyed();
       } catch (Exception var3) {
       }
@@ -71,26 +71,26 @@ public class DeepMIDlet extends MIDlet implements Runnable {
       // animating forever. Log it and keep the game running instead.
       while (true) {
          try {
-            switch (this.field_1040) {
+            switch (this.field_1525) {
                case 1:
-                  if (class_41.field_531 && !this.field_1044 && class_41.field_532 != -1) {
-                     class_41.field_539.method_425(class_41.field_532);
+                  if (class_84.field_1114 && !this.field_1529 && class_84.field_1115 != -1) {
+                     class_84.field_1122.method_768(class_84.field_1115);
                   }
 
-                  this.field_1041.method_521();
-                  this.field_1041.method_524();
+                  this.field_1526.method_949();
+                  this.field_1526.method_952();
                   break;
                case 2:
-                  this.field_1041.method_520();
-                  this.field_1040 = 1;
+                  this.field_1526.method_948();
+                  this.field_1525 = 1;
                   break;
                case 3:
-                  this.field_1041.method_523();
-                  this.field_1041.method_524();
+                  this.field_1526.method_951();
+                  this.field_1526.method_952();
                   break;
                case 4:
-                  this.field_1041.method_519();
-                  this.field_1040 = 3;
+                  this.field_1526.method_947();
+                  this.field_1525 = 3;
             }
          } catch (Exception var3) {
             org.deep3d.Diagnostics.gameLoopError(var3);

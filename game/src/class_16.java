@@ -1,625 +1,1129 @@
-// $VF: renamed from: bb
+// $VF: renamed from: dt
 public final class class_16 {
-   // $VF: renamed from: c int
-   private static int field_199 = 5;
-   // $VF: renamed from: d int
-   private static int field_200 = 5000;
-   // $VF: renamed from: e int
-   private static int field_201 = 20000;
-   // $VF: renamed from: a cm
-   public class_96 field_202;
-   // $VF: renamed from: a ay
-   public class_101 field_203;
-   // $VF: renamed from: b ay
-   private class_101 field_204;
-   // $VF: renamed from: a s
-   private class_71 field_205;
-   // $VF: renamed from: a c
-   private class_99 field_206;
-   // $VF: renamed from: a v
-   private class_5 field_207;
-   // $VF: renamed from: b v
-   private class_5 field_208;
-   // $VF: renamed from: a bh
-   public class_52 field_209;
-   // $VF: renamed from: a ar
-   private class_21 field_210;
-   // $VF: renamed from: a j
-   private class_20 field_211;
-   // $VF: renamed from: a ao
-   public class_8 field_212;
-   // $VF: renamed from: a cz
-   private class_7 field_213;
-   // $VF: renamed from: a cy
-   public class_57 field_214;
-   // $VF: renamed from: a dr
-   public class_13 field_215;
-   // $VF: renamed from: f int
-   private int field_216;
-   // $VF: renamed from: g int
-   // Deep3D-PC: float so a controller stick can command partial rates.
-   private float field_217;
-   // $VF: renamed from: h int
-   private float field_218;
-   // $VF: renamed from: i int
-   private int field_219;
-   // $VF: renamed from: a int
-   public int field_220;
-   // $VF: renamed from: a long
-   private long field_221;
-   // $VF: renamed from: b long
-   private long field_222;
-   // $VF: renamed from: j int
-   private int field_223;
-   // $VF: renamed from: a boolean
-   public boolean field_224;
-   // $VF: renamed from: c long
-   private long field_225;
-   // $VF: renamed from: k int
-   private int field_226;
-   // $VF: renamed from: b boolean
-   public boolean field_227;
-   // $VF: renamed from: l int
-   private int field_228;
-   // $VF: renamed from: m int
-   private int field_229;
-   // $VF: renamed from: c boolean
-   public boolean field_230;
-   // $VF: renamed from: f boolean
-   private boolean field_231;
-   // $VF: renamed from: g boolean
-   private boolean field_232;
-   // $VF: renamed from: c v
-   private class_5 field_233;
-   // $VF: renamed from: d v
-   private class_5 field_234;
-   // $VF: renamed from: a bn
-   private class_1 field_235 = new class_1();
-   // $VF: renamed from: n int
-   private int field_236;
-   // $VF: renamed from: b int
-   public int field_237;
-   // $VF: renamed from: a float
-   private float field_238;
-   // $VF: renamed from: o int
-   private int field_239;
-   // $VF: renamed from: d boolean
-   public boolean field_240;
-   // $VF: renamed from: a aw
-   private class_83 field_241;
-   // $VF: renamed from: e boolean
-   public boolean field_242;
-   // $VF: renamed from: e v
-   private class_5 field_243;
-   // $VF: renamed from: c ay
-   private class_101 field_244;
-   // $VF: renamed from: d ay
-   private class_101 field_245;
-   // $VF: renamed from: p int
-   private int field_246;
-   // $VF: renamed from: q int
-   private int field_247;
-   // $VF: renamed from: h boolean
-   private boolean field_248;
+   // $VF: renamed from: a short[]
+   private static final short[] field_150 = new short[]{
+      0,
+      6,
+      13,
+      19,
+      25,
+      31,
+      38,
+      44,
+      50,
+      57,
+      63,
+      69,
+      75,
+      82,
+      88,
+      94,
+      101,
+      107,
+      113,
+      119,
+      126,
+      132,
+      138,
+      144,
+      151,
+      157,
+      163,
+      170,
+      176,
+      182,
+      188,
+      195,
+      201,
+      207,
+      214,
+      220,
+      226,
+      232,
+      239,
+      245,
+      251,
+      257,
+      264,
+      270,
+      276,
+      283,
+      289,
+      295,
+      301,
+      308,
+      314,
+      320,
+      326,
+      333,
+      339,
+      345,
+      351,
+      358,
+      364,
+      370,
+      376,
+      383,
+      389,
+      395,
+      401,
+      408,
+      414,
+      420,
+      426,
+      433,
+      439,
+      445,
+      451,
+      458,
+      464,
+      470,
+      476,
+      483,
+      489,
+      495,
+      501,
+      508,
+      514,
+      520,
+      526,
+      533,
+      539,
+      545,
+      551,
+      557,
+      564,
+      570,
+      576,
+      582,
+      589,
+      595,
+      601,
+      607,
+      613,
+      620,
+      626,
+      632,
+      638,
+      644,
+      651,
+      657,
+      663,
+      669,
+      675,
+      682,
+      688,
+      694,
+      700,
+      706,
+      713,
+      719,
+      725,
+      731,
+      737,
+      744,
+      750,
+      756,
+      762,
+      768,
+      774,
+      781,
+      787,
+      793,
+      799,
+      805,
+      811,
+      818,
+      824,
+      830,
+      836,
+      842,
+      848,
+      854,
+      861,
+      867,
+      873,
+      879,
+      885,
+      891,
+      897,
+      904,
+      910,
+      916,
+      922,
+      928,
+      934,
+      940,
+      946,
+      953,
+      959,
+      965,
+      971,
+      977,
+      983,
+      989,
+      995,
+      1001,
+      1007,
+      1014,
+      1020,
+      1026,
+      1032,
+      1038,
+      1044,
+      1050,
+      1056,
+      1062,
+      1068,
+      1074,
+      1080,
+      1086,
+      1092,
+      1099,
+      1105,
+      1111,
+      1117,
+      1123,
+      1129,
+      1135,
+      1141,
+      1147,
+      1153,
+      1159,
+      1165,
+      1171,
+      1177,
+      1183,
+      1189,
+      1195,
+      1201,
+      1207,
+      1213,
+      1219,
+      1225,
+      1231,
+      1237,
+      1243,
+      1249,
+      1255,
+      1261,
+      1267,
+      1273,
+      1279,
+      1285,
+      1291,
+      1297,
+      1303,
+      1309,
+      1315,
+      1321,
+      1327,
+      1332,
+      1338,
+      1344,
+      1350,
+      1356,
+      1362,
+      1368,
+      1374,
+      1380,
+      1386,
+      1392,
+      1398,
+      1404,
+      1409,
+      1415,
+      1421,
+      1427,
+      1433,
+      1439,
+      1445,
+      1451,
+      1457,
+      1462,
+      1468,
+      1474,
+      1480,
+      1486,
+      1492,
+      1498,
+      1503,
+      1509,
+      1515,
+      1521,
+      1527,
+      1533,
+      1538,
+      1544,
+      1550,
+      1556,
+      1562,
+      1567,
+      1573,
+      1579,
+      1585,
+      1591,
+      1596,
+      1602,
+      1608,
+      1614,
+      1620,
+      1625,
+      1631,
+      1637,
+      1643,
+      1648,
+      1654,
+      1660,
+      1666,
+      1671,
+      1677,
+      1683,
+      1689,
+      1694,
+      1700,
+      1706,
+      1711,
+      1717,
+      1723,
+      1729,
+      1734,
+      1740,
+      1746,
+      1751,
+      1757,
+      1763,
+      1768,
+      1774,
+      1780,
+      1785,
+      1791,
+      1797,
+      1802,
+      1808,
+      1813,
+      1819,
+      1825,
+      1830,
+      1836,
+      1842,
+      1847,
+      1853,
+      1858,
+      1864,
+      1870,
+      1875,
+      1881,
+      1886,
+      1892,
+      1898,
+      1903,
+      1909,
+      1914,
+      1920,
+      1925,
+      1931,
+      1936,
+      1942,
+      1947,
+      1953,
+      1958,
+      1964,
+      1970,
+      1975,
+      1981,
+      1986,
+      1992,
+      1997,
+      2002,
+      2008,
+      2013,
+      2019,
+      2024,
+      2030,
+      2035,
+      2041,
+      2046,
+      2052,
+      2057,
+      2062,
+      2068,
+      2073,
+      2079,
+      2084,
+      2090,
+      2095,
+      2100,
+      2106,
+      2111,
+      2117,
+      2122,
+      2127,
+      2133,
+      2138,
+      2143,
+      2149,
+      2154,
+      2159,
+      2165,
+      2170,
+      2175,
+      2181,
+      2186,
+      2191,
+      2197,
+      2202,
+      2207,
+      2213,
+      2218,
+      2223,
+      2228,
+      2234,
+      2239,
+      2244,
+      2249,
+      2255,
+      2260,
+      2265,
+      2270,
+      2276,
+      2281,
+      2286,
+      2291,
+      2296,
+      2302,
+      2307,
+      2312,
+      2317,
+      2322,
+      2328,
+      2333,
+      2338,
+      2343,
+      2348,
+      2353,
+      2359,
+      2364,
+      2369,
+      2374,
+      2379,
+      2384,
+      2389,
+      2394,
+      2399,
+      2405,
+      2410,
+      2415,
+      2420,
+      2425,
+      2430,
+      2435,
+      2440,
+      2445,
+      2450,
+      2455,
+      2460,
+      2465,
+      2470,
+      2475,
+      2480,
+      2485,
+      2490,
+      2495,
+      2500,
+      2505,
+      2510,
+      2515,
+      2520,
+      2525,
+      2530,
+      2535,
+      2540,
+      2545,
+      2550,
+      2555,
+      2559,
+      2564,
+      2569,
+      2574,
+      2579,
+      2584,
+      2589,
+      2594,
+      2598,
+      2603,
+      2608,
+      2613,
+      2618,
+      2623,
+      2628,
+      2632,
+      2637,
+      2642,
+      2647,
+      2652,
+      2656,
+      2661,
+      2666,
+      2671,
+      2675,
+      2680,
+      2685,
+      2690,
+      2694,
+      2699,
+      2704,
+      2709,
+      2713,
+      2718,
+      2723,
+      2727,
+      2732,
+      2737,
+      2741,
+      2746,
+      2751,
+      2755,
+      2760,
+      2765,
+      2769,
+      2774,
+      2779,
+      2783,
+      2788,
+      2792,
+      2797,
+      2802,
+      2806,
+      2811,
+      2815,
+      2820,
+      2824,
+      2829,
+      2833,
+      2838,
+      2843,
+      2847,
+      2852,
+      2856,
+      2861,
+      2865,
+      2870,
+      2874,
+      2878,
+      2883,
+      2887,
+      2892,
+      2896,
+      2901,
+      2905,
+      2910,
+      2914,
+      2918,
+      2923,
+      2927,
+      2932,
+      2936,
+      2940,
+      2945,
+      2949,
+      2953,
+      2958,
+      2962,
+      2967,
+      2971,
+      2975,
+      2979,
+      2984,
+      2988,
+      2992,
+      2997,
+      3001,
+      3005,
+      3009,
+      3014,
+      3018,
+      3022,
+      3026,
+      3031,
+      3035,
+      3039,
+      3043,
+      3048,
+      3052,
+      3056,
+      3060,
+      3064,
+      3068,
+      3073,
+      3077,
+      3081,
+      3085,
+      3089,
+      3093,
+      3097,
+      3102,
+      3106,
+      3110,
+      3114,
+      3118,
+      3122,
+      3126,
+      3130,
+      3134,
+      3138,
+      3142,
+      3146,
+      3150,
+      3154,
+      3158,
+      3162,
+      3166,
+      3170,
+      3174,
+      3178,
+      3182,
+      3186,
+      3190,
+      3194,
+      3198,
+      3202,
+      3206,
+      3210,
+      3214,
+      3217,
+      3221,
+      3225,
+      3229,
+      3233,
+      3237,
+      3241,
+      3244,
+      3248,
+      3252,
+      3256,
+      3260,
+      3264,
+      3267,
+      3271,
+      3275,
+      3279,
+      3282,
+      3286,
+      3290,
+      3294,
+      3297,
+      3301,
+      3305,
+      3309,
+      3312,
+      3316,
+      3320,
+      3323,
+      3327,
+      3331,
+      3334,
+      3338,
+      3342,
+      3345,
+      3349,
+      3352,
+      3356,
+      3360,
+      3363,
+      3367,
+      3370,
+      3374,
+      3378,
+      3381,
+      3385,
+      3388,
+      3392,
+      3395,
+      3399,
+      3402,
+      3406,
+      3409,
+      3413,
+      3416,
+      3420,
+      3423,
+      3426,
+      3430,
+      3433,
+      3437,
+      3440,
+      3444,
+      3447,
+      3450,
+      3454,
+      3457,
+      3461,
+      3464,
+      3467,
+      3471,
+      3474,
+      3477,
+      3481,
+      3484,
+      3487,
+      3490,
+      3494,
+      3497,
+      3500,
+      3504,
+      3507,
+      3510,
+      3513,
+      3516,
+      3520,
+      3523,
+      3526,
+      3529,
+      3532,
+      3536,
+      3539,
+      3542,
+      3545,
+      3548,
+      3551,
+      3555,
+      3558,
+      3561,
+      3564,
+      3567,
+      3570,
+      3573,
+      3576,
+      3579,
+      3582,
+      3585,
+      3588,
+      3591,
+      3594,
+      3597,
+      3600,
+      3603,
+      3606,
+      3609,
+      3612,
+      3615,
+      3618,
+      3621,
+      3624,
+      3627,
+      3630,
+      3633,
+      3636,
+      3639,
+      3642,
+      3644,
+      3647,
+      3650,
+      3653,
+      3656,
+      3659,
+      3661,
+      3664,
+      3667,
+      3670,
+      3673,
+      3675,
+      3678,
+      3681,
+      3684,
+      3686,
+      3689,
+      3692,
+      3695,
+      3697,
+      3700,
+      3703,
+      3705,
+      3708,
+      3711,
+      3713,
+      3716,
+      3719,
+      3721,
+      3724,
+      3727,
+      3729,
+      3732,
+      3734,
+      3737,
+      3739,
+      3742,
+      3745,
+      3747,
+      3750,
+      3752,
+      3755,
+      3757,
+      3760,
+      3762,
+      3765,
+      3767,
+      3770,
+      3772,
+      3775,
+      3777,
+      3779,
+      3782,
+      3784,
+      3787,
+      3789,
+      3791,
+      3794,
+      3796,
+      3798,
+      3801,
+      3803,
+      3805,
+      3808,
+      3810,
+      3812,
+      3815,
+      3817,
+      3819,
+      3822,
+      3824,
+      3826,
+      3828,
+      3831,
+      3833,
+      3835,
+      3837,
+      3839,
+      3842,
+      3844,
+      3846,
+      3848,
+      3850,
+      3852,
+      3854,
+      3857,
+      3859,
+      3861,
+      3863,
+      3865,
+      3867,
+      3869,
+      3871,
+      3873,
+      3875,
+      3877,
+      3879,
+      3881,
+      3883,
+      3885,
+      3887,
+      3889,
+      3891,
+      3893,
+      3895,
+      3897,
+      3899,
+      3901,
+      3903,
+      3905,
+      3907,
+      3909,
+      3910,
+      3912,
+      3914,
+      3916,
+      3918,
+      3920,
+      3921,
+      3923,
+      3925,
+      3927,
+      3929,
+      3930,
+      3932,
+      3934,
+      3936,
+      3937,
+      3939,
+      3941,
+      3943,
+      3944,
+      3946,
+      3948,
+      3949,
+      3951,
+      3953,
+      3954,
+      3956,
+      3958,
+      3959,
+      3961,
+      3962,
+      3964,
+      3965,
+      3967,
+      3969,
+      3970,
+      3972,
+      3973,
+      3975,
+      3976,
+      3978,
+      3979,
+      3981,
+      3982,
+      3984,
+      3985,
+      3987,
+      3988,
+      3989,
+      3991,
+      3992,
+      3994,
+      3995,
+      3996,
+      3998,
+      3999,
+      4001,
+      4002,
+      4003,
+      4005,
+      4006,
+      4007,
+      4008,
+      4010,
+      4011,
+      4012,
+      4014,
+      4015,
+      4016,
+      4017,
+      4019,
+      4020,
+      4021,
+      4022,
+      4023,
+      4024,
+      4026,
+      4027,
+      4028,
+      4029,
+      4030,
+      4031,
+      4032,
+      4034,
+      4035,
+      4036,
+      4037,
+      4038,
+      4039,
+      4040,
+      4041,
+      4042,
+      4043,
+      4044,
+      4045,
+      4046,
+      4047,
+      4048,
+      4049,
+      4050,
+      4051,
+      4052,
+      4053,
+      4053,
+      4054,
+      4055,
+      4056,
+      4057,
+      4058,
+      4059,
+      4060,
+      4060,
+      4061,
+      4062,
+      4063,
+      4064,
+      4064,
+      4065,
+      4066,
+      4067,
+      4067,
+      4068,
+      4069,
+      4070,
+      4070,
+      4071,
+      4072,
+      4072,
+      4073,
+      4074,
+      4074,
+      4075,
+      4076,
+      4076,
+      4077,
+      4077,
+      4078,
+      4079,
+      4079,
+      4080,
+      4080,
+      4081,
+      4081,
+      4082,
+      4082,
+      4083,
+      4083,
+      4084,
+      4084,
+      4085,
+      4085,
+      4086,
+      4086,
+      4087,
+      4087,
+      4088,
+      4088,
+      4088,
+      4089,
+      4089,
+      4089,
+      4090,
+      4090,
+      4090,
+      4091,
+      4091,
+      4091,
+      4092,
+      4092,
+      4092,
+      4092,
+      4093,
+      4093,
+      4093,
+      4093,
+      4094,
+      4094,
+      4094,
+      4094,
+      4094,
+      4095,
+      4095,
+      4095,
+      4095,
+      4095,
+      4095,
+      4095,
+      4096,
+      4096,
+      4096,
+      4096,
+      4096,
+      4096,
+      4096,
+      4096,
+      4096,
+      4096,
+      4096
+   };
 
-   public class_16(class_96 var1) {
-      this.field_202 = var1;
-      this.field_202.field_1273 = true;
-      this.field_207 = new class_5();
-      this.field_208 = new class_5();
-      this.field_243 = new class_5();
-      this.field_233 = new class_5();
-      this.field_234 = new class_5();
-      this.field_219 = 1;
-      this.field_209 = new class_52();
-      this.field_210 = new class_21();
-      this.field_211 = new class_20();
-      this.field_213 = new class_7();
-      this.field_220 = -1;
-      this.field_223 = this.field_202.method_812();
-      this.field_216 = 2;
-      this.field_227 = false;
-      this.field_230 = true;
-      this.field_240 = false;
-      this.field_241 = null;
-      this.field_236 = class_3.method_110().field_834;
-      this.field_237 = this.field_236;
-      field_201 = class_3.method_108().field_437;
-      field_199 = class_3.method_108().field_436;
-      field_200 = class_3.method_108().field_438;
-      this.field_232 = field_201 > 0;
-      this.field_238 = class_3.method_108().field_429;
-      this.field_239 = class_3.method_108().field_439;
-      this.field_238 = this.field_238 + this.field_239 / 100.0F;
-      this.field_244 = class_25.method_328(9993);
-      this.field_244.field_1294 = 2;
-      this.field_245 = class_25.method_328(9997);
-      this.field_245.field_1294 = 2;
-      this.field_204 = class_25.method_328(6768);
-      this.field_204.field_1294 = 3;
-      new class_98().method_875(this.field_204);
-      this.field_205 = new class_71(this.field_244, this.field_204);
-      this.field_205.field_1039 = true;
-      this.field_206 = new class_99();
-      this.field_206.method_876(this.field_205);
-      this.field_246 = this.field_236 - class_3.method_108().field_448 << 3;
-      this.field_247 = this.field_236 - class_3.method_108().field_449 << 3;
-   }
-
-   // $VF: renamed from: a (ay) void
-   public final void method_229(class_101 var1) {
-      this.field_203 = var1;
-      int[] var2;
-      if ((var2 = class_24.method_319(var1.field_1286, class_3.method_108().field_443 ? 1 : 0)) != null) {
-         var1.method_872(var2[0], var2[1]);
-         var1.method_873((byte)2);
-      }
-
-      var1.field_1283.method_24(0, 0, 0);
-   }
-
-   // $VF: renamed from: a () void
-   public final void method_230() {
-      this.field_223 = this.field_202.method_812();
-   }
-
-   // $VF: renamed from: b () void
-   public final void method_231() {
-      if (!this.field_227 && this.field_232 && this.field_226 >= 0) {
-         class_41.field_539.method_427(7);
-         this.field_226 = 0;
-         this.field_216 = field_199;
-         this.field_227 = true;
-         this.field_203.method_845(this.field_233);
-         this.field_234.method_169(this.field_233);
-      }
-   }
-
-   // $VF: renamed from: a () boolean
-   public final boolean method_232() {
-      return this.field_226 >= 0;
-   }
-
-   // $VF: renamed from: a () float
-   public final float method_233() {
-      float var1;
-      if ((var1 = (float)this.field_226 / (field_200 / 6)) < 1.0F) {
-         return var1;
+   // $VF: renamed from: a (int) int
+   public static final int method_91(int var0) {
+      if ((var0 = var0 & 4095) >= 3072) {
+         return -field_150[4096 - var0];
+      } else if (var0 >= 2048) {
+         return -field_150[var0 - 2048];
       } else {
-         return var1 > 5.0F ? 6.0F - var1 : 1.0F;
+         return var0 >= 1024 ? field_150[2048 - var0] : field_150[var0];
       }
    }
 
-   // $VF: renamed from: b () float
-   public final float method_234() {
-      float var1;
-      return (var1 = (float)this.field_226 / field_201) > 0.0F ? 1.0F : 1.0F + var1;
-   }
-
-   // $VF: renamed from: c () void
-   public final void method_235() {
-      this.field_215 = null;
-   }
-
-   // $VF: renamed from: b () boolean
-   public final boolean method_236() {
-      return this.method_240() <= 0;
-   }
-
-   // $VF: renamed from: a (long) void
-   public final void method_237(long var1) {
-      if (this.field_220 >= 0) {
-         this.field_202.method_831(this.field_220, var1, false);
+   // $VF: renamed from: b (int) int
+   public static final int method_92(int var0) {
+      var0 -= 1024;
+      if ((var0 = var0 & 4095) >= 3072) {
+         return field_150[4096 - var0];
+      } else if (var0 >= 2048) {
+         return field_150[var0 - 2048];
+      } else {
+         return var0 >= 1024 ? -field_150[2048 - var0] : -field_150[var0];
       }
    }
 
-   // $VF: renamed from: a (o, int) void
-   public final void method_238(class_19 var1, int var2) {
-      this.field_202.method_825(var1, var2);
-      this.field_220 = 0;
+   // $VF: renamed from: c (int) int
+   public static final int method_93(int var0) {
+      int var1;
+      return (var1 = 4096 - (var0 * var0 >> 12)) <= 0 ? method_94(var0, 0) : method_94(var0, method_96(var1));
    }
 
-   // $VF: renamed from: a (o[], int) void
-   public final void method_239(class_19[] var1, int var2) {
-      this.field_202.method_826(var1, var2);
-      this.field_220 = 0;
-   }
-
-   // $VF: renamed from: a () int
-   public final int method_240() {
-      return this.field_202.field_1256;
-   }
-
-   // $VF: renamed from: b () int
-   public final int method_241() {
-      return this.field_202.field_1263;
-   }
-
-   // $VF: renamed from: d () void
-   public final void method_242() {
-      this.field_220++;
-      if (this.field_220 > this.field_202.field_1262 - 1) {
-         this.field_220 = 0;
-      }
-
-      class_3.method_108().field_450 = this.field_220;
-   }
-
-   // $VF: renamed from: c () boolean
-   public final boolean method_243() {
-      return this.field_220 >= 0
-         && this.field_202.field_1252 != null
-         && this.field_202.field_1252[this.field_220] != null
-         && this.field_202.field_1252[this.field_220][0].field_298;
-   }
-
-   // $VF: renamed from: c () int
-   public final int method_244() {
-      return this.field_202.method_829(this.field_220);
-   }
-
-   // $VF: renamed from: a () v
-   public final class_5 method_245() {
-      return this.field_203.method_844(this.field_207);
-   }
-
-   // $VF: renamed from: c () float
-   public final float method_246() {
-      return 1.0F - class_124.method_942(0, this.field_237 - 15000) / 15000.0F;
-   }
-
-   // $VF: renamed from: a (boolean) void
-   public final void method_247(boolean var1) {
-      this.field_202.field_1268 = var1;
-   }
-
-   // $VF: renamed from: a (aw) void
-   public final void method_248(class_83 var1) {
-      this.field_241 = var1;
-      this.field_242 = false;
-      this.field_240 = this.field_241 != null;
-      if (this.field_241 != null && this.field_241 instanceof class_87) {
-         this.field_242 = true;
+   // $VF: renamed from: a (int, int) int
+   public static final int method_94(int var0, int var1) {
+      boolean var2 = false;
+      int var3 = method_100(var0) + 1;
+      if (var1 >= 0) {
+         int var6 = (var1 - var3 << 12) / (var1 + var3);
+         return var0 < 0 ? -(512 - (512 * var6 >> 12)) : 512 - (512 * var6 >> 12);
+      } else {
+         int var4 = (var1 + var3 << 12) / (var3 - var1);
+         boolean var5 = false;
+         return var0 < 0 ? -(1536 - (512 * var4 >> 12)) : 1536 - (512 * var4 >> 12);
       }
    }
 
-   // $VF: renamed from: d () boolean
-   public final boolean method_249() {
-      return this.field_241 == this.field_214.field_778[1];
+   // $VF: renamed from: d (int) int
+   public static final int method_95(int var0) {
+      int var1 = var0 >> 1;
+      int var2 = Float.floatToIntBits(var0 * 2.4414062E-4F);
+      int var4;
+      return method_100((var0 = (int)(Float.intBitsToFloat(var4 = 1597463174 - (var2 >> 1)) * 4096.0F)) * (6144 - ((var1 * var0 >> 12) * var0 >> 12)) >> 12);
    }
 
-   // $VF: renamed from: e () boolean
-   public final boolean method_250() {
-      return this.field_214.field_778[0] != null ? this.field_241 == this.field_214.field_778[0] : false;
-   }
+   // $VF: renamed from: a (long) int
+   public static final int method_96(long var0) {
+      if (var0 == 0L) {
+         return 0;
+      } else {
+         boolean var2 = false;
+         int var3 = Integer.MAX_VALUE;
+         long var4 = Integer.MAX_VALUE;
 
-   // $VF: renamed from: a (int, int, int) void
-   public final void method_251(int var1, int var2, int var3) {
-      this.field_203.method_841(var1, var2, var3);
-      this.field_202.field_1270.method_9(var1, var2, var3);
-   }
-
-   // $VF: renamed from: b (long) void
-   public final void method_252(long var1) {
-      if (!this.field_224) {
-         int var3 = this.field_236 - (this.field_203.method_849() >> 3);
-         this.field_237 = var3 > 500 ? var3 : 500;
-         this.field_233 = this.field_203.method_845(this.field_233);
-         this.field_225 = var1;
-         if (this.field_226 < 0 && this.field_226 + 3L * var1 > 0L) {
-            class_4.method_154(4, this);
-            this.field_226 = 0;
-         }
-
-         this.field_226 = (int)(this.field_226 + var1);
-         if (this.field_227) {
-            if (this.field_226 > field_200) {
-               this.field_216 = 2;
-               this.field_227 = false;
-               this.field_226 = -field_201;
-            }
-
-            if (this.field_213 != null) {
-               this.field_213.method_190(this.field_233, (int)this.field_225);
-               this.field_234.method_169(this.field_233);
-            }
-         }
-
-         this.field_231 = false;
-         if (this.field_230) {
-            this.method_253(this.field_214.field_778);
-            this.method_253(this.field_214.field_776);
-            this.method_253(this.field_214.field_775);
-         }
-
-         if (this.field_240 && this.field_241 != null && !this.field_231) {
-            if (this.field_242) {
-               this.field_241 = ((class_87)this.field_241).field_1107.method_219();
-            }
-
-            if (this.field_241 != null) {
-               this.field_208 = this.field_241.method_746(this.field_208);
-               this.field_208.method_177(this.field_203.method_844(this.field_233));
-               this.field_208.method_182();
-               this.field_207.method_169(this.field_203.method_851(this.field_207));
-               this.field_207.method_182();
-               this.field_208.method_177(this.field_207);
-               this.field_208.method_178((int)((float)this.field_225 * 5.0F));
-               this.field_243 = this.field_207.method_174(this.field_208, this.field_243);
-               this.field_243.method_182();
-               this.field_203.field_1283.method_44(this.field_243);
-               if (this.field_217 == 0 && this.field_218 == 0) {
-                  this.method_258((int)this.field_225);
-               }
-
-               this.field_203.method_843((int)var1 * this.field_216);
+         for (int var6 = 30; var6 >= 0; var6--) {
+            var3 >>= 1;
+            long var7;
+            if ((var7 = var0 - (var4 * var4 >> 12)) > 0L) {
+               var4 += var3;
             } else {
-               this.method_248(null);
-            }
-         } else if (!this.field_231) {
-            this.field_203.method_858((int)(this.field_238 * (this.field_217 * (int)var1 / 3)));
-            this.field_228 = (int)(this.field_238 * (this.field_218 * (int)var1 / 3));
-            this.field_203.method_859(this.field_228);
-            this.field_229 = this.field_229 + (int)(this.field_238 * (this.field_217 * (int)var1 / 3));
-            if (this.field_217 == 0 && this.field_218 == 0) {
-               this.method_258((int)this.field_225);
-            }
-
-            this.field_203.method_843((int)var1 * this.field_216);
-         }
-
-         if (!this.field_231) {
-            this.field_203.method_877(-this.field_219);
-            if (this.field_219 > 0 && this.field_218 == 0) {
-               this.field_219 = (int)(this.field_219 - var1 / 5L);
-            } else if (this.field_219 < -var1 / 5L && this.field_218 == 0) {
-               this.field_219 = (int)(this.field_219 + var1 / 5L);
-            }
-
-            this.field_217 = this.field_218 = 0;
-         }
-
-         if (this.field_237 > class_3.method_108().field_448 && class_3.method_108().field_430 > 0 && class_3.method_108().field_432 > 0) {
-            this.field_221 += var1;
-            if (this.field_221 > class_3.method_108().field_432) {
-               this.field_221 = 0L;
-               this.field_202.method_813();
-            }
-         }
-
-         if (class_3.method_108().field_442 && this.field_202.field_1256 < this.field_202.field_1257) {
-            this.field_222 += var1;
-            if (this.field_222 > 600L) {
-               this.field_222 = 0L;
-               this.field_202.method_814();
-            }
-         }
-
-         this.field_202.method_832(var1);
-         this.field_209.method_511(var1, class_41.field_527.field_249.field_1284, false);
-         this.field_210.method_293(var1, this.field_202.field_1270);
-         this.field_211.method_289(this.field_203.field_1283);
-         this.field_202.field_1270 = this.field_203.field_1283;
-         this.field_244.method_841(this.field_203.method_848(), this.field_246, this.field_203.method_850());
-         this.field_245.method_841(this.field_203.method_848(), this.field_247, this.field_203.method_850());
-         if (this.field_215 != null) {
-            this.field_215.method_223(this.field_203.method_848(), this.field_203.method_849(), this.field_203.method_850());
-         }
-
-         if (!this.field_230) {
-            if (this.field_213 != null) {
-               this.field_213.method_190(this.field_233, (int)this.field_225);
-               this.field_234.method_169(this.field_233);
-            }
-         } else {
-            if (this.field_223 > this.field_202.method_812()) {
-               class_41.method_415(110);
-               this.field_223 = this.field_202.method_812();
-            }
-
-            this.field_248 = false;
-            if (this.field_237 > class_3.method_108().field_449 + 200) {
-               this.field_207 = this.field_245.method_844(this.field_207);
-               this.field_205.field_1031 = this.field_245;
-               this.field_248 = true;
-            } else if (this.field_237 < class_3.method_108().field_448 - 200) {
-               this.field_207 = this.field_244.method_844(this.field_207);
-               this.field_205.field_1031 = this.field_244;
-               this.field_248 = true;
-            }
-
-            if (this.field_237 > class_3.method_89()) {
-               class_3.method_91(this.field_237);
-            } else if (this.field_237 < class_3.method_90()) {
-               class_3.method_92(this.field_237);
-            }
-
-            if (this.field_248) {
-               this.field_204.method_866(class_41.field_527.field_249.field_1283);
-               this.field_204.method_843(-4200);
-               this.field_206.method_835(false);
-            }
-
-            if (this.field_233.method_183() > 500000) {
-               this.field_203.method_841(20000, this.field_233.field_139, 20000);
-            }
-
-            if (this.method_236()) {
-               this.method_259(var1);
-            }
-         }
-      }
-   }
-
-   // $VF: renamed from: a (aw[]) void
-   private void method_253(class_83[] var1) {
-      if (var1 != null) {
-         for (int var2 = 0; var2 < var1.length; var2++) {
-            if (var1[var2] != null && var1[var2].method_754(this.field_203.method_844(this.field_208))) {
-               this.field_208 = var1[var2].method_755(this.field_203.method_844(this.field_208));
-               this.field_208.field_138 += 100;
-               if (this.field_208 != null) {
-                  this.field_207.method_169(this.field_203.method_851(this.field_207));
-                  this.field_208.method_177(this.field_207);
-                  this.field_208.method_178((int)((float)this.field_225 * 5.0F));
-                  this.field_233 = this.field_207.method_174(this.field_208, this.field_233);
-                  this.field_233.method_182();
-                  this.field_203.field_1283.method_44(this.field_233);
-                  this.field_203.method_843((int)this.field_225 * this.field_216);
-                  this.method_258((int)this.field_225);
-                  this.field_231 = true;
-                  return;
+               if (var7 >= 0L) {
+                  return (int)var4;
                }
+
+               var4 -= var3;
             }
          }
+
+         return (int)var4;
       }
    }
 
-   // $VF: renamed from: c (long) void
-   public final void method_254(long var1) {
-      this.field_218 = 1;
-      if (this.field_219 < 384) {
-         this.field_219 = (int)(this.field_219 + var1);
-      }
+   // $VF: renamed from: b (int, int) int
+   public static final int method_97(int var0, int var1) {
+      return var0 >= var1 ? var0 : var1;
    }
 
-   // $VF: renamed from: d (long) void
-   public final void method_255(long var1) {
-      this.field_218 = -1;
-      if (this.field_219 > -384) {
-         this.field_219 = (int)(this.field_219 - var1);
-      }
+   // $VF: renamed from: c (int, int) int
+   public static final int method_98(int var0, int var1) {
+      return var0 <= var1 ? var0 : var1;
    }
 
-   /**
-    * Deep3D-PC: analogue steering. yaw > 0 turns left (like method_254),
-    * pitch uses the same sign as method_256/257. Magnitudes 0..1 scale the
-    * turn rate and the visual bank.
-    */
-   public final void steerAnalog(long var1, float yaw, float pitch) {
-      this.field_218 = yaw;
-      float bankLimit = 384.0F * Math.abs(yaw);
-      if (yaw > 0.0F) {
-         if (this.field_219 < bankLimit) {
-            this.field_219 = (int)(this.field_219 + var1);
-         }
-      } else if (yaw < 0.0F && this.field_219 > -bankLimit) {
-         this.field_219 = (int)(this.field_219 - var1);
-      }
-
-      this.field_217 = pitch;
+   // $VF: renamed from: a (float, float) float
+   public static final float method_99(float var0, float var1) {
+      return var0 <= var1 ? var0 : var1;
    }
 
-   // $VF: renamed from: e (long) void
-   public final void method_256(long var1) {
-      this.field_217 = 1;
-   }
-
-   // $VF: renamed from: f (long) void
-   public final void method_257(long var1) {
-      this.field_217 = -1;
-   }
-
-   // $VF: renamed from: a (int) void
-   public final void method_258(int var1) {
-      this.field_235.method_2();
-      var1 = class_124.method_943(var1, 60);
-      this.field_207 = this.field_203.method_852(this.field_207);
-      this.field_208 = this.field_203.method_854(this.field_208);
-      this.field_235.method_2();
-      int var2 = this.field_235.method_16().method_172(this.field_208);
-      if (this.field_235.method_16().method_172(this.field_207) < 0) {
-         if (var2 > 0) {
-            this.field_203.method_857(-var1 >> 1);
-         } else {
-            this.field_203.method_857(var1 >> 1);
-         }
-      } else {
-         if (var2 > 128 && var2 < 3968 || var2 < -128 && var2 > -3968) {
-            if (var2 < 0) {
-               this.field_203.method_857(var1 >> 1);
-               return;
-            }
-
-            this.field_203.method_857(-var1 >> 1);
-         }
-      }
-   }
-
-   // $VF: renamed from: g (long) void
-   private void method_259(long var1) {
-      if (this.field_202.field_1268) {
-         this.field_212.method_196(this.field_203.method_848(), this.field_203.method_849(), this.field_203.method_850());
-      }
-
-      this.field_202.field_1268 = false;
-   }
-
-   // $VF: renamed from: e () void
-   public final void method_260() {
-      this.field_202.method_830(this.field_220);
-   }
-
-   // $VF: renamed from: f () void
-   public final void method_261() {
-      this.field_214 = null;
-      if (this.field_212 != null) {
-         this.field_212.method_193();
-      }
-
-      this.field_212 = null;
-      if (this.field_211 != null) {
-         this.field_211.method_290();
-      }
-
-      this.field_211 = null;
-      if (this.field_209 != null) {
-         this.field_209.method_510();
-      }
-
-      this.field_209 = null;
-      if (this.field_210 != null) {
-         this.field_210.method_292();
-      }
-
-      this.field_210 = null;
-      if (this.field_213 != null) {
-         this.field_213.method_189();
-      }
-
-      this.field_213 = null;
-      ;
-   }
-
-   // $VF: renamed from: b (boolean) void
-   public final void method_262(boolean var1) {
-      if (this.method_236()) {
-         this.field_212.method_197(this.field_225);
-         this.field_209.method_512();
-         this.field_210.method_294();
-      } else {
-         class_41.field_527.method_265(this.field_203);
-         if (this.field_248) {
-            class_41.field_527.method_265(this.field_204);
-         }
-
-         this.field_209.method_512();
-         if (!this.field_224 && var1) {
-            this.field_210.method_294();
-            class_41.field_527.method_265(this.field_244);
-            class_41.field_527.method_265(this.field_245);
-         }
-
-         if (this.field_227 || !this.field_230) {
-            this.field_213.method_192();
-         }
-      }
-   }
-
-   // $VF: renamed from: a (boolean, am) void
-   public final void method_263(boolean var1, class_111 var2) {
-      if (!this.method_236() && !this.field_224 && var1) {
-         this.field_211.method_291(var2);
-      }
+   // $VF: renamed from: e (int) int
+   public static final int method_100(int var0) {
+      return var0 < 0 ? -var0 : var0;
    }
 }

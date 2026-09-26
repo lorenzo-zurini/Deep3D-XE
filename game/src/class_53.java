@@ -1,99 +1,109 @@
-// $VF: renamed from: z
-public final class class_53 {
-   // $VF: renamed from: a int
-   private int field_728;
-   // $VF: renamed from: b int
-   private int field_729;
-   // $VF: renamed from: c int
-   private int field_730;
-   // $VF: renamed from: d int
-   private int field_731;
-   // $VF: renamed from: a java.lang.String[]
-   private String[] field_732;
-   // $VF: renamed from: e int
-   private int field_733;
-   // $VF: renamed from: a boolean
-   private boolean field_734;
-   // $VF: renamed from: b boolean
-   private boolean field_735;
+import javax.microedition.lcdui.Command;
+import javax.microedition.lcdui.CommandListener;
+import javax.microedition.lcdui.Displayable;
+import javax.microedition.lcdui.Form;
+import javax.microedition.lcdui.Image;
+import javax.microedition.lcdui.Item;
+import javax.microedition.media.Manager;
+import javax.microedition.media.Player;
+import javax.microedition.media.PlayerListener;
+import javax.microedition.media.control.VideoControl;
 
-   public class_53(int var1, int var2, int var3) {
-      this.field_728 = var1;
-      this.field_729 = var2;
-      this.field_730 = var3;
-      this.field_731 = class_41.field_538 / 2;
-   }
+// $VF: renamed from: bs
+public final class class_53 implements CommandListener, PlayerListener {
+   // $VF: renamed from: a javax.microedition.media.Player
+   private Player field_590;
+   // $VF: renamed from: a javax.microedition.media.control.VideoControl
+   private VideoControl field_591;
+   // $VF: renamed from: a javax.microedition.lcdui.Image
+   public Image field_592;
+   // $VF: renamed from: a byte[]
+   private byte[] field_593;
+   // $VF: renamed from: a javax.microedition.lcdui.Form
+   private Form field_594 = new Form("Deep");
 
    public class_53() {
-      this(class_41.field_537 < 176 ? 10 : 20, class_41.field_538 / 2, class_41.field_537 - (class_41.field_537 < 176 ? 20 : 40));
-   }
-
-   // $VF: renamed from: a (java.lang.String) void
-   public final void method_513(String var1) {
-      this.method_514(var1, false);
-   }
-
-   // $VF: renamed from: a (java.lang.String, boolean) void
-   public final void method_514(String var1, boolean var2) {
-      this.field_734 = true;
-      this.field_735 = var2;
-      this.field_732 = class_50.method_499(var1, this.field_730 - 10);
-      this.field_729 = (class_41.field_538 >> 1) - (class_50.method_497(this.field_732) + 2 * class_50.method_494() >> 1);
-      this.field_733 = this.field_729 + this.field_732.length * class_50.method_494() + 10 + 2;
-      this.field_731 = this.field_733 + class_50.method_494() + 5 - this.field_729;
-   }
-
-   // $VF: renamed from: a () boolean
-   public final boolean method_515() {
-      return this.field_735 ? this.field_734 : false;
+      this.field_594.append(class_84.field_1116.method_4(303));
+      this.field_594.addCommand(new Command(class_84.field_1116.method_4(65), 3, 0));
+      this.field_594.addCommand(new Command("Click!", 1, 1));
+      this.field_594.setCommandListener(this);
    }
 
    // $VF: renamed from: a () void
-   public final void method_516() {
-      if (!this.field_734 && this.field_735) {
-         this.field_734 = true;
+   public final void method_436() {
+      try {
+         if (this.field_590 == null) {
+            this.field_590 = Manager.createPlayer("capture://image");
+            this.field_590.addPlayerListener(this);
+            this.field_590.realize();
+         }
+
+         if (this.field_591 == null) {
+            this.field_591 = (VideoControl)this.field_590.getControl("VideoControl");
+            if (this.field_591 != null) {
+               this.field_594.set(0, (Item)this.field_591.initDisplayMode(0, null));
+               this.field_594.get(0).setLayout(51);
+
+               try {
+                  this.field_591.setDisplaySize(class_84.field_1120, class_84.field_1120);
+               } catch (Exception var2) {
+                  var2.printStackTrace();
+               }
+            }
+         }
+
+         this.field_590.start();
+         class_84.field_1112.setCurrent(this.field_594);
+      } catch (Exception var3) {
+         var3.getMessage();
+         var3.printStackTrace();
+      }
+   }
+
+   // $VF: renamed from: a () javax.microedition.lcdui.Image
+   public final Image method_437() {
+      if (this.field_590 == null) {
+         this.method_436();
+      }
+
+      try {
+         this.field_593 = this.field_591.getSnapshot(null);
+         this.field_592 = Image.createImage(this.field_593, 0, this.field_593.length);
+         this.field_592 = class_28.method_280(
+            this.field_592, class_119.field_1458, (int)((float)class_119.field_1459 * class_84.field_1121 / class_84.field_1120)
+         );
+         this.field_592 = Image.createImage(
+            this.field_592, 0, this.field_592.getHeight() - class_119.field_1459 >> 1, class_119.field_1458, class_119.field_1459, 0
+         );
+         this.field_590.stop();
+         this.field_590.deallocate();
+         this.field_590.close();
+         this.field_590 = null;
+         return this.field_592;
+      } catch (Exception var2) {
+         var2.printStackTrace();
+         return null;
       }
    }
 
    // $VF: renamed from: b () void
-   public final void method_517() {
-      if (this.field_734 && this.field_735) {
-         this.field_734 = false;
+   public final void method_438() {
+      if (this.field_590 != null) {
+         this.field_590.deallocate();
       }
    }
 
-   // $VF: renamed from: c () void
-   public final void method_518() {
-      class_69.method_659();
-      class_69.method_668("", this.field_728, this.field_729, this.field_730, this.field_731, true);
-      class_50.method_488(this.field_732, this.field_728 + 5, this.field_729 + 10, 0);
-      class_41.field_534.setColor(class_69.field_1003);
-      if (this.field_735) {
-         class_50.method_483(class_41.field_533.method_297(45), this.field_728 + this.field_730 / 3, this.field_733, this.field_734 ? 0 : 1, 24);
-         class_50.method_483(
-            class_41.field_533.method_297(46), this.field_728 + this.field_730 - this.field_730 / 3, this.field_733, this.field_734 ? 1 : 0, 24
-         );
-         if (this.field_734) {
-            class_41.field_534
-               .drawRect(
-                  this.field_728 + this.field_730 / 3 - 2 - class_50.method_490(class_41.field_533.method_297(45)) / 2,
-                  this.field_733,
-                  class_50.method_490(class_41.field_533.method_297(45)) + 4,
-                  10
-               );
-         } else {
-            class_41.field_534
-               .drawRect(
-                  this.field_728 + this.field_730 - this.field_730 / 3 - 2 - class_50.method_490(class_41.field_533.method_297(46)) / 2,
-                  this.field_733,
-                  class_50.method_490(class_41.field_533.method_297(46)) + 4,
-                  10
-               );
+   public final void playerUpdate(Player var1, String var2, Object var3) {
+   }
+
+   public final void commandAction(Command var1, Displayable var2) {
+      if (var1.getLabel().equals("Click!")) {
+         this.field_592 = this.method_437();
+         if (this.field_592 != null) {
+            class_51.field_577 = false;
          }
-      } else {
-         class_50.method_485("OK", this.field_728 + this.field_730 / 2 - class_50.method_490("OK") / 2, this.field_733, 0);
-         class_41.field_534
-            .drawRect(this.field_728 + this.field_730 / 2 - 2 - class_50.method_490("OK") / 2, this.field_733, class_50.method_490("OK") + 4, 10);
       }
+
+      class_84.field_1112.setCurrent(class_84.field_1118);
    }
 }

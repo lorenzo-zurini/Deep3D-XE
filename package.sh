@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build a distributable copy of Deep3D-PC in dist/.
 #
-#   dist/deep3d/       portable folder: deep3d.jar + assets + launcher +
-#                      .desktop entry (needs a system Java 17+)
+#   dist/deep3d/       portable folder: deep3d.jar + assets + native 3D engine
+#                      + launcher + .desktop entry (needs a system Java 17+)
 #   dist/Deep3D/       self-contained app image with bundled Java runtime
 #                      (only if the JDK's jpackage tool is available)
 #
@@ -33,6 +33,8 @@ jar --create --file dist/deep3d/deep3d.jar --manifest build/MANIFEST.MF -C build
 cp -r assets dist/deep3d/assets
 mkdir -p dist/deep3d/lib
 cp lib/*.jar dist/deep3d/lib/
+mkdir -p dist/deep3d/native
+cp build/native/libjavam3g.so dist/deep3d/native/
 
 # Big icon for the desktop entry
 if command -v magick >/dev/null 2>&1; then

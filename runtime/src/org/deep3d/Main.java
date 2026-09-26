@@ -38,11 +38,15 @@ public final class Main {
             }
         }
 
+        // SIGTERM/SIGINT: skip native exit handlers (see Runtime.halt).
+        java.lang.Runtime.getRuntime().addShutdownHook(new Thread(() -> Runtime.halt(0), "Halt"));
+
         Runtime.setAppProperty("MIDlet-Name", "Deep");
         Runtime.setAppProperty("MIDlet-Vendor", "www.fishlabs.net");
         Runtime.setAppProperty("MIDlet-Version", "1.0.8");
 
         ru.woesss.j2me.micro3d.Render.textureFilter = Config.textureFilter;
+        javax.microedition.m3g.Platform.setTextureFilter(Config.textureFilter);
 
         AudioSettings.master = Config.masterVolume;
         AudioSettings.music = Config.musicVolume;

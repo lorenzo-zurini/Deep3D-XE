@@ -229,6 +229,20 @@ public final class GL2D {
                     i += 8;
                     break;
                 }
+                case Draw2D.OP_M3G:
+                    m3g((java.nio.ByteBuffer) d.objects[d.ops[i]], d.ops[i + 1], d.ops[i + 2],
+                            d.ops[i + 3], d.ops[i + 4], d.ops[i + 5], d.ops[i + 6],
+                            d.ops[i + 7], d.ops[i + 8], d.ops[i + 9], d.ops[i + 10],
+                            d.ops[i + 11] != 0);
+                    i += 12;
+                    break;
+                case Draw2D.OP_M3G_TEX:
+                    m3gTexture((M3GTargets.TexSlot) d.objects[d.ops[i]], d.ops[i + 1], d.ops[i + 2],
+                            d.ops[i + 3], d.ops[i + 4], d.ops[i + 5], d.ops[i + 6],
+                            d.ops[i + 7], d.ops[i + 8], d.ops[i + 9], d.ops[i + 10],
+                            d.ops[i + 11] != 0);
+                    i += 12;
+                    break;
                 case Draw2D.OP_BATCH_3D:
                     // handled by the caller (GLBackend splits on these)
                     i += 1;
@@ -242,6 +256,8 @@ public final class GL2D {
 
     private static int opArgLen(int op) {
         switch (op) {
+            case Draw2D.OP_M3G:
+            case Draw2D.OP_M3G_TEX: return 12;
             case Draw2D.OP_COLOR: return 1;
             case Draw2D.OP_FILL_RECT:
             case Draw2D.OP_DRAW_RECT:
@@ -436,6 +452,71 @@ public final class GL2D {
         texQuad(t.id, x, y, w, h, 0, 0, 1, 1, 0xFFFFFFFF);
     }
 
+    /* One GL texture per pooled M3G buffer (reused frame to frame). */
+    private final Map<java.nio.ByteBuffer, Integer> m3gTex = new IdentityHashMap<>();
+
+    private void m3g(java.nio.ByteBuffer pixels, int texW, int texH,
+                     int srcX, int srcY, int srcW, int srcH,
+                     int dstX, int dstY, int dstW, int dstH, boolean opaque) {
+        if (srcW <= 0 || srcH <= 0) {
+            return;
+        }
+        flush();
+        Integer tex = m3gTex.get(pixels);
+        if (tex == null) {
+            tex = glGenTextures();
+            m3gTex.put(pixels, tex);
+        }
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, texW);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, srcX);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, srcY);
+        pixels.rewind();
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, srcW, srcH, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+        texQuad(tex, dstX, dstY, dstW, dstH, 0, 0, 1, 1, 0xFFFFFFFF);
+        if (opaque) {
+            // draw without blending: the phone canvas has no alpha
+            glDisable(GL_BLEND);
+            flushNoBlend();
+        } else {
+            flush();
+        }
+    }
+
+    /** An M3G pass rendered straight into a shared texture (bottom-up rows). */
+    private void m3gTexture(M3GTargets.TexSlot slot, int texW, int texH,
+                            int srcX, int srcY, int srcW, int srcH,
+                            int dstX, int dstY, int dstW, int dstH, boolean opaque) {
+        if (srcW <= 0 || srcH <= 0 || texW <= 0 || texH <= 0) {
+            return;
+        }
+        flush();
+        if (slot.fence != 0) {
+            org.lwjgl.opengl.GL32.glWaitSync(slot.fence, 0, org.lwjgl.opengl.GL32.GL_TIMEOUT_IGNORED);
+            org.lwjgl.opengl.GL32.glDeleteSync(slot.fence);
+            slot.fence = 0;
+        }
+        float u0 = (float) srcX / texW;
+        float u1 = (float) (srcX + srcW) / texW;
+        float v0 = 1f - (float) srcY / texH;
+        float v1 = 1f - (float) (srcY + srcH) / texH;
+        texQuad(slot.texture, dstX, dstY, dstW, dstH, u0, v0, u1, v1, 0xFFFFFFFF);
+        if (opaque) {
+            glDisable(GL_BLEND);
+            flushNoBlend();
+        } else {
+            flush();
+        }
+    }
+
     private static int quickHash(int[] a) {
         int h = a.length;
         for (int i = 0; i < a.length; i += Math.max(1, a.length / 64)) {
@@ -567,6 +648,14 @@ public final class GL2D {
         flushWith(screenW, screenH);
     }
 
+    private boolean noBlendOnce;
+
+    private void flushNoBlend() {
+        noBlendOnce = true;
+        flushWith(screenW, screenH);
+        noBlendOnce = false;
+    }
+
     private void flushWith(float vw, float vh) {
         if (vertCount == 0) {
             return;
@@ -575,7 +664,11 @@ public final class GL2D {
         glUniform2f(uViewport, vw, vh);
         glDisable(GL_DEPTH_TEST);
         glDepthMask(false);
-        glEnable(GL_BLEND);
+        if (noBlendOnce) {
+            glDisable(GL_BLEND);
+        } else {
+            glEnable(GL_BLEND);
+        }
         glBlendEquation(GL_FUNC_ADD);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glActiveTexture(GL_TEXTURE0);

@@ -1,891 +1,379 @@
-import javax.microedition.lcdui.Image;
-
-// $VF: renamed from: ch
-public final class class_118 extends class_113 {
-   // $VF: renamed from: a long
-   private long field_1457;
-   // $VF: renamed from: b long
-   private long field_1458;
-   // $VF: renamed from: c long
-   private long field_1459;
-   // $VF: renamed from: d long
-   private long field_1460;
-   // $VF: renamed from: e long
-   private long field_1461;
+// $VF: renamed from: ae
+public final class class_118 {
+   // $VF: renamed from: a cz
+   private class_26 field_1443;
    // $VF: renamed from: a int
-   private int field_1462;
-   // $VF: renamed from: a int[]
-   private int[] field_1463;
-   // $VF: renamed from: a javax.microedition.lcdui.Image
-   private Image field_1464;
-   // $VF: renamed from: a bk
-   public class_117 field_1465;
-   // $VF: renamed from: a bu
-   private class_67 field_1466;
-   // $VF: renamed from: a boolean
-   private boolean field_1467;
-   // $VF: renamed from: b boolean
-   private boolean field_1468;
-   // $VF: renamed from: c boolean
-   private boolean field_1469;
+   private int field_1444;
    // $VF: renamed from: d boolean
-   private boolean field_1470;
-   // $VF: renamed from: e boolean
-   private boolean field_1471;
-   // $VF: renamed from: f boolean
-   private boolean field_1472;
-   // $VF: renamed from: g boolean
-   private boolean field_1473;
-   // $VF: renamed from: h boolean
-   private boolean field_1474;
-   // $VF: renamed from: i boolean
-   private boolean field_1475;
-   // $VF: renamed from: j boolean
-   private boolean field_1476;
-   // $VF: renamed from: k boolean
-   private boolean field_1477;
-   // $VF: renamed from: l boolean
-   private boolean field_1478;
-   // $VF: renamed from: a z
-   private class_53 field_1479;
-   // $VF: renamed from: a cn
-   private class_23 field_1480;
-   // $VF: renamed from: a ai
-   private class_62 field_1481;
-   // $VF: renamed from: a bp
-   public class_68 field_1482;
-   // $VF: renamed from: a ds
-   private class_49 field_1483;
-   // $VF: renamed from: a bv
-   private class_11 field_1484;
-   // $VF: renamed from: a bo
-   private class_30 field_1485;
-   // $VF: renamed from: b bo
-   private class_30 field_1486;
-   // $VF: renamed from: a i
-   private class_80 field_1487;
-   // $VF: renamed from: a y
-   private class_14 field_1488;
-   // $VF: renamed from: a al
-   private class_95 field_1489;
+   private boolean field_1445;
+   // $VF: renamed from: a boolean
+   public boolean field_1446;
+   // $VF: renamed from: b boolean
+   public boolean field_1447;
+   // $VF: renamed from: a s
+   private class_5 field_1448;
    // $VF: renamed from: b int
-   private int field_1490;
+   private int field_1449;
+   // $VF: renamed from: e boolean
+   private boolean field_1450;
+   // $VF: renamed from: a x
+   private class_3 field_1451 = new class_3();
+   // $VF: renamed from: b x
+   private class_3 field_1452 = new class_3();
+   // $VF: renamed from: c x
+   private class_3 field_1453 = new class_3();
+   // $VF: renamed from: a ck
+   private class_39 field_1454;
    // $VF: renamed from: c int
-   private int field_1491;
-   // $VF: renamed from: d int
-   private int field_1492;
-   // $VF: renamed from: m boolean
-   private boolean field_1493 = false;
-   // $VF: renamed from: n boolean
-   private boolean field_1494 = false;
-   // $VF: renamed from: o boolean
-   private boolean field_1495;
-   // $VF: renamed from: e int
-   private int field_1496;
-   // $VF: renamed from: a int[][]
-   private int[][] field_1497;
-   // $VF: renamed from: f int
-   private int field_1498;
-   // $VF: renamed from: p boolean
-   private boolean field_1499;
-   // $VF: renamed from: q boolean
-   private boolean field_1500;
-   // $VF: renamed from: g int
-   private int field_1501;
-   // $VF: renamed from: r boolean
-   private boolean field_1502;
+   private int field_1455;
+   // $VF: renamed from: c boolean
+   public boolean field_1456;
 
-   // $VF: renamed from: b () void
-   public final void method_903() {
-      this.field_1481.method_594();
-      this.field_1481 = null;
-      this.field_1482.method_638();
-      this.field_1482 = null;
-      this.field_1483.method_473();
-      this.field_1483 = null;
-      this.field_1463 = null;
-      this.field_1466.method_624();
-      this.field_1466 = null;
-      this.field_1480.method_300();
-      this.field_1480 = null;
-      this.field_1479 = null;
-      if (this.field_1465 != null) {
-         this.field_1465.method_903();
+   public class_118(class_42 var1, class_5 var2, class_26 var3) {
+      class_69.method_645(false);
+      this.field_1443 = var3;
+      this.field_1444 = 0;
+      this.field_1445 = true;
+      this.field_1446 = true;
+      this.field_1447 = false;
+      this.field_1450 = false;
+      this.field_1448 = var2;
+      this.field_1456 = false;
+      var1.method_373(false);
+      var2.field_53 = true;
+      if (class_21.method_143() == 1) {
+         class_69.field_963 = true;
+         var3.field_272.field_991 = true;
+         var3.field_272.method_661();
+         this.field_1454 = new class_39(class_84.field_1120, class_84.field_1121, 1);
+         class_84.field_1110.method_24(this.field_1454.field_388);
+      } else {
+         if (class_26.field_301) {
+            this.field_1451.field_37 = 2000 + class_84.field_1123.nextInt(2000);
+            this.field_1451.field_38 = 2000 + class_84.field_1123.nextInt(2000);
+            this.field_1451.field_39 = 30000;
+         } else {
+            this.field_1451.field_37 = 2000 + class_84.field_1123.nextInt(2000);
+            this.field_1451.field_38 = -2000 + class_84.field_1123.nextInt(4000);
+            this.field_1451.field_39 = 6000;
+         }
+
+         if (class_84.field_1123.nextInt(2) == 0) {
+            this.field_1451.field_37 *= -1;
+         }
+
+         if (class_84.field_1123.nextInt(2) == 0) {
+            this.field_1451.field_38 *= -1;
+         }
+
+         class_57 var4;
+         (var4 = new class_57()).method_490(var3.field_272.field_970.method_866());
+         this.field_1452 = var4.method_508(this.field_1451, this.field_1452);
+         this.field_1452.method_15(var3.field_272.field_970.method_848(this.field_1451));
+         class_84.field_1110.field_40.method_846(this.field_1452);
+         var1.method_370(this.field_1452);
+         var2.method_31(var3.field_272.field_970.method_857(), 2);
+         if (class_21.method_132().field_1161 && !class_21.method_132().method_754()) {
+            switch (class_21.method_143()) {
+               case 25:
+                  var3.field_274[0].field_1225.method_349();
+            }
+         }
       }
 
-      this.field_1465 = null;
-      this.field_1502 = false;
-      this.field_1464 = null;
-      ;
+      var3.field_272.field_997 = false;
    }
 
-   // $VF: renamed from: c () void
-   public final void method_919() {
-      this.field_1493 = true;
+   // $VF: renamed from: a (int, ce, y) boolean
+   public final boolean method_913(int var1, class_42 var2, class_2 var3) {
+      if (this.field_1446) {
+         this.field_1449 += var1;
+         if (class_21.method_143() == 1) {
+            if (this.field_1444 == 0) {
+               class_69.method_638("");
+               this.field_1443.field_272.field_976.method_547(var1, class_84.field_1110.field_40.field_1342, false);
+               this.field_1443.field_272.field_976.method_548();
+               this.field_1454.method_364(this.field_1449);
+               if (this.field_1449 > 69000) {
+                  class_84.field_1122.method_773();
+                  class_69.method_638("");
+                  class_69.field_963 = false;
+                  class_69.method_645(false);
+                  this.field_1444 = 1;
+                  this.field_1443.field_272.field_991 = false;
+                  class_84.field_1110.method_24((class_106)var2.field_454);
+                  var2.method_373(true);
+                  this.field_1448.field_53 = false;
+                  class_84.field_1110.field_40.method_870(this.field_1454.field_388.field_1341);
+                  var2.method_374(class_84.field_1110.field_40.method_850());
+               } else if (this.field_1449 > 4000 && this.field_1449 < 9000) {
+                  class_69.method_638(class_84.field_1116.method_4(622));
+               } else if (this.field_1449 > 14000 && this.field_1449 < 19000) {
+                  class_69.method_638(class_84.field_1116.method_4(623));
+               } else if (this.field_1449 > 24000 && this.field_1449 < 29000) {
+                  class_69.method_645(true);
+               } else if (this.field_1449 > 34000 && this.field_1449 < 39000) {
+                  class_69.method_638(class_84.field_1116.method_4(624));
+               } else if (this.field_1449 > 44000 && this.field_1449 < 51000) {
+                  class_69.method_638(class_84.field_1116.method_4(625));
+               } else if (this.field_1449 > 56000 && this.field_1449 < 61000) {
+                  class_69.method_638(class_84.field_1116.method_4(626));
+               } else if (this.field_1449 > 65000 && this.field_1449 < 69000) {
+                  class_69.method_638(class_84.field_1116.method_4(627));
+               }
+            }
+         } else if (class_26.field_301) {
+            this.field_1451.method_10(0, 0, -10 * var1);
+            this.field_1453 = this.field_1443.field_272.field_970.field_1341.method_508(this.field_1451, this.field_1453);
+            class_84.field_1110.field_40.method_844(this.field_1453);
+            if (this.field_1449 > 3500 && !this.field_1450) {
+               ((class_99)this.field_1443.field_276[2]).method_824();
+               this.field_1450 = true;
+            }
+         }
+
+         if (class_21.method_143() != 1 && this.field_1449 > 7000 || this.field_1444 == 1) {
+            this.field_1449 = 0;
+            this.field_1446 = false;
+            this.field_1447 = true;
+            this.field_1448.field_53 = false;
+            if (class_26.field_301) {
+               this.field_1451.method_10(0, 0, -10000);
+               this.field_1453 = this.field_1443.field_276[2].field_1226.field_1341.method_508(this.field_1451, this.field_1453);
+               this.field_1453.method_15(this.field_1443.field_276[2].field_1226.method_850());
+               var2.method_374(this.field_1453);
+            } else {
+               var2.method_374(class_84.field_1110.field_40.method_850());
+            }
+
+            var2.method_373(true);
+            method_916(var2, this.field_1443);
+            this.field_1445 = false;
+            this.field_1443.field_272.field_997 = true;
+            class_69.method_638(null);
+            class_67.method_578(class_21.method_178().field_884);
+            if (class_26.field_302 != null) {
+               class_69.method_633(5, this.field_1443.field_272);
+            }
+
+            class_26.field_301 = false;
+            if (class_26.field_302 != null) {
+               this.field_1443.field_272.method_667(this.field_1443.field_276[1]);
+            }
+         }
+      }
+
+      if (class_21.method_132().field_1161 && !class_21.method_132().method_754()) {
+         switch (class_21.method_143()) {
+            case 21:
+               if (this.field_1446) {
+                  this.field_1443.field_274[0].method_795(false);
+               } else if (this.field_1444 == 0 && this.field_1447) {
+                  this.field_1444 = 1;
+                  this.field_1443.field_274[0].method_795(true);
+                  this.field_1443.field_274[0].method_804();
+               }
+               break;
+            case 25:
+               if (this.field_1443.field_280[3].field_184) {
+                  this.field_1443.field_274[0].method_796(10);
+                  this.field_1443.field_274[0].method_797(null);
+               }
+
+               if (this.field_1443.field_274[0].field_1230.method_111().field_1298) {
+                  this.field_1443.field_274[0].method_795(false);
+               }
+               break;
+            case 43:
+               if (this.field_1443.field_280[0].field_184 && !this.field_1443.field_280[0].field_185) {
+                  class_91[] var11 = this.field_1443.field_274;
+
+                  for (int var13 = 0; var13 < var11.length; var13++) {
+                     var11[var13].method_804();
+                  }
+               }
+               break;
+            case 47:
+               if (this.field_1443.field_280[2].field_184 && this.field_1444 == 0) {
+                  this.field_1444 = 1;
+                  boolean var10 = false;
+                  this.field_1443.field_273[this.field_1443.field_273.length - 1].field_1225.method_330(100);
+               } else if (this.field_1443.field_280[6].field_185 && this.field_1444 == 1) {
+                  this.field_1444 = 2;
+                  class_91 var9 = this.field_1443.field_273[this.field_1443.field_273.length - 1];
+                  this.field_1451 = var9.field_1226.method_848(this.field_1451);
+                  var9.field_1226 = class_43.method_381(9994);
+                  var9.field_1226.method_846(this.field_1451);
+                  var9.field_1226.field_1367 = 2;
+                  var9.field_1225.method_349();
+                  var9.method_797(null);
+                  class_18 var12 = new class_18(new int[]{0, 0, 0});
+                  var9.field_1230 = var12;
+                  ((class_96)var9).field_1282 = true;
+                  var9.field_1225.method_327(32000);
+                  var9.method_795(true);
+                  var9.field_1224 = 1;
+                  var9.method_796(6);
+                  class_91[] var15 = this.field_1443.field_274;
+
+                  for (int var7 = 0; var7 < var15.length; var7++) {
+                     var15[var7].method_797(null);
+                     var15[var7].field_1230 = var12.method_115();
+                     var15[var7].field_1225.method_349();
+                  }
+
+                  var2.method_373(false);
+                  this.field_1448.field_45 = var9.field_1226;
+                  this.field_1448.field_53 = true;
+                  this.field_1448.method_31(this.field_1443.field_272.field_970.method_857(), 2);
+                  this.field_1451.field_39 -= 4000;
+                  class_84.field_1110.field_40.method_846(this.field_1451);
+                  this.field_1445 = true;
+                  this.field_1456 = true;
+               } else if (this.field_1443.field_280[10].field_184 && this.field_1444 == 2) {
+                  this.field_1451.method_10(0, 4096, 0);
+                  this.field_1448.method_31(this.field_1451, 2);
+                  class_84.field_1110.field_40.method_845(15000, 8000, 28000);
+                  Object var8 = null;
+                  this.field_1448.field_45 = ((class_100)this.field_1443.field_276[0]).method_826();
+                  this.field_1444 = 3;
+               } else {
+                  class_91 var4;
+                  if (this.field_1444 == 2 && (var4 = this.field_1443.field_273[this.field_1443.field_273.length - 1]).field_1230.method_111().field_1298) {
+                     var4.field_1226.method_845(0, 0, 0);
+                     var4.method_795(false);
+                     var4.method_803();
+                     var4.field_1225.method_327(0);
+                     class_18 var5;
+                     (var5 = new class_18(new int[]{40000, 0, 0, 36000, -3000, 4000})).field_163 = true;
+
+                     for (int var6 = 0; var6 < this.field_1443.field_274.length; var6++) {
+                        this.field_1443.field_274[var6].field_1230 = var5.method_115();
+                     }
+
+                     class_18 var14;
+                     (var14 = new class_18(new int[]{42000, -2000, 3000, 30000, -1000, -5000})).field_163 = true;
+                     this.field_1443.field_272.field_982 = var14;
+                     this.field_1443.field_272.method_667(var14.method_111());
+                  }
+               }
+
+               if (this.field_1444 == 3) {
+                  this.field_1455 += var1 / 4;
+                  ((class_100)this.field_1443.field_276[0]).method_827(0, var1 * 2 + this.field_1455, 0);
+                  if (this.field_1443.field_280[12].field_185) {
+                     this.field_1444 = 4;
+                     this.field_1448.field_53 = true;
+                     this.field_1443.field_272.method_670(44000, -5000, 1000);
+                     this.field_1451.method_10(0, 4096, 0);
+                     this.field_1448.method_31(this.field_1451, 2);
+                     this.field_1448.field_45 = this.field_1443.field_272.field_970;
+                     this.field_1448.field_48 = class_84.field_1110.field_40;
+                     class_84.field_1110.field_40.method_845(33000, -4000, 2000);
+                  }
+               }
+
+               if (this.field_1444 == 4 && this.field_1443.field_280[15].field_185) {
+                  this.field_1444 = 5;
+                  this.field_1451 = this.field_1443.field_274[0].method_799(this.field_1451);
+                  this.field_1451.field_37 += 5000;
+                  this.field_1451.field_38 -= 2000;
+                  class_84.field_1110.field_40.method_846(this.field_1451);
+                  this.field_1448.field_45 = this.field_1443.field_274[0].field_1226;
+               }
+
+               if (this.field_1444 == 5 && this.field_1443.field_280[17].field_185) {
+                  this.field_1444 = 6;
+                  this.field_1451 = this.field_1443.field_274[1].method_799(this.field_1451);
+                  this.field_1451.field_37 -= 5000;
+                  this.field_1451.field_38 += 2000;
+                  class_84.field_1110.field_40.method_846(this.field_1451);
+                  this.field_1448.field_45 = this.field_1443.field_274[1].field_1226;
+               }
+
+               if (this.field_1444 == 6 && this.field_1443.field_280[19].field_185) {
+                  this.field_1444 = 7;
+                  this.field_1451 = this.field_1443.field_274[1].method_799(this.field_1451);
+                  this.field_1451.field_39 += 8000;
+                  this.field_1451.field_38 += 1000;
+                  class_84.field_1110.field_40.method_846(this.field_1451);
+                  this.field_1448.field_45 = this.field_1443.field_274[1].field_1226;
+               }
+
+               if (this.field_1444 == 7 && this.field_1443.field_280[24].field_185) {
+                  this.field_1444 = 8;
+                  this.field_1448.field_53 = false;
+                  var2.method_373(true);
+                  this.field_1449 = 0;
+                  class_69.method_635();
+                  this.field_1443.field_272.method_670(44000, -5000, 1000);
+               }
+
+               if (this.field_1444 == 8) {
+                  class_69.method_636(1);
+                  if (class_69.method_637()) {
+                     this.field_1444 = 9;
+                  }
+               }
+
+               if (this.field_1444 == 9) {
+                  class_21.method_133(class_87.field_1145);
+                  class_21.method_145();
+                  this.field_1443.field_273[this.field_1443.field_273.length - 1].method_802();
+                  this.field_1443.field_272.method_667(null);
+                  this.field_1443.field_272.field_982 = null;
+                  this.field_1443.method_269();
+                  this.field_1443.field_277 = null;
+                  new class_2(this.field_1443);
+                  this.field_1445 = false;
+                  this.field_1444 = 10;
+                  this.field_1456 = false;
+               }
+         }
+      }
+
+      return this.field_1445;
    }
 
    // $VF: renamed from: a () void
-   public final void method_902() {
-      if (this.field_1465 == null) {
-         this.field_1499 = false;
-         if (!class_44.method_433()[class_3.method_110().field_828]) {
-            this.field_1499 = true;
-         }
-
-         this.field_1501 = class_3.method_110().method_592() ? 100 : 50;
-         long var1 = class_3.field_64;
-         class_3.method_61(class_3.method_110());
-         if (class_3.method_142() - var1 > 30000L) {
-            class_9.method_200(class_3.method_110());
-         }
-
-         class_3.method_110().method_586();
-         class_48.method_467();
-         this.field_1465 = new class_117(0);
+   public final void method_914() {
+      if (class_21.method_143() > 1) {
+         this.field_1449 = 7001;
       }
 
-      if (!this.field_1465.field_1443) {
-         this.field_1465.method_902();
-      } else {
-         class_58.method_579();
-         if (this.field_1466 == null) {
-            this.field_1466 = new class_67();
-         }
-
-         this.field_1468 = false;
-         if (this.field_1480 == null) {
-            this.field_1480 = new class_23();
-         } else {
-            this.field_1470 = false;
-            if (this.field_1481 == null) {
-               this.field_1481 = new class_62();
-               this.field_1481.method_595();
-            } else {
-               this.field_1471 = false;
-               if (this.field_1482 == null) {
-                  this.field_1482 = new class_68();
-                  this.field_1482.method_641();
-               } else {
-                  this.field_1472 = false;
-                  this.field_1467 = true;
-                  this.field_1484 = new class_11();
-                  this.field_1474 = false;
-                  this.field_1487 = new class_80();
-                  this.field_1476 = false;
-                  this.field_1478 = false;
-                  this.field_1463 = new int[7];
-
-                  for (int var3 = 0; var3 < this.field_1463.length; var3++) {
-                     this.field_1463[var3] = 0;
-                     if (var3 == this.field_1462) {
-                        this.field_1463[var3] = 1;
-                     }
-                  }
-
-                  this.field_1490 = 1;
-                  this.field_1491 = class_41.field_538 - 32 - this.field_1463.length * 10;
-                  this.field_1492 = 60;
-                  this.field_1496 = 0;
-                  this.field_1494 = false;
-                  this.field_1495 = false;
-                  this.field_1461 = 0L;
-                  this.field_1479 = new class_53(20, class_41.field_538 / 2, class_41.field_537 - 40);
-                  this.field_1464 = class_40.method_412(
-                     "/data/interface/logo_" + (class_58.method_565() ? 2 : (class_3.method_110().method_592() ? 0 : 1)) + ".png"
-                  );
-                  if (!this.field_1493) {
-                     this.method_921();
-                     if (class_3.method_110().method_592()) {
-                        this.field_1496 = class_3.method_108().method_380();
-                        if (this.field_1496 > 0) {
-                           this.method_920(class_41.field_533.method_297(257) + "      " + this.field_1496 + " $");
-                        }
-                     } else if (class_3.method_73() == 12 && class_3.method_110().field_828 == 3) {
-                        this.method_920(class_41.field_533.method_297(258));
-                     }
-
-                     if (class_3.method_73() == 2) {
-                        class_3.method_110().field_835 = new class_51[]{class_24.method_311()[0].method_505()};
-                        this.field_1481.method_595();
-                     }
-
-                     if ((class_3.method_73() == 33 || class_3.method_73() == 34) && class_3.method_110().field_828 == class_3.method_67().field_1232) {
-                        if (!class_46.method_450(37, class_3.method_110().field_836)) {
-                           class_3.method_110().field_836 = class_46.method_454(
-                              class_3.method_110().field_836, new class_46[]{class_24.method_315()[37].method_447(1)}
-                           );
-                        }
-                     } else if ((class_3.method_73() == 36 || class_3.method_73() == 37) && class_3.method_110().field_828 == class_3.method_67().field_1232) {
-                        if (!class_46.method_450(38, class_3.method_110().field_836)) {
-                           class_3.method_110().field_836 = class_46.method_454(
-                              class_3.method_110().field_836, new class_46[]{class_24.method_315()[38].method_447(1)}
-                           );
-                        }
-                     } else if ((class_3.method_73() == 41 && class_46.method_450(36, class_3.method_108().field_445) || class_3.method_73() == 42)
-                        && class_3.method_110().field_828 == 14
-                        && !class_3.method_108().method_369(42)
-                        && !class_3.method_110().method_587(42)) {
-                        class_3.method_110().method_588(class_24.method_311()[42].method_505());
-                        this.field_1481.method_595();
-                     }
-                  }
-
-                  if (!this.field_1494 && !this.field_1493) {
-                     class_3.method_127(this.field_1496);
-                     class_81.method_733(3);
-                     class_3.method_127(-this.field_1496);
-                     this.field_1494 = true;
-                  }
-
-                  if (this.field_1483 == null) {
-                     this.field_1483 = new class_49();
-                     this.field_1483.method_474();
-                  }
-
-                  this.field_1473 = false;
-                  class_41.field_539.method_425(1);
-                  this.field_1460 = 0L;
-                  class_48.method_466();
-                  ;
-                  this.field_1457 = System.currentTimeMillis();
-                  this.field_1458 = System.currentTimeMillis();
-                  this.field_1502 = true;
-                  class_69.method_654(!class_3.method_110().method_592());
-               }
-            }
-         }
-      }
+      class_67.method_578(class_21.method_178().field_884);
    }
 
-   // $VF: renamed from: a (java.lang.String) void
-   private void method_920(String var1) {
-      this.field_1479.method_513(var1);
-      this.field_1469 = true;
+   // $VF: renamed from: b () void
+   public final void method_915() {
+      this.field_1447 = false;
+      this.field_1449 = 0;
+      this.field_1450 = true;
    }
 
-   // $VF: renamed from: e () void
-   private void method_921() {
-      if (!this.field_1477 && !this.field_1478) {
-         this.field_1497 = (int[][])null;
-         int[] var1 = class_58.method_567();
-         int var2 = 0;
-
-         for (int var3 = 0; var3 < var1.length; var3++) {
-            if (var1[var3] > 0) {
-               var2++;
-            }
-         }
-
-         if (var2 > 0) {
-            this.field_1497 = new int[var2][2];
-            var2 = 0;
-
-            for (int var5 = 0; var5 < var1.length; var5++) {
-               if (var1[var5] > 0) {
-                  this.field_1497[var2++] = new int[]{var5, var1[var5]};
-               }
-            }
-
-            this.field_1477 = true;
-            this.field_1498 = 0;
-            this.field_1488 = new class_14();
-            this.field_1488.method_225(this.field_1497[0][0], this.field_1497[0][1]);
-         }
-      } else {
-         this.field_1498++;
-         if (this.field_1498 >= this.field_1497.length) {
-            this.field_1477 = false;
-         } else {
-            this.field_1488.method_225(this.field_1497[this.field_1498][0], this.field_1497[this.field_1498][1]);
-         }
-      }
+   // $VF: renamed from: a (ce, cz) void
+   public static final void method_916(class_42 var0, class_26 var1) {
+      var0.method_368(var1.field_272.field_970);
+      var0.method_375(new class_3(0, 850, 0));
+      var0.method_376(new class_3(0, 1050, -4000));
+      var0.method_372();
    }
 
-   // $VF: renamed from: a () boolean
-   public final boolean method_904() {
-      return this.field_1502;
+   // $VF: renamed from: a (ce) void
+   public static final void method_917(class_42 var0) {
+      var0.method_375(new class_3(0, 300, 0));
+      var0.method_376(new class_3(0, 300, 5600));
    }
 
-   // $VF: renamed from: b (int) void
-   public final void method_900(int var1) {
-      if (this.field_1502) {
-         class_69.method_673(false);
-         this.field_1457 = System.currentTimeMillis();
-         this.field_1459 = this.field_1457 - this.field_1458;
-         this.field_1458 = this.field_1457;
-         this.field_1460 = this.field_1460 + this.field_1459;
-         this.field_1461 = this.field_1461 + this.field_1459;
-         class_3.method_141(this.field_1459);
-         class_58.method_575(class_3.method_112());
-         if (!this.field_1470 && !this.field_1471 && !this.field_1472 && !this.field_1473 && !this.field_1474 && !this.field_1476 && this.field_1465 != null) {
-            this.field_1465.method_917();
-         }
-
-         if (this.field_1461 < 2300L) {
-            class_50.method_485(
-               class_41.field_533.method_297(this.field_1493 ? 36 : 32), 5, class_41.field_538 - class_69.method_653() - class_50.method_494(), 1
-            );
-         } else {
-            this.field_1493 = false;
-         }
-
-         if (this.field_1461 >= 2300L) {
-            if (!this.field_1475) {
-               class_95 var2;
-               if ((var2 = class_3.method_78(true, 0L)) != null) {
-                  this.field_1489 = var2;
-               }
-
-               if (var2 != null) {
-                  this.field_1485 = new class_30(var2, 1);
-                  this.field_1475 = true;
-               }
-            }
-
-            if (!this.field_1469 && !this.field_1475) {
-               this.method_922();
-            }
-
-            int var3 = var1;
-            if (this.field_1478) {
-               var3 = 0;
-            }
-
-            if (this.field_1476) {
-               this.field_1487.method_726(var3, (int)this.field_1459);
-            } else {
-               if (this.field_1475) {
-                  if (this.field_1473 || this.field_1470 || this.field_1471) {
-                     class_69.method_663();
-                  }
-
-                  this.field_1485.method_352(var3, (int)this.field_1459);
-                  this.field_1485.method_359();
-               } else if (this.field_1468) {
-                  this.field_1466.method_625(var3, (int)this.field_1459);
-                  this.field_1466.method_636();
-               } else if (this.field_1470) {
-                  class_69.method_655((int)this.field_1459);
-                  this.field_1480.method_306(var3, (int)this.field_1459);
-                  if (this.field_1480 != null && this.field_1480.method_308()) {
-                     if (this.field_1482.method_644() && this.field_1486 == null && !class_41.field_513) {
-                        this.field_1486 = new class_30(class_41.field_533.method_297(360));
-                        class_41.field_513 = true;
-                        this.field_1478 = true;
-                     }
-
-                     if (!this.field_1482.method_644() && this.field_1486 == null && !class_41.field_512) {
-                        this.field_1486 = new class_30(class_41.field_533.method_297(359));
-                        class_41.field_512 = true;
-                        this.field_1478 = true;
-                     }
-                  } else if (this.field_1480 != null && this.field_1480.method_307()) {
-                     if (this.field_1482.method_644() && this.field_1486 == null && !class_41.field_507) {
-                        this.field_1486 = new class_30(class_41.field_533.method_297(362));
-                        class_41.field_507 = true;
-                        this.field_1478 = true;
-                     }
-
-                     if (!this.field_1482.method_644() && this.field_1486 == null && !class_41.field_506) {
-                        this.field_1486 = new class_30(class_41.field_533.method_297(361));
-                        class_41.field_506 = true;
-                        this.field_1478 = true;
-                     }
-                  }
-               } else if (this.field_1471) {
-                  class_69.method_655((int)this.field_1459);
-                  this.field_1481.method_598(var3, (int)this.field_1459);
-               } else if (this.field_1472) {
-                  this.field_1482.method_645(var3, (int)this.field_1459);
-                  if (this.field_1482 != null) {
-                     if (this.field_1482.method_644() && this.field_1486 == null && !class_41.field_507) {
-                        this.field_1486 = new class_30(class_41.field_533.method_297(362));
-                        class_41.field_507 = true;
-                        this.field_1478 = true;
-                     }
-
-                     if (!this.field_1482.method_644() && this.field_1486 == null && !class_41.field_506) {
-                        this.field_1486 = new class_30(class_41.field_533.method_297(361));
-                        class_41.field_506 = true;
-                        this.field_1478 = true;
-                     }
-                  }
-               } else if (this.field_1473) {
-                  class_69.method_655((int)this.field_1459);
-                  this.field_1483.method_476(var3, (int)this.field_1459);
-               } else if (this.field_1474) {
-                  class_69.method_655((int)this.field_1459);
-                  this.field_1484.method_211(var3, (int)this.field_1459);
-               } else {
-                  this.method_923();
-               }
-
-               if (this.field_1478) {
-                  this.field_1486.method_352(var1, (int)this.field_1459);
-                  this.field_1486.method_360();
-               }
-            }
-         }
-      }
+   // $VF: renamed from: b (ce) void
+   public static final void method_918(class_42 var0) {
+      var0.method_375(new class_3(0, 500, 0));
+      var0.method_376(new class_3(6000, 500, 0));
    }
 
-   // $VF: renamed from: d () void
-   public final void method_922() {
-      if (this.field_1499 && this.field_1486 == null && class_3.method_73() == 16 && class_3.method_110().field_828 != 5) {
-         this.field_1486 = new class_30(class_3.method_149(class_41.field_533.method_297(280), class_3.method_143()));
-         this.field_1499 = false;
-         this.field_1478 = true;
-      }
-
-      if (this.field_1499 && this.field_1486 == null && class_3.method_73() == 18 && !class_3.method_110().method_592() && class_3.method_110().field_828 != 6) {
-         this.field_1486 = new class_30(class_41.field_533.method_297(281));
-         this.field_1478 = true;
-         this.field_1499 = false;
-      }
-
-      if (this.field_1486 == null && !class_41.field_520 && class_3.method_108().method_365()) {
-         this.field_1486 = new class_30(class_41.field_533.method_297(346));
-         this.field_1478 = true;
-         class_41.field_520 = true;
-      }
-
-      if (!this.field_1477 && this.field_1486 == null && !class_41.field_522 && class_58.method_564()) {
-         this.field_1486 = new class_30(class_41.field_533.method_297(350));
-         class_41.field_522 = true;
-         this.field_1478 = true;
-      }
-
-      if (!this.field_1477 && this.field_1486 == null && !class_41.field_523 && class_58.method_565()) {
-         this.field_1486 = new class_30(class_41.field_533.method_297(351));
-         class_41.field_523 = true;
-         this.field_1478 = true;
-      }
-
-      if (!this.field_1477 && this.field_1486 == null && !class_41.field_524 && !class_58.method_564() && class_3.method_76()) {
-         this.field_1486 = new class_30(class_41.field_533.method_297(352));
-         class_41.field_524 = true;
-         this.field_1478 = true;
-      }
-
-      if (!this.field_1477 && this.field_1486 == null && !this.field_1500 && class_58.method_571() > 0) {
-         int var1;
-         int var2 = (var1 = class_58.method_571()) < 4 ? 284 : (var1 < 7 ? 285 : (var1 < 12 ? 286 : 287));
-         this.field_1486 = new class_30(
-            class_41.field_533.method_297(283)
-               + ": "
-               + var1
-               + "\n"
-               + var1
-               + " x "
-               + var1
-               + " x "
-               + this.field_1501
-               + " $\n"
-               + class_41.field_533.method_297(40)
-               + ": "
-               + var1 * var1 * this.field_1501
-               + " $\n\n"
-               + class_41.field_533.method_297(var2)
-               + "\n",
-            true
-         );
-         this.field_1500 = true;
-         this.field_1478 = true;
-      }
-   }
-
-   // $VF: renamed from: f () void
-   private void method_923() {
-      class_41.field_534.drawImage(this.field_1464, 3, 3, 0);
-      class_50.method_483(class_3.method_110().field_827, this.field_1464.getWidth() + 6, 3, 0, 17);
-      class_50.method_483(
-         class_41.field_533.method_297(class_22.field_323[class_3.method_105()[class_3.method_110().field_828] ? 1 : 0]),
-         this.field_1464.getWidth() + 6,
-         13,
-         1,
-         17
-      );
-      class_50.method_483(class_41.field_533.method_297(44) + ": " + class_3.method_110().field_833, this.field_1464.getWidth() + 6, 23, 1, 17);
-      if (this.field_1467) {
-         class_69.method_667("", this.field_1490, this.field_1491, this.field_1492, 12 + (this.field_1463.length + 1) * 10 - 5);
-         class_69.method_661(class_41.field_533.method_297(62), this.field_1490, this.field_1491 + 12, this.field_1492, this.field_1463[0] == 1, false, true);
-         class_69.method_661(
-            class_41.field_533.method_297(37), this.field_1490, this.field_1491 + 12 + 10, this.field_1492, this.field_1463[1] == 1, false, true
-         );
-         class_69.method_661(
-            class_41.field_533.method_297(73), this.field_1490, this.field_1491 + 12 + 20, this.field_1492, this.field_1463[2] == 1, false, true
-         );
-         class_69.method_661(
-            class_41.field_533.method_297(235), this.field_1490, this.field_1491 + 12 + 30, this.field_1492, this.field_1463[3] == 1, false, true
-         );
-         class_69.method_661(
-            class_41.field_533.method_297(64), this.field_1490, this.field_1491 + 12 + 40, this.field_1492, this.field_1463[4] == 1, false, true
-         );
-         class_69.method_661(
-            class_41.field_533.method_297(66), this.field_1490, this.field_1491 + 12 + 50, this.field_1492, this.field_1463[5] == 1, false, true
-         );
-         class_69.method_661(
-            class_41.field_533.method_297(241), this.field_1490, this.field_1491 + 12 + 60, this.field_1492, this.field_1463[6] == 1, false, true
-         );
-      } else if (!this.field_1475
-         && !this.field_1473
-         && !this.field_1471
-         && !this.field_1472
-         && !this.field_1468
-         && !this.field_1470
-         && !this.field_1469
-         && !this.field_1477
-         && !this.field_1474) {
-         class_69.method_655((int)this.field_1459);
-         class_69.method_673(class_69.method_656());
-      }
-
-      if (this.field_1477) {
-         class_69.method_669("", "");
-         this.field_1488.method_226();
-      } else if (this.field_1469) {
-         class_69.method_669("", "");
-         this.field_1479.method_518();
-      } else {
-         class_69.method_669(class_41.field_533.method_297(67), class_41.field_533.method_297(241));
-      }
-   }
-
-   // $VF: renamed from: a (int) void
-   public final void method_901(int var1) {
-      if (this.field_1502) {
-         class_3.method_129();
-         if (this.field_1461 < 2300L) {
-            if (var1 == 256) {
-               this.field_1461 = 2301L;
-               class_69.method_654(!class_3.method_110().method_592());
-            }
-         } else if (this.field_1476) {
-            if ((var1 == 131072 || var1 == 16384 || var1 == 8192) && !this.field_1487.method_725(131072)) {
-               this.field_1476 = false;
-            }
-         } else if (this.field_1478) {
-            if (var1 == 256) {
-               this.field_1478 = false;
-               this.field_1486 = null;
-               class_69.method_654(!class_3.method_110().method_592());
-               if (this.field_1500) {
-                  class_3.method_127(class_58.method_571() * class_58.method_571() * this.field_1501);
-                  class_58.method_572();
-                  this.field_1500 = false;
-               }
-            }
-         } else {
-            if (var1 == 131072) {
-               if (this.field_1471) {
-                  this.field_1487.method_724(class_41.field_533.method_297(353));
-               } else if (this.field_1470) {
-                  if (this.field_1480.method_302() == 1) {
-                     this.field_1487.method_724(class_41.field_533.method_297(355));
-                  } else {
-                     this.field_1487.method_724(class_41.field_533.method_297(356));
-                  }
-               } else if (this.field_1473) {
-                  if (this.field_1483.method_478() == 0) {
-                     this.field_1487.method_724(class_41.field_533.method_297(357));
-                  } else {
-                     this.field_1487.method_724(class_41.field_533.method_297(358));
-                  }
-               } else if (this.field_1472) {
-                  if (this.field_1482.method_639()) {
-                     this.field_1487.method_724(class_41.field_533.method_297(361));
-                  } else {
-                     this.field_1487.method_724(class_41.field_533.method_297(362));
-                  }
-               } else if (this.field_1474) {
-                  if (this.field_1484.method_210()) {
-                     this.field_1487.method_724(class_41.field_533.method_297(364));
-                  } else {
-                     this.field_1487.method_724(class_41.field_533.method_297(363));
-                  }
-               } else if (!this.field_1468) {
-                  this.field_1487.method_724(class_41.field_533.method_297(365));
-               }
-
-               if (!this.field_1468) {
-                  this.field_1476 = true;
-               }
-            }
-
-            if (this.field_1475) {
-               if (!this.field_1485.method_351(var1)) {
-                  if (this.field_1489.field_1226 == 13 || this.field_1489.field_1226 == 14) {
-                     if (!this.field_1489.field_1241 || this.field_1489.field_1244 != 36 || class_3.method_73() == 41) {
-                        class_3.method_108().method_370(this.field_1489.field_1244, this.field_1489.field_1245);
-                     }
-
-                     this.field_1483.method_474();
-                  }
-
-                  if (this.field_1489.field_1241) {
-                     class_3.method_75();
-                  } else {
-                     class_3.method_71();
-                  }
-
-                  class_3.method_127(this.field_1489.field_1230);
-                  class_3.method_93(this.field_1489);
-                  this.field_1480.method_299();
-                  this.field_1475 = false;
-                  if (this.field_1496 > 0) {
-                     class_3.method_127(this.field_1496);
-                     this.field_1496 = 0;
-                  }
-               }
-            } else if (this.field_1470) {
-               if (var1 == 32 && this.field_1480.method_303() && this.field_1486 == null && !class_41.field_505) {
-                  this.field_1486 = new class_30(class_41.field_533.method_297(355));
-                  class_41.field_505 = true;
-                  this.field_1478 = true;
-               }
-
-               if (!this.field_1480.method_304(var1)) {
-                  this.field_1470 = false;
-               }
-            } else if (this.field_1471) {
-               if (var1 == 32 && this.field_1481.method_596() && this.field_1486 == null && !class_41.field_503) {
-                  this.field_1486 = new class_30(class_41.field_533.method_297(354));
-                  class_41.field_503 = true;
-                  this.field_1478 = true;
-               }
-
-               if (!this.field_1481.method_597(var1)) {
-                  this.field_1471 = false;
-               }
-            } else if (this.field_1472) {
-               if (!this.field_1482.method_642(var1)) {
-                  this.field_1472 = false;
-               }
-            } else if (this.field_1473) {
-               if (var1 == 32 && this.field_1483.method_479() && this.field_1486 == null && !class_41.field_509) {
-                  this.field_1486 = new class_30(class_41.field_533.method_297(358));
-                  class_41.field_509 = true;
-                  this.field_1478 = true;
-               }
-
-               if (!this.field_1483.method_475(var1)) {
-                  this.field_1473 = false;
-               }
-            } else if (this.field_1474) {
-               if (var1 == 32 && this.field_1486 == null && !class_41.field_511) {
-                  this.field_1486 = new class_30(class_41.field_533.method_297(364));
-                  class_41.field_511 = true;
-                  this.field_1478 = true;
-               }
-
-               if (!this.field_1484.method_209(var1)) {
-                  this.field_1474 = false;
-               }
-            } else if (this.field_1477) {
-               if (var1 == 256) {
-                  this.method_921();
-               }
-            } else if (!this.field_1469) {
-               if (this.field_1467 && !this.field_1468) {
-                  if (var1 == 256 && !this.field_1475 && !this.field_1477) {
-                     switch (this.field_1462) {
-                        case 0:
-                           this.field_1471 = true;
-                           if (this.field_1486 == null && !class_41.field_502) {
-                              this.field_1486 = new class_30(class_41.field_533.method_297(353));
-                              class_41.field_502 = true;
-                              this.field_1478 = true;
-                           }
-
-                           return;
-                        case 1:
-                           if (class_3.method_73() < 9) {
-                              this.field_1486 = new class_30(class_3.method_149(class_41.field_533.method_297(282), class_3.method_143()));
-                              this.field_1478 = true;
-                              return;
-                           }
-
-                           if (class_3.method_73() == 42 && !class_3.method_108().method_369(42)) {
-                              this.field_1486 = new class_30(class_41.field_533.method_297(289));
-                              this.field_1478 = true;
-                              return;
-                           }
-
-                           this.field_1470 = true;
-                           this.field_1480.method_301();
-                           this.field_1460 = -150L;
-                           if (this.field_1486 == null && !class_41.field_504) {
-                              this.field_1486 = new class_30(class_41.field_533.method_297(356));
-                              class_41.field_504 = true;
-                              this.field_1478 = true;
-                           }
-
-                           return;
-                        case 2:
-                           if (class_3.method_73() < 7) {
-                              this.field_1486 = new class_30(class_3.method_149(class_41.field_533.method_297(282), class_3.method_143()));
-                              this.field_1478 = true;
-                              return;
-                           }
-
-                           if (class_3.method_73() == 42 && !class_3.method_108().method_369(42)) {
-                              this.field_1486 = new class_30(class_41.field_533.method_297(289));
-                              this.field_1478 = true;
-                              return;
-                           }
-
-                           this.field_1472 = true;
-                           this.field_1482.method_640(null);
-                           return;
-                        case 3:
-                           if (!class_3.method_110().method_592()) {
-                              this.field_1473 = true;
-                              if (this.field_1486 == null && !class_41.field_508) {
-                                 this.field_1486 = new class_30(class_41.field_533.method_297(357));
-                                 class_41.field_508 = true;
-                                 this.field_1478 = true;
-                                 return;
-                              }
-                           } else {
-                              this.field_1486 = new class_30(class_41.field_533.method_297(256));
-                              this.field_1478 = true;
-                           }
-
-                           return;
-                        case 4:
-                           this.field_1474 = true;
-                           this.field_1484.method_208();
-                           if (this.field_1486 == null && !class_41.field_510) {
-                              this.field_1486 = new class_30(class_41.field_533.method_297(363));
-                              class_41.field_510 = true;
-                              this.field_1478 = true;
-                           }
-
-                           return;
-                        case 5:
-                           this.field_1468 = true;
-                           this.field_1466.method_634(2);
-                           return;
-                        case 6:
-                           this.method_924();
-                           return;
-                     }
-                  }
-
-                  if (var1 == 64) {
-                     this.field_1463[this.field_1462] = 0;
-                     if (this.field_1462 < this.field_1463.length - 1) {
-                        this.field_1462++;
-                     } else {
-                        this.field_1462 = 0;
-                     }
-
-                     this.field_1463[this.field_1462] = 1;
-                  }
-
-                  if (var1 == 2) {
-                     this.field_1463[this.field_1462] = 0;
-                     if (this.field_1462 > 0) {
-                        this.field_1462--;
-                     } else {
-                        this.field_1462 = this.field_1463.length - 1;
-                     }
-
-                     this.field_1463[this.field_1462] = 1;
-                  }
-
-                  if (var1 == 16384) {
-                     this.field_1467 = !this.field_1467;
-                     return;
-                  }
-               }
-
-               if (!this.field_1468 && var1 == 8192) {
-                  this.method_924();
-               } else if (this.field_1468) {
-                  this.field_1466.method_637(var1);
-                  if (var1 == 4) {
-                     this.field_1466.method_629();
-                  }
-
-                  if (var1 == 32) {
-                     this.field_1466.method_631();
-                  }
-
-                  if (var1 == 2) {
-                     this.field_1466.method_627((int)this.field_1459);
-                  }
-
-                  if (var1 == 64) {
-                     this.field_1466.method_628((int)this.field_1459);
-                  }
-
-                  if (var1 == 16384) {
-                     this.field_1466.method_633();
-                  }
-
-                  if (var1 == 8192 && this.field_1466.method_632()) {
-                     this.field_1468 = !this.field_1468;
-                     this.field_1466.method_634(2);
-                  }
-
-                  if (var1 == 256 && !this.field_1475 && !this.field_1477) {
-                     this.field_1499 = false;
-                     if (this.field_1466.method_626()) {
-                        this.field_1468 = false;
-                     }
-                  }
-               } else {
-                  if (var1 == 16384) {
-                     this.field_1467 = !this.field_1467;
-                  }
-               }
-            } else {
-               if (var1 == 4) {
-                  this.field_1479.method_516();
-               }
-
-               if (var1 == 32) {
-                  this.field_1479.method_517();
-               }
-
-               if (var1 == 256) {
-                  if (this.field_1479.method_515() && this.field_1495) {
-                     this.field_1495 = false;
-                     class_3.method_70();
-                     class_3.method_61(class_3.method_110());
-                     class_3.field_63 = -1;
-                     class_3.field_61 = -1;
-                     class_3.field_62 = -1;
-                     class_58.method_580();
-                     class_41.field_543.method_213(class_41.field_544[2]);
-                  } else if (this.field_1496 > 0) {
-                     class_3.method_127(this.field_1496);
-                     this.field_1496 = 0;
-                  }
-
-                  this.field_1469 = false;
-               }
-            }
-         }
-      }
-   }
-
-   // $VF: renamed from: g () void
-   private void method_924() {
-      if (class_3.method_73() == 3) {
-         this.field_1486 = new class_30(class_41.field_533.method_297(288));
-         this.field_1478 = true;
-      } else if (class_3.method_73() == 42 && !class_3.method_108().method_369(42)) {
-         this.field_1486 = new class_30(class_41.field_533.method_297(289));
-         this.field_1478 = true;
-      } else {
-         if (!this.field_1469 && !this.field_1475 && !this.field_1477) {
-            this.field_1479.method_514(class_41.field_533.method_297(234), true);
-            this.field_1479.method_516();
-            this.field_1469 = true;
-            this.field_1495 = true;
-         }
-      }
+   // $VF: renamed from: c (ce) void
+   public static final void method_919(class_42 var0) {
+      var0.method_375(new class_3(0, 500, 0));
+      var0.method_376(new class_3(-6000, 500, 0));
    }
 }

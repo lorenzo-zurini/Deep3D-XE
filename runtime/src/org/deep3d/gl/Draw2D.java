@@ -22,6 +22,10 @@ public final class Draw2D {
     public static final int OP_REGION = 9;      // objIdx sx sy sw sh transform x y anchor
     public static final int OP_RGB = 10;        // objIdx offset scanlen x y w h alpha
     public static final int OP_BATCH_3D = 11;   // objIdx (List<RenderNode>)
+    /** M3G pass: objIdx(ByteBuffer RGBA) texW texH srcX srcY srcW srcH dstX dstY dstW dstH opaque */
+    public static final int OP_M3G = 12;
+    /** M3G pass as shared texture: objIdx(M3GTargets.TexSlot) texW texH src.. dst.. opaque */
+    public static final int OP_M3G_TEX = 13;
 
     public int[] ops = new int[16384];
     public int opLen;

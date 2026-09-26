@@ -1,364 +1,500 @@
-// $VF: renamed from: cm
-public final class class_96 {
-   // $VF: renamed from: a o[][]
-   public class_19[][] field_1252;
-   // $VF: renamed from: a cm[]
-   public class_96[] field_1253;
-   // $VF: renamed from: b cm[]
-   public class_96[] field_1254;
-   // $VF: renamed from: a float
-   public float field_1255;
-   // $VF: renamed from: a int
-   public int field_1256;
-   // $VF: renamed from: b int
-   public int field_1257;
-   // $VF: renamed from: c int
-   public int field_1258;
-   // $VF: renamed from: k int
-   private int field_1259;
-   // $VF: renamed from: d int
-   public int field_1260;
-   // $VF: renamed from: l int
-   private int field_1261;
-   // $VF: renamed from: e int
-   public int field_1262;
+// $VF: renamed from: bl
+public final class class_96 extends class_91 {
    // $VF: renamed from: f int
-   public int field_1263;
+   private int field_1265 = 500;
+   // $VF: renamed from: a float
+   private float field_1266 = 2.1F;
+   // $VF: renamed from: b float
+   private float field_1267 = 2.0F;
    // $VF: renamed from: g int
-   public int field_1264;
-   // $VF: renamed from: h int
-   public int field_1265;
-   // $VF: renamed from: a int[]
-   private int[] field_1266;
-   // $VF: renamed from: m int
-   private int field_1267;
-   // $VF: renamed from: a boolean
-   public boolean field_1268;
-   // $VF: renamed from: d boolean
-   private boolean field_1269;
+   private int field_1268 = 20;
+   // $VF: renamed from: a da
+   private class_25 field_1269;
+   // $VF: renamed from: c x
+   private class_3 field_1270 = new class_3();
+   // $VF: renamed from: d x
+   private class_3 field_1271 = new class_3();
+   // $VF: renamed from: e x
+   private class_3 field_1272 = new class_3();
+   // $VF: renamed from: f x
+   private class_3 field_1273 = new class_3();
    // $VF: renamed from: a bn
-   public class_1 field_1270;
-   // $VF: renamed from: a v
-   private class_5 field_1271 = new class_5();
-   // $VF: renamed from: a aw
-   public class_83 field_1272;
-   // $VF: renamed from: b boolean
-   public boolean field_1273;
+   private static class_57 field_1274 = new class_57();
+   // $VF: renamed from: h int
+   private int field_1275;
+   // $VF: renamed from: j boolean
+   private boolean field_1276;
    // $VF: renamed from: i int
-   public int field_1274;
+   private int field_1277;
    // $VF: renamed from: j int
-   public int field_1275;
-   // $VF: renamed from: c boolean
-   public boolean field_1276;
+   private int field_1278;
+   // $VF: renamed from: k int
+   private int field_1279;
+   // $VF: renamed from: l int
+   private int field_1280;
+   // $VF: renamed from: b cm
+   private class_37 field_1281;
+   // $VF: renamed from: e boolean
+   public boolean field_1282;
+   // $VF: renamed from: a long
+   private long field_1283;
+   // $VF: renamed from: k boolean
+   private boolean field_1284;
+   // $VF: renamed from: f boolean
+   public boolean field_1285;
+   // $VF: renamed from: g boolean
+   public boolean field_1286;
+   // $VF: renamed from: a ar
+   private class_83 field_1287;
+   // $VF: renamed from: l boolean
+   private boolean field_1288;
+   // $VF: renamed from: c float
+   private float field_1289;
+   // $VF: renamed from: d float
+   private float field_1290;
+   // $VF: renamed from: a dp[]
+   private class_29[] field_1291;
+   // $VF: renamed from: h boolean
+   public boolean field_1292;
+   // $VF: renamed from: i boolean
+   public boolean field_1293;
+   // $VF: renamed from: e int
+   public int field_1294;
 
-   public class_96(float var1, int var2, int var3) {
-      this.field_1255 = var1;
-      this.field_1256 = var2;
-      this.field_1257 = var2;
-      this.method_815();
-      this.field_1262 = var3;
-      if (var3 > 0) {
-         this.field_1252 = new class_19[var3][];
-      }
-
-      this.field_1270 = new class_1();
-      this.field_1268 = true;
-      this.field_1269 = true;
-      this.field_1266 = new int[6];
-      this.field_1266[0] = 1000000;
-      this.field_1272 = null;
-      this.field_1273 = false;
-      this.field_1276 = false;
-   }
-
-   // $VF: renamed from: a () boolean
-   public final boolean method_800() {
-      return this.field_1272 != null ? this.field_1272.field_1115 : false;
-   }
-
-   // $VF: renamed from: a (int) void
-   public final void method_801(int var1) {
-      this.field_1255 = var1;
-   }
-
-   // $VF: renamed from: a (cm[]) void
-   public final void method_802(class_96[] var1) {
-      this.field_1253 = var1;
-      if (this.field_1252 != null) {
-         for (int var2 = 0; var2 < this.field_1252.length; var2++) {
-            if (this.field_1252[var2] != null) {
-               for (int var3 = 0; var3 < this.field_1252[var2].length; var3++) {
-                  if (this.field_1252[var2][var3] != null) {
-                     this.field_1252[var2][var3].field_278 = this.field_1253;
-                  }
-               }
-            }
-         }
-      }
-   }
-
-   // $VF: renamed from: a (cm) void
-   public final void method_803(class_96 var1) {
-      class_96[] var2;
-      (var2 = new class_96[1])[0] = var1;
-      this.method_802(var2);
-   }
-
-   // $VF: renamed from: b (cm[]) void
-   public final void method_804(class_96[] var1) {
-      if (this.field_1253 == null) {
-         this.method_802(var1);
+   public class_96(int var1, int var2, boolean var3, class_37 var4, class_108 var5, int var6, int var7, int var8) {
+      super(var1, var3, var4, var5, var6, var7, var8);
+      this.field_1294 = var2;
+      this.field_1271.method_10(var6, var7, var8);
+      super.field_1239 = var1 != 19;
+      this.field_1269 = new class_25();
+      this.field_1287 = new class_83();
+      this.field_1287.field_1072 = 50;
+      this.field_1287.method_734(this.field_1271);
+      this.field_1276 = var3 && class_21.method_143() > 15;
+      if (var1 == 19) {
+         var5.method_873(64);
+         var5.method_877((byte)2);
+         this.field_1276 = false;
+         this.field_1289 = 2.1F;
+         this.field_1290 = 1.5F;
       } else {
-         class_96[] var2 = new class_96[this.field_1253.length + var1.length];
-
-         for (int var3 = 0; var3 < this.field_1253.length; var3++) {
-            var2[var3] = this.field_1253[var3];
+         int[] var9;
+         if ((var9 = class_90.method_789(var5.field_1344, var2)) != null) {
+            var5.method_876(var9[0], var9[1]);
+            var5.method_877((byte)2);
          }
 
-         for (int var4 = 0; var4 < var1.length; var4++) {
-            var2[this.field_1253.length + var4] = var1[var4];
-         }
-
-         this.method_802(var2);
-      }
-   }
-
-   // $VF: renamed from: a (int) cm
-   public final class_96 method_805(int var1) {
-      return this.field_1253[var1];
-   }
-
-   // $VF: renamed from: b (int) void
-   public final void method_806(int var1) {
-      this.field_1256 = var1;
-      if (this.field_1256 > this.field_1257) {
-         this.field_1257 = this.field_1256;
+         this.field_1289 = this.field_1266;
+         this.field_1290 = this.field_1267;
       }
 
-      this.method_815();
-   }
-
-   // $VF: renamed from: c (int) void
-   public final void method_807(int var1) {
-      this.field_1258 = var1;
-      if (this.field_1258 > this.field_1259) {
-         this.field_1258 = this.field_1259;
-      }
-
-      this.method_815();
-   }
-
-   // $VF: renamed from: d (int) void
-   public final void method_808(int var1) {
-      this.field_1260 = var1;
-      if (this.field_1260 > this.field_1261) {
-         this.field_1260 = this.field_1261;
-      }
-
-      this.method_815();
-   }
-
-   // $VF: renamed from: e (int) void
-   public final void method_809(int var1) {
-      this.field_1257 = var1;
-      this.field_1256 = var1;
-      this.method_815();
-   }
-
-   // $VF: renamed from: f (int) void
-   public final void method_810(int var1) {
-      this.field_1259 = var1;
-      this.field_1258 = var1;
-      this.method_815();
-   }
-
-   // $VF: renamed from: g (int) void
-   public final void method_811(int var1) {
-      this.field_1261 = var1;
-      this.field_1260 = var1;
-      this.method_815();
-   }
-
-   // $VF: renamed from: a () int
-   public final int method_812() {
-      return this.field_1258 + this.field_1260 + this.field_1256;
+      this.field_1284 = false;
+      this.field_1285 = false;
+      this.field_1286 = false;
+      this.field_1288 = false;
+      super.field_1240 = class_35.method_307();
+      this.field_1293 = true;
    }
 
    // $VF: renamed from: a () void
-   public final void method_813() {
-      if (this.field_1258 + 1 < this.field_1259) {
-         this.field_1258++;
-      } else {
-         this.field_1258 = this.field_1259;
+   public final void method_794() {
+      super.method_794();
+      if (this.field_1269 != null) {
+         this.field_1269.method_235();
       }
 
-      this.method_815();
+      this.field_1269 = null;
+      if (this.field_1287 != null) {
+         this.field_1287.method_731();
+      }
+
+      this.field_1287 = null;
+      this.field_1281 = null;
+      this.field_1291 = null;
+   }
+
+   // $VF: renamed from: b (boolean) void
+   public final void method_814(boolean var1) {
+      this.field_1284 = var1;
+      if (var1) {
+         super.field_1240 = null;
+      }
+   }
+
+   // $VF: renamed from: c () boolean
+   public final boolean method_815() {
+      return this.field_1284 && !super.field_1239;
+   }
+
+   // $VF: renamed from: d () boolean
+   public final boolean method_816() {
+      return !super.field_1239;
    }
 
    // $VF: renamed from: b () void
-   public final void method_814() {
-      if (this.field_1256 + 1 < this.field_1257) {
-         this.field_1256++;
+   public final void method_817() {
+      super.field_1239 = false;
+      this.method_795(false);
+      if (this.field_1284) {
+         class_69.method_640(0, 0, false, true);
+      } else if (class_21.method_178().method_612(super.field_1240.field_1490)) {
+         class_21.method_152();
+         class_21.method_178().method_613(super.field_1240);
+         class_69.method_640(super.field_1240.field_1480, super.field_1240.field_1490, false, false);
       } else {
-         this.field_1256 = this.field_1257;
+         class_69.method_640(super.field_1240.field_1480, super.field_1240.field_1490, true, false);
       }
-
-      this.method_815();
-   }
-
-   // $VF: renamed from: d () void
-   private void method_815() {
-      this.field_1263 = (int)((float)this.field_1256 / this.field_1257 * 100.0F);
-      this.field_1264 = (int)((float)this.field_1258 / this.field_1259 * 100.0F);
-      this.field_1265 = (int)((float)this.field_1260 / this.field_1261 * 100.0F);
    }
 
    // $VF: renamed from: a (int, int, int) void
-   public final void method_816(int var1, int var2, int var3) {
-      this.field_1271.field_138 = var1;
-      this.field_1271.field_139 = var2;
-      this.field_1271.field_140 = var3;
-   }
-
-   // $VF: renamed from: a (int) float
-   public final float method_817(int var1) {
-      if (this.field_1252 != null) {
-         Object var2 = null;
-         if (var1 == this.field_1275) {
-            var2 = this.field_1252[var1][this.field_1274];
-         } else {
-            var2 = this.field_1252[var1][0];
-         }
-
-         if (var2 != null) {
-            return (float)((class_19)var2).field_291 / ((class_19)var2).field_292;
-         }
-      }
-
-      return 0.0F;
-   }
-
-   // $VF: renamed from: h (int) void
-   public final void method_818(int var1) {
-      if (this.field_1269 && this.field_1268) {
-         if (this.field_1260 <= 0) {
-            this.method_820(var1);
-         } else {
-            this.field_1260 -= var1;
-         }
-
-         if (this.field_1260 < 0) {
-            this.field_1260 = 0;
-         }
-
-         this.method_815();
+   public final void method_818(int var1, int var2, int var3) {
+      super.field_1234 = var1;
+      super.field_1235 = var2;
+      super.field_1236 = var3;
+      super.field_1226.method_845(var1, var2, var3);
+      this.field_1271.method_10(var1, var2, var3);
+      if (this.field_1287 != null) {
+         this.field_1287.method_734(this.field_1271);
       }
    }
 
-   // $VF: renamed from: i (int) void
-   public final void method_819(int var1) {
-      if (this.field_1269 && this.field_1268) {
-         if (this.field_1258 <= 0) {
-            this.method_820(var1);
-         } else {
-            this.field_1258 -= var1;
-         }
-
-         if (this.field_1258 < 0) {
-            this.field_1258 = 0;
-         }
-
-         this.method_815();
-      }
+   // $VF: renamed from: a (int) void
+   public final void method_796(int var1) {
+      this.field_1276 = false;
+      this.field_1266 = var1;
+      this.field_1289 = this.field_1266;
    }
 
-   // $VF: renamed from: j (int) void
-   public final void method_820(int var1) {
-      this.field_1256 -= var1;
-      if (this.field_1256 < 0) {
-         this.field_1256 = 0;
-      }
-   }
+   // $VF: renamed from: a (long) void
+   public final void method_805(long var1) {
+      if (super.field_1224 == 4 && !super.field_1239) {
+         this.method_795(false);
+      } else {
+         this.field_1278 = (int)(this.field_1278 + var1);
+         this.field_1277 = (int)(this.field_1277 + var1);
+         this.field_1283 = var1;
+         this.field_1270 = super.field_1226.method_848(this.field_1270);
+         if (this.field_1269 != null) {
+            super.field_1232.method_9(this.field_1270);
+            if (super.field_1224 != 4 && super.field_1224 != 3) {
+               super.field_1233 = super.field_1226.method_855(super.field_1233);
+               super.field_1233.method_22();
+               super.field_1233.method_19(32768, super.field_1233);
+               super.field_1232.method_17(super.field_1233);
+            }
 
-   // $VF: renamed from: a (int, boolean) void
-   public final void method_821(int var1, boolean var2) {
-      if (this.field_1269 && this.field_1268) {
-         int var3;
-         if ((var3 = this.field_1258 - var1) < 0) {
-            this.field_1258 = 0;
-            int var4;
-            if ((var4 = this.field_1260 - -var3) < 0) {
-               this.field_1260 = 0;
-               this.field_1256 -= -var4;
+            this.field_1269.method_236(super.field_1232, (int)var1);
+            this.field_1280 = (int)(this.field_1280 + var1);
+            if (this.field_1280 > 200) {
+               if (this.field_1287 != null) {
+                  this.field_1287.method_733(this.field_1270);
+               }
+
+               this.field_1280 = 0;
+            }
+         }
+
+         super.field_1225.field_377 = super.field_1226.field_1341;
+         if (super.field_1224 != 4 && super.field_1224 != 3) {
+            super.field_1225.method_353(var1);
+            class_37[] var3 = super.field_1225.field_360;
+            if (super.field_1225.field_360 != null && this.field_1269 != null) {
+               if (!this.field_1292) {
+                  this.field_1275 = -1;
+               } else if (this.field_1275 >= 0 && !var3[this.field_1275].field_375) {
+                  this.field_1292 = false;
+               }
+
+               this.field_1281 = null;
+               if (this.field_1277 > 5000) {
+                  if (this.field_1288) {
+                     this.field_1288 = false;
+                  } else {
+                     this.field_1288 = class_84.field_1123.nextInt(100) < 20;
+                  }
+
+                  this.field_1277 = 0;
+                  if (class_84.field_1123.nextInt(100) < 30 && var3.length > 1) {
+                     this.field_1292 = false;
+
+                     for (int var9 = 0; var9 < 5 && !this.field_1292; var9++) {
+                        this.field_1275 = class_84.field_1123.nextInt(var3.length);
+                        if (var3[this.field_1275].field_375) {
+                           super.field_1232 = var3[this.field_1275].method_344(super.field_1232);
+                           if (this.field_1270.field_37 - super.field_1232.field_37 < 50000
+                              && this.field_1270.field_37 - super.field_1232.field_37 > -50000
+                              && this.field_1270.field_38 - super.field_1232.field_38 < 50000
+                              && this.field_1270.field_38 - super.field_1232.field_38 > -50000
+                              && this.field_1270.field_39 - super.field_1232.field_39 < 50000
+                              && this.field_1270.field_39 - super.field_1232.field_39 > -50000) {
+                              this.field_1292 = true;
+                              break;
+                           }
+                        }
+                     }
+
+                     if (!this.field_1292) {
+                        this.field_1275 = 0;
+                     }
+                  } else {
+                     this.field_1275 = 0;
+                  }
+
+                  if (var3[this.field_1275].field_375 && !var3[this.field_1275].method_345()) {
+                     super.field_1232 = var3[this.field_1275].method_344(super.field_1232);
+                     if (this.field_1270.field_37 - super.field_1232.field_37 < 50000
+                        && this.field_1270.field_37 - super.field_1232.field_37 > -50000
+                        && this.field_1270.field_38 - super.field_1232.field_38 < 50000
+                        && this.field_1270.field_38 - super.field_1232.field_38 > -50000
+                        && this.field_1270.field_39 - super.field_1232.field_39 < 50000
+                        && this.field_1270.field_39 - super.field_1232.field_39 > -50000) {
+                        this.field_1275 = this.field_1275;
+                     } else {
+                        this.field_1275 = -1;
+                     }
+                  } else {
+                     this.field_1275 = -1;
+                  }
+               } else if (!this.field_1292) {
+                  for (int var4 = 0; var4 < var3.length; var4++) {
+                     if (var3[var4].field_375 && !var3[var4].method_345()) {
+                        super.field_1232 = var3[var4].method_344(super.field_1232);
+                        if (this.field_1270.field_37 - super.field_1232.field_37 < 50000
+                           && this.field_1270.field_37 - super.field_1232.field_37 > -50000
+                           && this.field_1270.field_38 - super.field_1232.field_38 < 50000
+                           && this.field_1270.field_38 - super.field_1232.field_38 > -50000
+                           && this.field_1270.field_39 - super.field_1232.field_39 < 50000
+                           && this.field_1270.field_39 - super.field_1232.field_39 > -50000) {
+                           this.field_1275 = var4;
+                           break;
+                        }
+                     }
+                  }
+               }
+
+               this.field_1282 = false;
+               if (this.field_1275 == -1 && super.field_1230 != null) {
+                  if (super.field_1230.method_110() != null && super.field_1225.field_375) {
+                     super.field_1230
+                        .method_114(super.field_1225.field_377.field_698, super.field_1225.field_377.field_699, super.field_1225.field_377.field_700);
+                     if (super.field_1230.method_110() != null) {
+                        this.field_1272.field_37 = super.field_1230.method_110().field_1295;
+                        this.field_1272.field_38 = super.field_1230.method_110().field_1296;
+                        this.field_1272.field_39 = super.field_1230.method_110().field_1297;
+                        this.field_1282 = true;
+                     }
+                  } else {
+                     this.field_1275 = 0;
+                     this.field_1281 = super.field_1225.method_326(this.field_1275);
+                     super.field_1232 = this.field_1281.method_344(super.field_1232);
+                     this.field_1272.field_37 = super.field_1232.field_37;
+                     this.field_1272.field_38 = super.field_1232.field_38;
+                     this.field_1272.field_39 = super.field_1232.field_39;
+                  }
+               } else {
+                  if (this.field_1275 < 0) {
+                     this.field_1275 = 0;
+                  }
+
+                  this.field_1281 = super.field_1225.method_326(this.field_1275);
+                  super.field_1232 = this.field_1281.method_344(super.field_1232);
+                  this.field_1272.field_37 = super.field_1232.field_37;
+                  this.field_1272.field_38 = super.field_1232.field_38;
+                  this.field_1272.field_39 = super.field_1232.field_39;
+               }
+            } else if (super.field_1230 != null) {
+               super.field_1230.method_114(super.field_1225.field_377.field_698, super.field_1225.field_377.field_699, super.field_1225.field_377.field_700);
+               if (super.field_1230.method_110() != null) {
+                  this.field_1272.field_37 = super.field_1230.method_110().field_1295;
+                  this.field_1272.field_38 = super.field_1230.method_110().field_1296;
+                  this.field_1272.field_39 = super.field_1230.method_110().field_1297;
+                  this.field_1282 = true;
+               }
             } else {
-               this.field_1260 = var4;
-            }
-         } else {
-            this.field_1258 = var3;
-         }
-
-         if (this.field_1256 < 0) {
-            this.field_1256 = 0;
-            if (var2) {
-               this.field_1276 = true;
+               super.field_1224 = 5;
             }
          }
 
-         this.method_815();
-      }
-   }
-
-   // $VF: renamed from: k (int) void
-   public final void method_822(int var1) {
-      this.method_821(var1, false);
-   }
-
-   // $VF: renamed from: a (v) v
-   public final class_5 method_823(class_5 var1) {
-      return this.field_1270.method_12(var1);
-   }
-
-   // $VF: renamed from: b () boolean
-   public final boolean method_824() {
-      return this.field_1256 <= 0;
-   }
-
-   // $VF: renamed from: a (o, int) void
-   public final void method_825(class_19 var1, int var2) {
-      if (this.field_1252 != null) {
-         if (var2 <= this.field_1262 && var2 >= 0) {
-            this.field_1252[var2] = new class_19[1];
-            this.field_1252[var2][0] = var1;
+         this.field_1273.field_37 = this.field_1272.field_37 - this.field_1270.field_37;
+         this.field_1273.field_38 = this.field_1272.field_38 - this.field_1270.field_38;
+         this.field_1273.field_39 = this.field_1272.field_39 - this.field_1270.field_39;
+         if (!super.field_1228 && super.field_1224 == 5) {
+            super.field_1232 = super.field_1229.field_272.field_969.method_344(super.field_1232);
+            this.field_1273.field_37 = super.field_1232.field_37 - this.field_1270.field_37;
+            this.field_1273.field_38 = super.field_1232.field_38 - this.field_1270.field_38;
+            this.field_1273.field_39 = super.field_1232.field_39 - this.field_1270.field_39;
+            if (this.field_1273.field_37 < 10000
+               && this.field_1273.field_37 > -10000
+               && this.field_1273.field_38 < 10000
+               && this.field_1273.field_38 > -10000
+               && this.field_1273.field_39 < 10000
+               && this.field_1273.field_39 > -10000) {
+               super.field_1224 = 1;
+               super.field_1225.field_375 = true;
+            }
          }
 
-         this.method_827();
-      }
-   }
-
-   // $VF: renamed from: a (o[], int) void
-   public final void method_826(class_19[] var1, int var2) {
-      if (this.field_1252 != null) {
-         if (var2 <= this.field_1262 && var2 >= 0) {
-            this.field_1252[var2] = new class_19[var1.length];
-            this.field_1252[var2] = var1;
+         if (this.field_1291 != null) {
+            for (int var6 = 0; var6 < this.field_1291.length; var6++) {
+               this.field_1291[var6]
+                  .method_286(super.field_1225.field_377.field_698, super.field_1225.field_377.field_699, super.field_1225.field_377.field_700);
+            }
          }
 
-         this.method_827();
-      }
-   }
+         if (super.field_1225.field_363 <= 0 && super.field_1224 != 3 && super.field_1224 != 4) {
+            if (super.field_1228) {
+               if (this.field_1294 == 2 && !super.field_1225.field_383) {
+                  class_21.method_206();
+               }
 
-   // $VF: renamed from: e () void
-   private void method_827() {
-      int var1 = 0;
-      this.field_1274 = 0;
-      if (this.field_1252 != null) {
-         for (int var2 = 0; var2 < this.field_1252.length; var2++) {
-            if (this.field_1252[var2] != null) {
-               for (int var3 = 0; var3 < this.field_1252[var2].length; var3++) {
-                  if (this.field_1252[var2][var3].field_292 > var1 && !this.field_1252[var2][var3].field_298) {
-                     var1 = this.field_1252[var2][var3].field_292;
-                     this.field_1275 = var2;
-                     this.field_1274 = var3;
+               super.field_1229.method_257(super.field_1227, super.field_1225.field_383);
+            } else {
+               super.field_1229.method_259();
+            }
+
+            super.field_1224 = 3;
+            if (super.field_1231 != null) {
+               super.field_1231.method_741(this.field_1270.field_37, this.field_1270.field_38, this.field_1270.field_39);
+            }
+
+            int var7 = class_16.method_98(40000, this.field_1273.method_23());
+            float var10 = 1.0F - var7 / 40000.0F;
+            int var5 = class_84.field_1122.field_1182;
+            class_84.field_1122.method_769(super.field_1227 == 19 ? 9 : 6, (int)(var5 * var10));
+            if (super.field_1239) {
+               this.field_1271.method_9(this.field_1270);
+               super.field_1226 = class_43.method_381(17);
+               super.field_1226.field_1367 = 2;
+               super.field_1226.method_846(this.field_1270);
+               super.field_1225.field_377 = super.field_1226.field_1341;
+               super.field_1225.field_379 = this;
+               this.field_1287 = null;
+            }
+         }
+
+         switch (super.field_1224) {
+            case 0:
+               super.field_1224 = 1;
+               break;
+            case 1:
+               if (this.field_1276) {
+                  if (this.field_1278 > 5000 && this.field_1289 != 4.0F) {
+                     if (class_84.field_1123.nextInt(100) < this.field_1268) {
+                        this.field_1279 = class_84.field_1123.nextInt(3000) + 5000;
+                     }
+
+                     this.field_1278 = 0;
+                     this.field_1289 = 4.0F;
+                     this.field_1290 = 1.3F;
+                  }
+
+                  if (this.field_1289 == 4.0F && this.field_1278 > this.field_1279) {
+                     this.field_1278 = 0;
+                     this.field_1289 = this.field_1266;
+                     this.field_1290 = this.field_1267;
+                  }
+               }
+
+               if (this.field_1281 != null
+                  && !this.field_1282
+                  && this.field_1273.field_37 < 8000
+                  && this.field_1273.field_37 > -8000
+                  && this.field_1273.field_38 < 8000
+                  && this.field_1273.field_38 > -8000
+                  && this.field_1273.field_39 < 8000
+                  && this.field_1273.field_39 > -8000) {
+                  this.field_1273 = super.field_1226.method_858(this.field_1273);
+               }
+
+               this.field_1273.method_22();
+               super.field_1233.method_9(this.field_1273);
+               this.field_1273 = super.field_1226.method_871(field_1274).method_509(super.field_1233, this.field_1273);
+               this.field_1273.field_38 = -this.field_1273.field_38;
+               if (!this.field_1282
+                  && this.field_1281 != null
+                  && this.field_1273.field_37 < this.field_1265
+                  && this.field_1273.field_37 > -this.field_1265
+                  && this.field_1273.field_38 < this.field_1265
+                  && this.field_1273.field_38 > -this.field_1265
+                  && this.field_1272.field_37 - this.field_1270.field_37 < 35000
+                  && this.field_1272.field_37 - this.field_1270.field_37 > -35000
+                  && this.field_1272.field_38 - this.field_1270.field_38 < 35000
+                  && this.field_1272.field_38 - this.field_1270.field_38 > -35000
+                  && this.field_1272.field_39 - this.field_1270.field_39 < 35000
+                  && this.field_1272.field_39 - this.field_1270.field_39 > -35000) {
+                  if (this.field_1281.field_375 && !this.field_1281.method_345()) {
+                     super.field_1225.method_352(0, var1, false);
+                  } else {
+                     this.field_1292 = false;
+                  }
+               }
+
+               if (!this.field_1288) {
+                  super.field_1232.method_9(super.field_1226.method_855(super.field_1232));
+                  super.field_1233.method_17(super.field_1232);
+                  super.field_1233.method_22();
+                  super.field_1233.method_18((int)((float)var1 * this.field_1290));
+                  this.field_1273 = super.field_1232.method_14(super.field_1233, this.field_1273);
+                  this.field_1273.method_22();
+                  super.field_1226.field_1341.method_512(this.field_1273);
+               }
+
+               super.field_1226.method_847((int)((float)var1 * this.field_1289));
+            case 2:
+            default:
+               break;
+            case 3:
+               this.field_1293 = false;
+               if (super.field_1231 != null) {
+                  if (super.field_1231.method_743()) {
+                     super.field_1224 = 4;
+                  }
+               } else {
+                  super.field_1224 = 4;
+               }
+               break;
+            case 4:
+               if (super.field_1239 && super.field_1225.field_375) {
+                  if (!super.field_1237) {
+                     super.field_1226.method_843(0, -((int)var1) / 2, 0);
+                  }
+
+                  if (super.field_1226.method_848(super.field_1232).field_38 < this.field_1271.field_38 - 30000) {
+                     this.field_1285 = true;
+                     this.method_795(false);
+                  }
+               } else {
+                  this.method_795(false);
+               }
+               break;
+            case 5:
+               if (super.field_1228
+                  && this.field_1273.field_37 < 50000
+                  && this.field_1273.field_37 > -50000
+                  && this.field_1273.field_38 < 50000
+                  && this.field_1273.field_38 > -50000
+                  && this.field_1273.field_39 < 50000
+                  && this.field_1273.field_39 > -50000) {
+                  super.field_1224 = 1;
+                  super.field_1225.field_375 = true;
+               }
+         }
+
+         if (this.field_1293) {
+            class_91[] var8 = super.field_1229.field_276;
+            if (super.field_1229.field_276 != null) {
+               for (int var11 = 0; var11 < var8.length; var11++) {
+                  if (var8[var11] != null && var8[var11].method_807(super.field_1226.method_848(super.field_1233))) {
+                     super.field_1233 = var8[var11].method_808(super.field_1226.method_848(super.field_1233));
+                     if (super.field_1233 != null) {
+                        super.field_1232.method_9(super.field_1226.method_855(super.field_1232));
+                        super.field_1233.method_17(super.field_1232);
+                        super.field_1233.method_18((int)((float)var1 * 5.0F));
+                        this.field_1270 = super.field_1232.method_14(super.field_1233, this.field_1270);
+                        this.field_1270.method_22();
+                        super.field_1226.field_1341.method_512(this.field_1270);
+                        super.field_1226.method_847((int)((float)var1 * this.field_1289));
+                     }
                   }
                }
             }
@@ -367,45 +503,41 @@ public final class class_96 {
    }
 
    // $VF: renamed from: c () void
-   public final void method_828() {
-      this.field_1262 = 0;
-      this.field_1252 = (class_19[][])null;
-   }
-
-   // $VF: renamed from: a (int) int
-   public final int method_829(int var1) {
-      return this.field_1252[var1][0].field_301;
-   }
-
-   // $VF: renamed from: l (int) void
-   public final void method_830(int var1) {
-      if (this.field_1252 != null && var1 < this.field_1252.length && var1 >= 0 && this.field_1252[var1] != null) {
-         for (int var2 = 0; var2 < this.field_1252[var1].length; var2++) {
-            this.field_1252[var1][var2].field_291 = 0;
+   public final void method_809() {
+      if (super.field_1224 != 4 && super.field_1224 != 3 || super.field_1239 && super.field_1225.field_375) {
+         super.method_809();
+         if (this.field_1269 != null) {
+            this.field_1269.method_238();
          }
+
+         if (this.field_1287 != null) {
+            this.field_1287.method_735();
+         }
+      }
+
+      if (super.field_1224 == 3 && super.field_1231.method_740() > 1) {
+         super.method_809();
+      }
+
+      if (super.field_1224 == 3 && super.field_1231 != null) {
+         super.field_1231.method_742(this.field_1283);
       }
    }
 
-   // $VF: renamed from: a (int, long, boolean) void
-   public final void method_831(int var1, long var2, boolean var4) {
-      if (this.field_1252 != null && var1 < this.field_1252.length && var1 >= 0 && this.field_1252[var1] != null) {
-         for (int var5 = 0; var5 < this.field_1252[var1].length; var5++) {
-            if (this.field_1252[var1][var5].field_291 > this.field_1252[var1][var5].field_292
-               && this.field_1252[var1][var5].method_284(this.field_1270, var2, var4)) {
-               this.field_1252[var1][var5].field_291 = 0;
-               if (this.field_1273 && this.field_1252[var1][var5].field_298) {
-                  class_41.field_539.method_427(5);
+   // $VF: renamed from: a (int, int, int) boolean
+   public final boolean method_806(int var1, int var2, int var3) {
+      if (super.field_1224 != 4 && super.field_1224 != 3) {
+         if (this.field_1291 != null) {
+            for (int var4 = 0; var4 < this.field_1291.length; var4++) {
+               if (this.field_1291[var4].method_287(var1, var2, var3)) {
+                  return true;
                }
             }
          }
-      }
-   }
 
-   // $VF: renamed from: a (long) void
-   public final void method_832(long var1) {
-      this.field_1267 = (int)(this.field_1267 + var1);
-      if (this.field_1267 > 3000) {
-         this.field_1267 = 0;
+         return false;
+      } else {
+         return false;
       }
    }
 }

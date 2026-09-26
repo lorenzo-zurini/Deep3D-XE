@@ -62,14 +62,11 @@ public final class Config {
 
     /** Creature active radius multiplier (kept modest: it thins population). */
     public static int creatureRangeScale() {
-        return org.deep3d.gl.GLBackend.isActive() ? Math.min(viewDistance, 2) : 1;
+        return Math.min(viewDistance, 2);
     }
 
-    /** Camera far plane in world units (software renderer keeps the original). */
+    /** Camera far plane in world units (the 3D engine always runs on the GPU). */
     public static int farPlane() {
-        if (!org.deep3d.gl.GLBackend.isActive()) {
-            return 31768;
-        }
         return 31768 * viewDistance;
     }
 

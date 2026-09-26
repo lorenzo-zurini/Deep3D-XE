@@ -27,4 +27,7 @@ javac -nowarn -cp "lib/*" -d build/classes $(find runtime/src -name '*.java')
 echo "Compiling game..."
 javac -nowarn -cp build/classes -d build/classes game/src/*.java
 
-echo "Build OK -> build/classes"
+echo "Building native M3G (JSR-184) engine..."
+native/build-m3g.sh
+
+echo "Build OK -> build/classes, build/native"

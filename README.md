@@ -5,17 +5,27 @@ J2ME mobile game. The original MIDP 2.0 midlet has been decompiled and
 recompiled against a purpose-built desktop runtime, so the game runs as a
 native Java application with full PC-game UX — no phone emulator involved.
 
+It is built from the **Nokia (JSR-184 / M3G) edition** of the game, the
+version that looked best on real phones (teal water gradient, full
+models), rendered by Nokia's own reference M3G engine on your GPU, with the
+official English text from the international release.
+
 ![status](https://img.shields.io/badge/status-playable-green)
 
 ## PC features
 
 - **Hardware OpenGL renderer (LWJGL/GLFW)** — the whole frame is drawn by
   the GPU: the game's 2D output is recorded as a command stream and
-  replayed as batched textured quads, and the Mascot Capsule 3D pipeline
-  runs as GL shaders (a desktop port of JL-Mod's GLES2 renderer). No
-  readbacks, no software rasterization; with VSync and the FPS limit off
-  it runs as fast as the GPU can swap (hundreds of FPS even on Mesa's
-  software GL; thousands on a real GPU).
+  replayed as batched textured quads, and the 3D scenes are rendered by
+  Nokia's JSR-184 reference engine running on desktop OpenGL. On X11 the
+  engine shares the window's GL context, so each 3D pass reaches the
+  screen as a texture with no CPU read-back; with VSync and the FPS limit
+  off it runs at well over a thousand FPS at 1080p on a GTX 1070.
+- **Smooth or original texturing** — trilinear + 16x anisotropic
+  filtering, or the phones' crisp nearest-neighbour look.
+- **Extended view distance** (up to 8x the original far plane), with the
+  station LOD/impostor distance and the creature spawn radius scaled to
+  match, so detail stops popping in.
 - **Launches fullscreen at your display's native resolution** in true
   widescreen; VSync toggle, FPS limit (Off/30/60/120), FPS counter.
 - **Resolution-independent UI scale** — the interface keeps its classic
@@ -54,20 +64,28 @@ native Java application with full PC-game UX — no phone emulator involved.
 
 ## Building and running
 
-You need a JDK (17 or newer) and an original `Deep` v1.0.8 JAR
-(not included — the game data is copyrighted).
+You need a JDK (17 or newer), a C/C++ compiler with the EGL, GLX, X11 and
+zlib development headers (for the native 3D engine), and two original
+`Deep` v1.0.8 JARs (not included — the game data is copyrighted):
+
+- the **Nokia / JSR-184 build** (contains `data/3d/*.m3g`), and
+- the **international build** (contains `data/lang/en/`), for the English
+  text; the Nokia build only shipped with Russian text.
 
 ```sh
 ./build.sh
-./run.sh                 # first run asks for the original JAR
+./run.sh                 # first run asks for the two JARs
 ```
 
 or set the data up explicitly (also transcodes sound effects with ffmpeg):
 
 ```sh
-./extract-assets.sh "Deep (2009)(www.fishlabs.net)(v1.0.8).jar"
+./extract-assets.sh "Deep (…)(v1.0.8)(a1).jar" "Deep (…)(v1.0.8).jar"
 ./run.sh [--fullscreen] [--res 480x640]
 ```
+
+With no arguments `extract-assets.sh` identifies suitable JARs next to it
+by their contents.
 
 To make a distributable build:
 
@@ -104,32 +122,40 @@ QWERTY phone map and name entry keep working.
 runtime/src/   Desktop runtime:
                - javax.microedition.{midlet,lcdui,lcdui.game,rms,media,shell}
                  reimplemented on Java2D / javax.sound
-               - com.mascotcapsule.micro3d.v3 (HI Corp Mascot Capsule V3 API)
-                 with MBAC/MTRA loaders from JL-Mod and a from-scratch
-                 pure-Java software rasterizer (ru.woesss.j2me.micro3d.Render)
+               - javax.microedition.m3g: JSR-184 API bindings (Nokia, via
+                 J2ME Loader), adapted to desktop render targets
                - org.deep3d: launcher, window, input, overlay menu, gamepad,
-                 config, first-run setup
-game/src/      Game logic decompiled from the original JAR (Vineflower,
-               deobfuscated member names), with minimal desktop patches.
+                 config, first-run setup; org.deep3d.gl: the GPU backend
+               - com.mascotcapsule.micro3d.v3 / ru.woesss.j2me.micro3d:
+                 Mascot Capsule V3 support used by the earlier port of the
+                 international build (kept, currently unused)
+native/m3g/    Nokia's JSR-184 reference engine (C, from J2ME Loader) plus
+               the Linux layer: GLES 1.1 -> desktop GL shim, and EGL calls
+               served over GLX (window context sharing) or headless EGL
+game/src/      Game logic decompiled from the Nokia JAR (Vineflower,
+               deobfuscated member names), with desktop/PC patches.
 extract-assets.sh / build.sh / run.sh / package.sh
 ```
 
 ## How the port works
 
-- **Game code**: the 126 obfuscated classes were decompiled with Vineflower
-  (member renaming enabled, since obfuscated bytecode contains identifier
-  collisions that are illegal in Java source). Two small patches make
-  resource loading desktop-safe; everything else is untouched.
+- **Game code**: the 126 obfuscated classes of the Nokia build were
+  decompiled with Vineflower (member renaming enabled, since obfuscated
+  bytecode contains identifier collisions that are illegal in Java
+  source). Patches are marked `Deep3D-PC`: desktop-safe resource loading,
+  decompiler fixes (byte/short loop counters widened to int), the PC
+  command bar and menu hooks, typed name entry, analogue steering, view
+  distance scaling, a crash-proof main loop and save logging.
 - **Graphics (2D)**: MIDP `Graphics`/`Image`/`GameCanvas` are backed by
   Java2D `BufferedImage`s presented with aspect-correct scaling.
-- **Graphics (3D)**: the game uses HI Corporation's Mascot Capsule V3 engine
-  (`.mbac` models, `.mtra` animations). The API layer and binary format
-  loaders are adapted from the open-source
-  [JL-Mod](https://github.com/woesss/JL-Mod) project (Apache-2.0); the
-  OpenGL ES renderer was replaced with a pure-Java software rasterizer that
-  reproduces the same pipeline: two-pass opaque/blended flush, per-vertex
-  lighting, color-key transparency, half/add/sub blend modes, point sprites,
-  and perspective-correct texturing.
+- **Graphics (3D)**: the Nokia build uses JSR-184 (M3G). The engine is
+  Nokia's reference implementation as open-sourced for Symbian (EPL-1.0)
+  and ported to Android by [J2ME Loader](https://github.com/nikita36078/J2ME-Loader);
+  here it is built for Linux against desktop OpenGL. On X11 its contexts
+  are GLX contexts sharing objects with the game window, so every 3D pass
+  is copied GPU-side into a texture and composited into the frame (fenced,
+  no read-back); elsewhere it runs headless on EGL and the pass is read
+  back. Passes render at native resolution while the 2D UI is scaled.
 - **Sound**: MIDI music through `javax.sound.midi`; AMR sound effects are
   transcoded to WAV at setup (ffmpeg) and sniffed by container, silently
   stubbed otherwise.
@@ -150,9 +176,8 @@ composed frame. `DEEP3D_DEBUG=1` logs key events.
   degrades gracefully in-game.
 - Controller rumble and non-Linux controller backends are not implemented
   (the backend is isolated in `org.deep3d.Gamepad`).
-- The software rasterizer uses Gouraud (per-vertex) lighting where the
-  original GPU-era reimplementation shades per-pixel; on these low-poly
-  models the difference is minor.
+- The zero-copy 3D path needs an X11 (or XWayland) GLX window; native
+  Wayland falls back to reading each 3D pass back through the CPU.
 
 ## Legal
 
@@ -161,9 +186,13 @@ composed frame. `DEEP3D_DEBUG=1` logs key events.
 - Files under `com/mascotcapsule/micro3d/v3` and `ru/woesss/j2me/micro3d`
   are adapted from JL-Mod, © Yury Kharchenko, **Apache License 2.0** —
   license headers are preserved in each file.
+- `native/m3g` and `runtime/src/javax/microedition/m3g` are Nokia's JSR-184
+  implementation, © Nokia Corporation, **Eclipse Public License 1.0**, as
+  adapted by J2ME Loader; the Deep3D-PC changes to them are under the same
+  license.
 - `game/src` is **decompiled proprietary code** © Fishlabs Entertainment
   GmbH (now Deca Games). It is provided for interoperability, preservation
   and study. It is *not* under an open-source license and may not be
   redistributed commercially. The game assets are not included in this
   repository (and `dist/` output containing them must not be shared):
-  you must supply your own original JAR.
+  you must supply your own original JARs.

@@ -1,95 +1,200 @@
-// $VF: renamed from: t
+// $VF: renamed from: ds
 public final class class_17 {
-   // $VF: renamed from: a am
-   public class_111 field_249 = null;
-   // $VF: renamed from: a ae
-   private class_97 field_250;
-   // $VF: renamed from: a r[]
-   private class_34[] field_251 = new class_34[1];
-   // $VF: renamed from: a boolean[]
-   private boolean[] field_252;
-   // $VF: renamed from: a b
-   private class_26 field_253;
-
-   public class_17(class_26 var1) {
-      this.field_251[0] = new class_34();
-      this.field_252 = new boolean[1];
-      this.field_252[0] = true;
-      this.field_253 = var1;
-   }
-
-   // $VF: renamed from: a (am) void
-   public final void method_264(class_111 var1) {
-      this.field_249 = var1;
-      this.field_250 = this.field_249;
-
-      while (this.field_250.field_1278 != null) {
-         this.field_250 = this.field_250.field_1278;
-      }
-   }
-
-   // $VF: renamed from: a (ae) void
-   public final void method_265(class_97 var1) {
-      try {
-         if (var1 != null && this.field_251 != null && this.field_249 != null) {
-            var1.method_835(false);
-            if (this.field_250 != null) {
-               this.field_250.method_835(false);
-            } else {
-               this.field_249.method_835(false);
-            }
-
-            var1.method_833(this.field_249, this);
-         }
-      } catch (Exception var3) {
-         var3.printStackTrace();
-      }
-   }
+   // $VF: renamed from: a long
+   private long field_151;
+   // $VF: renamed from: a int
+   private int field_152;
+   // $VF: renamed from: a boolean
+   private boolean field_153;
+   // $VF: renamed from: b boolean
+   private boolean field_154;
+   // $VF: renamed from: a di
+   private class_78 field_155;
+   // $VF: renamed from: a j
+   private class_10 field_156;
+   // $VF: renamed from: a ab
+   private class_121 field_157;
+   // $VF: renamed from: a bh
+   private class_59 field_158;
+   // $VF: renamed from: b int
+   private int field_159;
+   // $VF: renamed from: c int
+   private int field_160;
+   // $VF: renamed from: d int
+   private int field_161;
 
    // $VF: renamed from: a () void
-   public final void method_266() {
-      for (int var1 = 0; var1 < this.field_251.length; var1++) {
-         this.field_251[var1].method_397();
-         if (this.field_252[var1]) {
-            this.field_253.method_335();
-         }
-
-         this.field_251[var1].method_395();
-      }
-   }
-
-   // $VF: renamed from: a (long) void
-   public final void method_267(long var1) {
-      for (int var3 = 0; var3 < this.field_251.length; var3++) {
-         this.field_251[var3].method_396(var1);
-         this.field_251[var3].method_397();
-         if (this.field_252[var3]) {
-            this.field_253.method_335();
-         }
-
-         this.field_251[var3].method_395();
-      }
-   }
-
-   // $VF: renamed from: a (boolean) void
-   public final void method_268(boolean var1) {
-      class_34[] var2 = new class_34[this.field_251.length + 1];
-      System.arraycopy(this.field_251, 0, var2, 0, this.field_251.length);
-      var2[this.field_251.length] = new class_34();
-      this.field_251 = var2;
-      boolean[] var3 = new boolean[this.field_252.length + 1];
-      System.arraycopy(this.field_252, 0, var3, 0, this.field_252.length);
-      var3[this.field_252.length] = var1;
-      this.field_252 = var3;
+   public final void method_101() {
+      this.field_155.method_714();
+      this.field_155 = null;
+      this.field_156 = null;
+      this.field_157 = null;
+      this.field_154 = false;
+      // System.gc() removed: full GCs stall the desktop JVM
    }
 
    // $VF: renamed from: b () void
-   public final void method_269() {
-      this.method_268(true);
+   public final void method_102() {
+      this.field_159 = 0;
+      this.field_153 = false;
+      this.field_155 = new class_78(new String[]{class_84.field_1116.method_4(266), class_84.field_1116.method_4(267)}, class_84.field_1116.method_4(235));
+      this.field_156 = new class_10();
+      this.field_157 = new class_121(20, class_84.field_1121 / 3, class_84.field_1120 - 40);
+      class_21.method_220();
+      this.field_155.method_722(0, class_120.method_935(class_21.method_178().field_886, class_21.method_180().field_1142));
+      class_21.method_178().method_611(class_120.method_934(this.field_155.field_1062, true));
+      class_21.method_180().field_1142 = class_120.method_934(this.field_155.field_1062, false);
+      this.field_155.method_722(1, class_35.method_302());
+      // System.gc() removed: full GCs stall the desktop JVM
+      this.field_154 = true;
    }
 
-   // $VF: renamed from: a (int, ay) void
-   public final void method_270(int var1, class_101 var2) {
-      this.field_251[var1].method_394(var2);
+   // $VF: renamed from: a (int) boolean
+   public final boolean method_103(int var1) {
+      this.field_158 = (class_59)this.field_155.method_701();
+      if (var1 == 256) {
+         if (this.field_153) {
+            this.field_153 = false;
+            return true;
+         }
+
+         if (this.field_159 == 0) {
+            this.field_155.method_726();
+         } else if (this.field_159 == 2) {
+            this.field_159 = 0;
+         } else if (this.field_159 == 1) {
+            this.field_159 = 0;
+         }
+      }
+
+      if (var1 == 4 && this.field_159 == 0) {
+         this.field_155.method_706();
+      }
+
+      if (var1 == 32 && this.field_159 == 0) {
+         this.field_155.method_707();
+      }
+
+      if (var1 == 2) {
+         if (this.field_159 == 0) {
+            this.field_155.method_704();
+         } else if (this.field_159 == 2) {
+            this.field_156.method_52(this.field_152);
+         }
+      }
+
+      if (var1 == 64) {
+         if (this.field_159 == 0) {
+            this.field_155.method_705();
+         } else if (this.field_159 == 2) {
+            this.field_156.method_53(this.field_152);
+         }
+      }
+
+      if (var1 == 8192) {
+         if (this.field_159 == 0 && !this.field_155.method_723()) {
+            return false;
+         }
+
+         if (this.field_159 == 2) {
+            this.field_159 = 0;
+         }
+      }
+
+      if (var1 == 16384) {
+         if (this.field_159 == 0 && !this.field_155.method_723()) {
+            if (this.field_158 != null) {
+               this.field_159 = 2;
+               this.field_156.method_51(this.field_158, this.field_155.field_1038 == 0);
+            }
+         } else if (this.field_159 == 1) {
+            this.field_159 = 0;
+         }
+      }
+
+      return this.field_153 ? true : true;
+   }
+
+   // $VF: renamed from: a (int, int) boolean
+   public final boolean method_104(int var1, int var2) {
+      if (!this.field_154) {
+         return true;
+      } else {
+         this.field_151 += var2;
+         this.field_152 = var2;
+         this.method_105();
+         if (this.field_155.method_701() != null) {
+            this.field_158 = (class_59)this.field_155.method_701();
+         }
+
+         if (this.field_153) {
+            return true;
+         } else {
+            if (this.field_159 == 0) {
+               if ((var1 & 4) == 0) {
+                  this.field_160 = 0;
+               } else {
+                  this.field_160 += var2;
+               }
+
+               if ((var1 & 32) == 0) {
+                  this.field_161 = 0;
+               } else {
+                  this.field_161 += var2;
+               }
+
+               if (this.field_160 > 500) {
+                  this.field_155.method_724();
+                  this.field_160 = 0;
+               }
+
+               if (this.field_161 > 500) {
+                  this.field_155.method_725();
+                  this.field_161 = 0;
+               }
+            }
+
+            return true;
+         }
+      }
+   }
+
+   // $VF: renamed from: c () void
+   public final void method_105() {
+      class_67.method_587();
+      if (this.field_159 == 0) {
+         this.field_155.method_718();
+      }
+
+      if (this.field_159 == 2) {
+         this.field_156.method_54();
+      }
+
+      if (this.field_159 == 1 || this.field_155.method_723()) {
+         class_67.method_593("", "");
+      } else if (this.field_159 == 0) {
+         class_67.method_593(class_84.field_1116.method_4(226), class_84.field_1116.method_4(65));
+      } else {
+         class_67.method_593("", class_84.field_1116.method_4(65));
+      }
+
+      if (this.field_159 == 1) {
+         this.field_155.method_718();
+         this.field_157.method_944();
+      }
+
+      if (this.field_153) {
+         this.field_157.method_944();
+      }
+   }
+
+   // $VF: renamed from: a () int
+   public final int method_106() {
+      return this.field_155.field_1038;
+   }
+
+   // $VF: renamed from: a () boolean
+   public final boolean method_107() {
+      return this.field_159 == 0 && !this.field_155.method_723();
    }
 }
