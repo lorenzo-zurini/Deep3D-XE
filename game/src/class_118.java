@@ -116,7 +116,7 @@ public final class class_118 extends class_113 {
       this.field_1465 = null;
       this.field_1502 = false;
       this.field_1464 = null;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: c () void
@@ -246,7 +246,7 @@ public final class class_118 extends class_113 {
                   class_41.field_539.method_425(1);
                   this.field_1460 = 0L;
                   class_48.method_466();
-                  System.gc();
+                  ;
                   this.field_1457 = System.currentTimeMillis();
                   this.field_1458 = System.currentTimeMillis();
                   this.field_1502 = true;

@@ -32,7 +32,7 @@ public final class class_114 extends class_113 {
       this.field_1387 = 0;
       this.field_1385 = true;
       this.field_1388 = 0;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: b () void

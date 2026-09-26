@@ -42,7 +42,7 @@ public final class class_62 {
       this.field_850 = null;
       this.field_851 = null;
       this.field_846 = false;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: b () void
@@ -62,7 +62,7 @@ public final class class_62 {
       this.field_855[1] = this.field_855[0];
       this.field_855[2] = this.field_854 - this.field_855[0] - this.field_855[1] - 4;
       this.field_847.method_695(field_843);
-      System.gc();
+      ;
       this.field_846 = true;
    }
 

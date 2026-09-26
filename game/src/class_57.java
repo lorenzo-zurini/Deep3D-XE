@@ -1858,6 +1858,6 @@ public final class class_57 {
       this.field_791 = null;
       this.field_792 = null;
       this.field_794 = 0;
-      System.gc();
+      ;
    }
 }

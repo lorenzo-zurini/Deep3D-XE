@@ -51,6 +51,27 @@ public final class class_59 {
 
    // $VF: renamed from: a (int) int
    public final int method_582(int var1) {
+      // Deep3D-PC: real keyboard typing (multi-tap kept as fallback).
+      org.deep3d.GameUi.textEntryTick();
+      String var9 = org.deep3d.GameUi.pollTypedText();
+
+      for (int var10 = 0; var10 < var9.length(); var10++) {
+         char var11 = var9.charAt(var10);
+         if (var11 == '\b') {
+            if (this.field_825.length() > 0) {
+               this.field_825 = this.field_825.substring(0, this.field_825.length() - 1);
+            }
+
+            this.field_824 = ' ';
+            this.field_821 = 0;
+         } else if (this.field_825.length() < this.field_819
+               && (Character.isLetterOrDigit(var11) || var11 == ' ')) {
+            this.field_825 = this.field_825 + var11;
+            this.field_824 = ' ';
+            this.field_821 = 0;
+         }
+      }
+
       this.field_823 += var1;
       if (this.field_826 == 16384) {
          return 0;

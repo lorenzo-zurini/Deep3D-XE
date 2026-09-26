@@ -51,7 +51,7 @@ public final class class_12 {
             this.field_181.method_787();
          }
 
-         System.gc();
+         ;
       }
    }
 }

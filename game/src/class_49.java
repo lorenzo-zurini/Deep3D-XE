@@ -30,7 +30,7 @@ public final class class_49 {
       this.field_701 = null;
       this.field_702 = null;
       this.field_699 = false;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: b () void
@@ -45,7 +45,7 @@ public final class class_49 {
       class_3.method_108().method_371(class_46.method_452(this.field_700.field_1080, true));
       class_3.method_110().field_836 = class_46.method_452(this.field_700.field_1080, false);
       this.field_700.method_715(1, class_9.method_199());
-      System.gc();
+      ;
       this.field_699 = true;
    }
 

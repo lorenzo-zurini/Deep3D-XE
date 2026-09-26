@@ -119,6 +119,10 @@ public class Render {
 		stack.clear();
 	}
 
+	/** Accumulated rasterization time, drained by the FPS probe. */
+	public static final java.util.concurrent.atomic.AtomicLong rasterNanos =
+			new java.util.concurrent.atomic.AtomicLong();
+
 	public synchronized void flush() {
 		if (stack.isEmpty()) {
 			return;
@@ -127,6 +131,7 @@ public class Render {
 			stack.clear();
 			return;
 		}
+		long t0 = System.nanoTime();
 		try {
 			flushStep = 1;
 			for (RenderNode r : stack) {
@@ -140,6 +145,7 @@ public class Render {
 			clearDepth();
 		} finally {
 			stack.clear();
+			rasterNanos.addAndGet(System.nanoTime() - t0);
 		}
 	}
 
@@ -729,8 +735,13 @@ public class Render {
 	// Triangle pipeline: near clip, perspective divide, raster
 	// ------------------------------------------------------------------
 
-	private static final float NEAR_EPS = 1.0f;
+	private static final float NEAR_EPS = 0.01f;
 	private static final int NUM_ATTRS = 6;
+
+	// Scratch buffers reused across triangles (raster setup is single-threaded).
+	private final float[] scratchPa0 = new float[NUM_ATTRS];
+	private final float[] scratchPa1 = new float[NUM_ATTRS];
+	private final float[] scratchPa2 = new float[NUM_ATTRS];
 
 	/** v: 3 clip-space float4; attr: 3 float[6]. */
 	private void clipAndRaster(float[][] v, float[][] attr, boolean textured, boolean colorKey) {
@@ -832,9 +843,9 @@ public class Render {
 		float invArea = 1.0f / area;
 
 		// Pre-divide attributes by w for perspective-correct interpolation.
-		float[] pa0 = new float[NUM_ATTRS];
-		float[] pa1 = new float[NUM_ATTRS];
-		float[] pa2 = new float[NUM_ATTRS];
+		float[] pa0 = scratchPa0;
+		float[] pa1 = scratchPa1;
+		float[] pa2 = scratchPa2;
 		for (int i = 0; i < NUM_ATTRS; i++) {
 			pa0[i] = a0[i] * iw0;
 			pa1[i] = a1[i] * iw1;
@@ -902,58 +913,105 @@ public class Render {
 							boolean textured, boolean colorKey,
 							boolean tl0, boolean tl1, boolean tl2) {
 		int w = env.width;
+		// Incremental edge functions and linear attribute accumulators:
+		// attr/w and 1/w are linear in screen space, so everything advances
+		// by constant per-pixel steps; only 1/w needs a divide per pixel.
+		final float stepE0 = -(y2 - y1);
+		final float stepE1 = -(y0 - y2);
+		final float stepE2 = -(y1 - y0);
+		final float dl0 = stepE0 * invArea;
+		final float dl1 = stepE1 * invArea;
+		final float dl2 = stepE2 * invArea;
+		final float zStep = dl0 * z0 + dl1 * z1 + dl2 * z2;
+		final float iwStep = dl0 * iw0 + dl1 * iw1 + dl2 * iw2;
+		final float a0Step = dl0 * pa0[0] + dl1 * pa1[0] + dl2 * pa2[0];
+		final float a1Step = dl0 * pa0[1] + dl1 * pa1[1] + dl2 * pa2[1];
+		final float a2Step = dl0 * pa0[2] + dl1 * pa1[2] + dl2 * pa2[2];
+		final float a3Step = dl0 * pa0[3] + dl1 * pa1[3] + dl2 * pa2[3];
+		final float a4Step = dl0 * pa0[4] + dl1 * pa1[4] + dl2 * pa2[4];
+		final float a5Step = dl0 * pa0[5] + dl1 * pa1[5] + dl2 * pa2[5];
+
+		// Fast paths: unlit texture (light==1, no sphere add) and flat color.
+		boolean unlitTex = textured
+				&& pa0[2] == iw0 && pa1[2] == iw1 && pa2[2] == iw2
+				&& pa0[3] == 0 && pa1[3] == 0 && pa2[3] == 0
+				&& pa0[4] == 0 && pa1[4] == 0 && pa2[4] == 0
+				&& pa0[5] == 0 && pa1[5] == 0 && pa2[5] == 0;
+		int flatRgb = -1;
+		if (!textured) {
+			float r0 = pa0[0] / iw0, g0 = pa0[1] / iw0, b0 = pa0[2] / iw0;
+			float r1 = pa1[0] / iw1, g1 = pa1[1] / iw1, b1 = pa1[2] / iw1;
+			float r2 = pa2[0] / iw2, g2 = pa2[1] / iw2, b2 = pa2[2] / iw2;
+			if (Math.abs(r0 - r1) < 0.004f && Math.abs(r0 - r2) < 0.004f
+					&& Math.abs(g0 - g1) < 0.004f && Math.abs(g0 - g2) < 0.004f
+					&& Math.abs(b0 - b1) < 0.004f && Math.abs(b0 - b2) < 0.004f) {
+				flatRgb = packColor(r0, g0, b0);
+			}
+		}
+
 		for (int py = yStart; py <= yEnd; py++) {
 			float fy = py + 0.5f;
 			int rowBase = py * w;
-			for (int px = minX; px <= maxX; px++) {
-				float fx = px + 0.5f;
-				float e0 = (x2 - x1) * (fy - y1) - (y2 - y1) * (fx - x1);
-				float e1 = (x0 - x2) * (fy - y2) - (y0 - y2) * (fx - x2);
-				float e2 = (x1 - x0) * (fy - y0) - (y1 - y0) * (fx - x0);
+			float fx = minX + 0.5f;
+			float e0 = (x2 - x1) * (fy - y1) - (y2 - y1) * (fx - x1);
+			float e1 = (x0 - x2) * (fy - y2) - (y0 - y2) * (fx - x2);
+			float e2 = (x1 - x0) * (fy - y0) - (y1 - y0) * (fx - x0);
+			float l0 = e0 * invArea;
+			float l1 = e1 * invArea;
+			float l2 = e2 * invArea;
+			float z = l0 * z0 + l1 * z1 + l2 * z2;
+			float iw = l0 * iw0 + l1 * iw1 + l2 * iw2;
+			float aw0 = l0 * pa0[0] + l1 * pa1[0] + l2 * pa2[0];
+			float aw1 = l0 * pa0[1] + l1 * pa1[1] + l2 * pa2[1];
+			float aw2 = l0 * pa0[2] + l1 * pa1[2] + l2 * pa2[2];
+			float aw3 = l0 * pa0[3] + l1 * pa1[3] + l2 * pa2[3];
+			float aw4 = l0 * pa0[4] + l1 * pa1[4] + l2 * pa2[4];
+			float aw5 = l0 * pa0[5] + l1 * pa1[5] + l2 * pa2[5];
+			boolean wasInside = false;
+			for (int px = minX; px <= maxX;
+					px++, e0 += stepE0, e1 += stepE1, e2 += stepE2,
+					z += zStep, iw += iwStep,
+					aw0 += a0Step, aw1 += a1Step, aw2 += a2Step,
+					aw3 += a3Step, aw4 += a4Step, aw5 += a5Step) {
 				// canonical winding => inside pixels have all edges >= 0;
 				// zero-valued edges count only for their owning triangle
 				if (e0 < 0 || (e0 == 0 && !tl0)
 						|| e1 < 0 || (e1 == 0 && !tl1)
 						|| e2 < 0 || (e2 == 0 && !tl2)) {
+					if (wasInside) {
+						break;   // convex: once we leave the span, done
+					}
 					continue;
 				}
-				float l0 = e0 * invArea;
-				float l1 = e1 * invArea;
-				float l2 = e2 * invArea;
-				float z = l0 * z0 + l1 * z1 + l2 * z2;
+				wasInside = true;
 				if (z < -1 || z > 1) {
 					continue;
 				}
 				int idx = rowBase + px;
-				if (z >= depthBuffer[idx]) {
+				if (z >= depthBuffer[idx] || iw <= 0) {
 					continue;
 				}
-				float iw = l0 * iw0 + l1 * iw1 + l2 * iw2;
-				if (iw <= 0) {
-					continue;
-				}
-				float rw = 1.0f / iw;
 				int srcRgb;
 				if (textured) {
-					float u = (l0 * pa0[0] + l1 * pa1[0] + l2 * pa2[0]) * rw;
-					float vv = (l0 * pa0[1] + l1 * pa1[1] + l2 * pa2[1]) * rw;
-					int texel = sampleTexture(u, vv, colorKey);
+					float rw = 1.0f / iw;
+					int texel = sampleTexture(aw0 * rw, aw1 * rw, colorKey);
 					if (colorKey && (texel >>> 24) < 128) {
 						continue;
 					}
-					float light = (l0 * pa0[2] + l1 * pa1[2] + l2 * pa2[2]) * rw;
-					float sr = (l0 * pa0[3] + l1 * pa1[3] + l2 * pa2[3]) * rw;
-					float sg = (l0 * pa0[4] + l1 * pa1[4] + l2 * pa2[4]) * rw;
-					float sb = (l0 * pa0[5] + l1 * pa1[5] + l2 * pa2[5]) * rw;
-					float r = ((texel >> 16) & 0xFF) / 255f * light + sr;
-					float g = ((texel >> 8) & 0xFF) / 255f * light + sg;
-					float b = (texel & 0xFF) / 255f * light + sb;
-					srcRgb = packColor(r, g, b);
+					if (unlitTex) {
+						srcRgb = texel & 0xFFFFFF;
+					} else {
+						float light = aw2 * rw;
+						float r = ((texel >> 16) & 0xFF) / 255f * light + aw3 * rw;
+						float g = ((texel >> 8) & 0xFF) / 255f * light + aw4 * rw;
+						float b = (texel & 0xFF) / 255f * light + aw5 * rw;
+						srcRgb = packColor(r, g, b);
+					}
+				} else if (flatRgb >= 0) {
+					srcRgb = flatRgb;
 				} else {
-					float r = (l0 * pa0[0] + l1 * pa1[0] + l2 * pa2[0]) * rw;
-					float g = (l0 * pa0[1] + l1 * pa1[1] + l2 * pa2[1]) * rw;
-					float b = (l0 * pa0[2] + l1 * pa1[2] + l2 * pa2[2]) * rw;
-					srcRgb = packColor(r, g, b);
+					float rw = 1.0f / iw;
+					srcRgb = packColor(aw0 * rw, aw1 * rw, aw2 * rw);
 				}
 				pixels[idx] = blendPixel(pixels[idx], srcRgb);
 				if (depthWrite) {

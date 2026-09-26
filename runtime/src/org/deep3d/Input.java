@@ -70,6 +70,8 @@ public final class Input {
         DEFAULTS.put(Action.HASH, new int[]{KeyEvent.VK_H});
     }
 
+    private static boolean escSentBack;
+
     private Input() {
     }
 
@@ -185,18 +187,59 @@ public final class Input {
                 Runtime.saveScreenshot();
                 return;
             }
-            if (code == KeyEvent.VK_ESCAPE) {
+            if (code == KeyEvent.VK_F10) {
                 Overlay.toggle();
                 return;
             }
-        } else if (code == KeyEvent.VK_ESCAPE || code == KeyEvent.VK_F11
-                || code == KeyEvent.VK_F12) {
-            return;
+            if (code == KeyEvent.VK_ESCAPE) {
+                // PC semantics: Esc backs out of game menus; otherwise it
+                // opens the pause overlay (F10 always opens it).
+                if (!Overlay.isOpen()
+                        && (GameUi.menuVisible() || GameUi.textEntryActive())) {
+                    escSentBack = true;
+                    sendMidpKey(-7, true);
+                } else {
+                    Overlay.toggle();
+                }
+                return;
+            }
+        } else {
+            if (code == KeyEvent.VK_ESCAPE) {
+                if (escSentBack) {
+                    escSentBack = false;
+                    sendMidpKey(-7, false);
+                }
+                return;
+            }
+            if (code == KeyEvent.VK_F10 || code == KeyEvent.VK_F11
+                    || code == KeyEvent.VK_F12) {
+                return;
+            }
         }
 
         if (Overlay.isOpen()) {
             if (pressed) {
                 Overlay.handleKey(code);
+            }
+            return;
+        }
+
+        if (GameUi.textEntryActive()) {
+            if (!pressed) {
+                return;
+            }
+            if (code == KeyEvent.VK_BACK_SPACE) {
+                GameUi.pushTypedChar('\b');
+                return;
+            }
+            if (code == KeyEvent.VK_ENTER) {
+                sendMidpKey(-6, true);
+                sendMidpKey(-6, false);
+                return;
+            }
+            char tc = e.getKeyChar();
+            if (tc >= ' ' && tc < 127) {
+                GameUi.pushTypedChar(tc);
             }
             return;
         }

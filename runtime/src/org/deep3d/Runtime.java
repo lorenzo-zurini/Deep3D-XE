@@ -321,17 +321,43 @@ public final class Runtime {
         MouseAdapter mouse = new MouseAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                Overlay.mouseMoved(e.getX(), e.getY());
+                if (Overlay.isOpen()) {
+                    Overlay.mouseMoved(e.getX(), e.getY());
+                } else {
+                    int[] g = toGameCoords(e.getX(), e.getY());
+                    if (g != null) {
+                        GameUi.mouseMoved(g[0], g[1]);
+                    } else {
+                        GameUi.mouseExited();
+                    }
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                GameUi.mouseExited();
             }
 
             @Override
             public void mousePressed(MouseEvent e) {
-                Overlay.mouseClicked(e.getX(), e.getY());
+                if (Overlay.isOpen()) {
+                    Overlay.mouseClicked(e.getX(), e.getY());
+                    return;
+                }
+                int[] g = toGameCoords(e.getX(), e.getY());
+                if (g != null) {
+                    GameUi.mouseClicked(g[0], g[1],
+                            javax.swing.SwingUtilities.isRightMouseButton(e));
+                }
             }
 
             @Override
             public void mouseWheelMoved(MouseWheelEvent e) {
-                Overlay.mouseWheel(e.getWheelRotation());
+                if (Overlay.isOpen()) {
+                    Overlay.mouseWheel(e.getWheelRotation());
+                } else {
+                    GameUi.mouseWheel(e.getWheelRotation());
+                }
             }
         };
         p.addMouseListener(mouse);
@@ -367,6 +393,17 @@ public final class Runtime {
             }
         });
         hide.start();
+    }
+
+    /** Window coords -> game (internal buffer) coords, or null if outside. */
+    private static int[] toGameCoords(int mx, int my) {
+        Rectangle r = viewRect;
+        if (r.width <= 0 || mx < r.x || mx >= r.x + r.width
+                || my < r.y || my >= r.y + r.height) {
+            return null;
+        }
+        return new int[]{(mx - r.x) * screenWidth / r.width,
+                (my - r.y) * screenHeight / r.height};
     }
 
     private static Rectangle computeViewRect(int pw, int ph) {
@@ -469,6 +506,7 @@ public final class Runtime {
 
     /** Copy a full-screen frame onto the visible screen and repaint. */
     public static void present(BufferedImage frameBuffer) {
+        GameUi.commitFrame();
         synchronized (Runtime.class) {
             Graphics2D g = screen.createGraphics();
             g.drawImage(frameBuffer, 0, 0, null);
@@ -482,7 +520,6 @@ public final class Runtime {
             fpsWindowStart = now;
         }
         repaintWindow();
-        java.awt.Toolkit.getDefaultToolkit().sync();
     }
 
     public static void saveScreenshot() {
@@ -608,9 +645,31 @@ public final class Runtime {
                     default: break;
                 }
                 break;
-            case "fps":
-                System.out.println("[fps] " + displayFps + " @ " + screenWidth + "x" + screenHeight);
+            case "type": {
+                String text = parts[1].replace('_', ' ');
+                for (int i = 0; i < text.length(); i++) {
+                    GameUi.pushTypedChar(text.charAt(i));
+                }
                 break;
+            }
+            case "mm":
+                GameUi.mouseMoved(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+                break;
+            case "mc":
+                GameUi.mouseClicked(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]),
+                        parts.length > 3 && parts[3].equals("r"));
+                break;
+            case "mw":
+                GameUi.mouseWheel(Integer.parseInt(parts[1]));
+                break;
+            case "fps": {
+                long raster = ru.woesss.j2me.micro3d.Render.rasterNanos.getAndSet(0);
+                int fps = displayFps;
+                long perFrame = fps > 0 ? raster / Math.max(1, fps) / 1_000_000 : 0;
+                System.out.println("[fps] " + fps + " @ " + screenWidth + "x" + screenHeight
+                        + " raster=" + perFrame + "ms/frame");
+                break;
+            }
             case "shot": {
                 // Render the composed window view (game + overlay) offscreen.
                 JPanel p = panel;

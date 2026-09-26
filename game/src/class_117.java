@@ -72,7 +72,7 @@ public final class class_117 extends class_113 {
       this.field_1443 = false;
       this.field_1452 = null;
       this.field_1455 = null;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: a () void
@@ -128,7 +128,7 @@ public final class class_117 extends class_113 {
          var3.printStackTrace();
       }
 
-      System.gc();
+      ;
       this.field_1438 = System.currentTimeMillis();
       this.field_1439 = System.currentTimeMillis();
       this.field_1443 = true;

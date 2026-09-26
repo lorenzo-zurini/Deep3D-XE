@@ -49,7 +49,7 @@ public final class class_70 {
          this.field_1022 = null;
       }
 
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: a (int, int, int, int) void

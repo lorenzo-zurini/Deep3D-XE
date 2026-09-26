@@ -18,7 +18,7 @@ public final class class_40 {
          int[] var8 = new int[(int)(var5 * var3) * (int)(var6 * var4)];
          var0.getRGB(var7, 0, var5, 0, 0, var5, var6);
          var0 = Image.createRGBImage(method_411(var7, var8, var5, (int)(var5 * var3)), (int)(var5 * var3), (int)(var6 * var4), true);
-         System.gc();
+         ;
       } catch (Exception var9) {
          var9.printStackTrace();
       }
@@ -85,7 +85,7 @@ public final class class_40 {
          }
 
          var1 = Image.createImage(var5, 0, var4);
-         System.gc();
+         ;
       } catch (Exception var9) {
       }
 

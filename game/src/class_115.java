@@ -23,7 +23,7 @@ public final class class_115 extends class_113 {
 
       this.field_1396 = null;
       this.field_1395 = false;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: a () void
@@ -40,7 +40,7 @@ public final class class_115 extends class_113 {
          this.field_1397 = new class_67();
          this.field_1397.method_634(0);
          class_69.method_654(false);
-         System.gc();
+         ;
          this.field_1391 = System.currentTimeMillis();
          this.field_1392 = System.currentTimeMillis();
          this.field_1395 = true;

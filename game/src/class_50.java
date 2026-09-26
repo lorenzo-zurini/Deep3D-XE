@@ -12,7 +12,7 @@ public final class class_50 {
    // $VF: renamed from: a () void
    public static final void method_480() {
       field_707 = null;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: a (javax.microedition.lcdui.Graphics) void

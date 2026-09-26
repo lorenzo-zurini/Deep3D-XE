@@ -170,7 +170,7 @@ public final class class_68 {
       this.field_956 = null;
       this.field_957 = null;
       this.field_958 = null;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: a () boolean
@@ -310,7 +310,7 @@ public final class class_68 {
       this.field_996 = true;
       this.field_1000 = false;
       this.field_1001 = false;
-      System.gc();
+      ;
       this.field_933 = true;
    }
 

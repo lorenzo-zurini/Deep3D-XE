@@ -122,7 +122,7 @@ public final class class_116 extends class_113 {
       this.field_1420 = null;
       this.field_1406 = false;
       this.field_1427 = null;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: a () void
@@ -169,7 +169,7 @@ public final class class_116 extends class_113 {
 
          class_69.method_673(false);
          class_4.method_155(-1, -1, "");
-         System.gc();
+         ;
          this.field_1399 = System.currentTimeMillis();
          this.field_1400 = System.currentTimeMillis();
          this.field_1404 = 0L;

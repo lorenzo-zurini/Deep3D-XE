@@ -500,6 +500,191 @@ public final class Overlay {
     // ------------------------------------------------------------------
 
     public static synchronized void render(Graphics2D g, int w, int h) {
+        if (GameFont.available()) {
+            if (!open) {
+                renderGameToast(g, w, h, Math.max(2, Math.round(h / 320f)));
+                return;
+            }
+            renderGameStyle(g, w, h);
+            return;
+        }
+        renderModern(g, w, h);
+    }
+
+    /* Palette lifted from the game's UI toolkit (class_69). */
+    private static final Color DEEP_ACCENT = new Color(0x4993B8);
+    private static final Color DEEP_PANEL = new Color(0x1E3B4A);
+    private static final Color DEEP_BOX = new Color(0x23516E);
+    private static final Color DEEP_DARK = new Color(0x0F1F26);
+
+    private static void renderGameStyle(Graphics2D g, int w, int h) {
+        g.setColor(new Color(0, 0, 0, 150));
+        g.fillRect(0, 0, w, h);
+
+        GameFont fw = GameFont.white();
+        GameFont fg = GameFont.gray();
+        int S = Math.max(2, Math.round(h / 320f));
+        int fh = fw.height(S);
+        int rowH = fh + 5 * S;
+
+        List<Item> items = buildItems();
+        currentItems = items;
+
+        int panelW = Math.min(w - 8 * S, (page == Page.CONTROLS ? 250 : 190) * S);
+        int titleH = 10 * S;
+        int footH = rowH + 2 * S;
+        int maxListH = h - 24 * S - titleH - footH;
+        int visible = Math.max(1, maxListH / rowH);
+        int shown = Math.min(items.size(), visible);
+        int panelH = titleH + 3 * S + shown * rowH + footH;
+        int px = (w - panelW) / 2;
+        int py = (h - panelH) / 2;
+
+        // Frame in the game's menu-box style
+        g.setColor(DEEP_PANEL);
+        g.fillRect(px, py, panelW, panelH);
+        g.setColor(DEEP_BOX);
+        g.fillRect(px, py, panelW, titleH);
+        g.setColor(DEEP_ACCENT);
+        java.awt.Shape clip = g.getClip();
+        g.clipRect(px, py, panelW, titleH);
+        for (int x = px; x < px + panelW; x += 4 * S) {
+            g.drawLine(x, py + 7 * S, x + 4 * S, py + 3 * S);
+        }
+        g.setClip(clip);
+        g.drawRect(px, py, panelW, panelH);
+        g.drawLine(px, py + titleH, px + panelW, py + titleH);
+        String title = pageTitle();
+        g.setColor(DEEP_ACCENT);
+        g.fillRect(px, py, fw.width(title, S) + 6 * S, titleH);
+        fw.draw(g, title, px + 3 * S, py + (titleH - fh) / 2, S);
+
+        // Items
+        if (selected < scroll) {
+            scroll = selected;
+        }
+        if (selected >= scroll + visible) {
+            scroll = selected - visible + 1;
+        }
+        int listTop = py + titleH + 2 * S;
+        int ix = px + 4 * S;
+        int iw = panelW - 8 * S;
+        rowsX = ix;
+        rowsW = iw;
+        rowBounds = new int[items.size()][2];
+
+        for (int i = scroll; i < items.size() && i - scroll < visible; i++) {
+            Item it = items.get(i);
+            int y = listTop + (i - scroll) * rowH;
+            rowBounds[i][0] = y;
+            rowBounds[i][1] = rowH;
+            boolean sel = i == selected;
+            int textY = y + (rowH - fh) / 2;
+            GameFont lf = sel ? fw : fg;
+
+            String value = null;
+            boolean chevrons = false;
+            if (it.bindAction != null) {
+                value = capturing == it.bindAction ? "press a key..." : bindText(it.bindAction);
+            } else if (it.slider == null && it.value != null) {
+                value = it.value.get();
+                chevrons = true;
+            }
+
+            int valueW = 0;
+            if (it.slider != null) {
+                valueW = 46 * S + fg.width("100%", S) + 4 * S;
+            } else if (value != null) {
+                String shown2 = chevrons ? "< " + value + " >" : value;
+                valueW = lf.width(shown2, S) + 2 * S;
+            }
+
+            if (sel) {
+                // selection: horizontal accent lines + solid box behind label
+                g.setColor(DEEP_ACCENT);
+                for (int ly = 2; ly <= 10; ly += 2) {
+                    int yy = y + ly * S / 2 + S;
+                    g.drawLine(ix, yy, ix + iw, yy);
+                }
+                String lbl = fw.elide(it.label, S, iw - valueW - 4 * S);
+                g.fillRect(ix + S, textY - S, fw.width(lbl, S) + 3 * S, fh + 2 * S);
+                fw.draw(g, lbl, ix + 2 * S, textY, S);
+            } else {
+                String lbl = fg.elide(it.label, S, iw - valueW - 4 * S);
+                fg.draw(g, lbl, ix + 2 * S, textY, S);
+            }
+
+            if (it.slider != null) {
+                int barW = 40 * S;
+                int barX = ix + iw - barW - S;
+                int barY = y + rowH / 2 - 2 * S;
+                g.setColor(DEEP_DARK);
+                g.fillRect(barX, barY, barW, 3 * S);
+                g.setColor(sel ? DEEP_ACCENT : DEEP_BOX);
+                g.fillRect(barX, barY, barW * it.slider.getAsInt() / 100, 3 * S);
+                g.setColor(DEEP_ACCENT);
+                g.drawRect(barX, barY, barW, 3 * S);
+                String v = it.value.get();
+                (sel ? fw : fg).draw(g, v, barX - fg.width(v, S) - 2 * S, textY, S);
+            } else if (value != null) {
+                String shown2 = chevrons ? "< " + value + " >" : value;
+                boolean hot = capturing != null && capturing == it.bindAction;
+                GameFont vf = hot || sel ? fw : fg;
+                vf.draw(g, shown2, ix + iw - vf.width(shown2, S) - S, textY, S);
+            }
+            if (it.note != null && sel && it.value != null && it.slider == null) {
+                fg.draw(g, it.note, ix + iw - fg.width(it.note, S) - S, textY + fh + S, S);
+            }
+        }
+
+        // Footer: command chips like the in-game bar
+        int fy = py + panelH - footH + S;
+        g.setColor(DEEP_ACCENT);
+        g.drawLine(px, fy - S, px + panelW, fy - S);
+        drawChip(g, fw, fg, S, px + 2 * S, fy + S,
+                "Enter", page == Page.CONTROLS ? "Rebind" : "Select");
+        String backLbl = page == Page.ROOT ? "Resume" : "Back";
+        int chipW = chipWidth(fw, fg, S, "Esc", backLbl);
+        drawChip(g, fw, fg, S, px + panelW - chipW - 2 * S, fy + S, "Esc", backLbl);
+
+        renderGameToast(g, w, h, S);
+    }
+
+    private static int chipWidth(GameFont fw, GameFont fg, int S, String key, String label) {
+        return fg.width(key, S) + fw.width(label, S) + 7 * S;
+    }
+
+    private static void drawChip(Graphics2D g, GameFont fw, GameFont fg, int S,
+                                 int x, int y, String key, String label) {
+        int fh = fw.height(S);
+        int cw = chipWidth(fw, fg, S, key, label);
+        int ch = fh + 2 * S;
+        g.setColor(DEEP_BOX);
+        g.fillRect(x, y, cw, ch);
+        g.setColor(DEEP_ACCENT);
+        g.drawRect(x, y, cw, ch);
+        fg.draw(g, key, x + 2 * S, y + S, S);
+        fw.draw(g, label, x + 4 * S + fg.width(key, S), y + S, S);
+    }
+
+    private static void renderGameToast(Graphics2D g, int w, int h, int S) {
+        if (toast == null || System.currentTimeMillis() > toastUntil) {
+            return;
+        }
+        GameFont fw = GameFont.white();
+        int fh = fw.height(S);
+        int tw = fw.width(toast, S) + 6 * S;
+        int th = fh + 4 * S;
+        int x = (w - tw) / 2;
+        int y = h - th - 6 * S;
+        g.setColor(DEEP_PANEL);
+        g.fillRect(x, y, tw, th);
+        g.setColor(DEEP_ACCENT);
+        g.drawRect(x, y, tw, th);
+        fw.draw(g, toast, x + 3 * S, y + 2 * S, S);
+    }
+
+    private static synchronized void renderModern(Graphics2D g, int w, int h) {
         if (!open) {
             renderToast(g, w, h);
             return;

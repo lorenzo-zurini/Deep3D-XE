@@ -14,12 +14,21 @@ native Java application with full PC-game UX — no phone emulator involved.
   size; the internal resolution follows the window live (Native, Native/2
   or classic presets, switchable in the pause menu without restarting).
 - **Multithreaded software rasterizer** with optional bilinear texture
-  filtering (or crisp original texels), correct culling/fill rules.
+  filtering (or crisp original texels), correct culling/fill rules,
+  incremental span rasterization and GC-free frame rendering (no
+  stutter: heap buffers, no explicit GC, zero per-pixel allocation).
 - **Resizable window & fullscreen** (F11 / Alt+Enter), aspect-correct
   scaling, brightness control, FPS limit and FPS counter.
-- **Pause menu on Esc** — mouse, keyboard and controller navigable overlay
-  with Display / Audio / Controls settings; the game freezes cleanly while
-  it is open. Settings persist in `deep3d.cfg` next to the game.
+- **PC-native menus everywhere** — the game's own menus are mouse-driven
+  (hover moves the selection, click confirms, right-click/Esc backs out,
+  wheel scrolls) with their original pixel-identical look; the phone
+  softkey boxes are replaced by an Enter/Esc command bar in the same
+  style, and name entry uses real keyboard typing instead of multi-tap.
+  In-game help texts are rewritten to name your actual key bindings.
+- **Pause menu on Esc (F10 anywhere)** — drawn with the game's own bitmap
+  font and palette; mouse, keyboard and controller navigable, with
+  Display / Audio / Controls settings; the game freezes cleanly while it
+  is open. Settings persist in `deep3d.cfg` next to the game.
 - **Controller support** (Linux, zero dependencies) — standard gamepads via
   `/dev/input/js*`, hot-plugged. Left stick / d-pad steer, A fires,
   B backs out, X confirms, Y docks, RB boosts, triggers switch key 7 /

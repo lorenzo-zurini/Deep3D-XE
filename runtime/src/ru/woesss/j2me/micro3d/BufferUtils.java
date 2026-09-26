@@ -34,7 +34,9 @@ public class BufferUtils {
 	}
 
 	public static ByteBuffer createByteBuffer(int capacity) {
-		return ByteBuffer.allocateDirect(capacity).order(ByteOrder.nativeOrder());
+		// Heap buffers: the software renderer never needs native memory, and
+		// per-frame direct allocations cause GC pressure and stutter.
+		return ByteBuffer.allocate(capacity).order(ByteOrder.nativeOrder());
 	}
 
 	public static ShortBuffer createShortBuffer(int capacity) {

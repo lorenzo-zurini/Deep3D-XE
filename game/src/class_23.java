@@ -31,7 +31,7 @@ public final class class_23 {
       this.field_348 = new class_53(20, class_41.field_538 / 3, class_41.field_537 - 40);
       this.field_353 = new class_66();
       this.field_352 = false;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: a () void
@@ -45,7 +45,7 @@ public final class class_23 {
       this.field_346 = null;
       this.field_347 = null;
       this.field_348 = null;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: c () void

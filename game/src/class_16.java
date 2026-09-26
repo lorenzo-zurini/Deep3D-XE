@@ -568,7 +568,7 @@ public final class class_16 {
       }
 
       this.field_213 = null;
-      System.gc();
+      ;
    }
 
    // $VF: renamed from: b (boolean) void
