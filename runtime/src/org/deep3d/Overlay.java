@@ -150,11 +150,21 @@ public final class Overlay {
                             Config.integerScaling = !Config.integerScaling;
                             Runtime.repaintWindow();
                         }));
-                Item res = Item.choice("Render resolution",
-                        () -> Config.internalWidth + " x " + Config.internalHeight,
-                        Overlay::cycleResolution);
-                res.note = "applies on next launch";
-                items.add(res);
+                items.add(Item.choice("Render resolution",
+                        Overlay::resolutionLabel,
+                        Overlay::cycleResolution));
+                items.add(Item.choice("Texture filtering",
+                        () -> Config.textureFilter ? "Smooth" : "Crisp (original)",
+                        d -> {
+                            Config.textureFilter = !Config.textureFilter;
+                            ru.woesss.j2me.micro3d.Render.textureFilter = Config.textureFilter;
+                        }));
+                items.add(Item.choice("FPS counter",
+                        () -> Config.showFps ? "On" : "Off",
+                        d -> {
+                            Config.showFps = !Config.showFps;
+                            Runtime.repaintWindow();
+                        }));
                 items.add(Item.choice("FPS limit",
                         () -> Config.fpsCap == 0 ? "Off" : String.valueOf(Config.fpsCap),
                         Overlay::cycleFps));
@@ -216,17 +226,67 @@ public final class Overlay {
         AudioSettings.refresh();
     }
 
+    private static final String[] RES_MODES = {"auto", "half", "fixed_480", "fixed_360", "fixed_240"};
+
+    private static String currentResMode() {
+        if ("auto".equals(Config.resolutionMode)) {
+            return "auto";
+        }
+        if ("half".equals(Config.resolutionMode)) {
+            return "half";
+        }
+        if (Config.internalWidth >= 480) {
+            return "fixed_480";
+        }
+        if (Config.internalWidth >= 360) {
+            return "fixed_360";
+        }
+        return "fixed_240";
+    }
+
+    private static String resolutionLabel() {
+        switch (currentResMode()) {
+            case "auto": return "Native (" + Runtime.screenWidth + " x " + Runtime.screenHeight + ")";
+            case "half": return "Native / 2 (" + Runtime.screenWidth + " x " + Runtime.screenHeight + ")";
+            case "fixed_480": return "480 x 640";
+            case "fixed_360": return "360 x 480";
+            default: return "240 x 320";
+        }
+    }
+
     private static void cycleResolution(int d) {
-        int[][] presets = {{240, 320}, {360, 480}, {480, 640}, {600, 800}};
-        int cur = 0;
-        for (int i = 0; i < presets.length; i++) {
-            if (presets[i][0] == Config.internalWidth) {
-                cur = i;
+        String cur = currentResMode();
+        int idx = 0;
+        for (int i = 0; i < RES_MODES.length; i++) {
+            if (RES_MODES[i].equals(cur)) {
+                idx = i;
             }
         }
-        int next = ((cur + d) % presets.length + presets.length) % presets.length;
-        Config.internalWidth = presets[next][0];
-        Config.internalHeight = presets[next][1];
+        String next = RES_MODES[((idx + d) % RES_MODES.length + RES_MODES.length) % RES_MODES.length];
+        switch (next) {
+            case "auto":
+                Config.resolutionMode = "auto";
+                break;
+            case "half":
+                Config.resolutionMode = "half";
+                break;
+            case "fixed_480":
+                Config.resolutionMode = "fixed";
+                Config.internalWidth = 480;
+                Config.internalHeight = 640;
+                break;
+            case "fixed_360":
+                Config.resolutionMode = "fixed";
+                Config.internalWidth = 360;
+                Config.internalHeight = 480;
+                break;
+            default:
+                Config.resolutionMode = "fixed";
+                Config.internalWidth = 240;
+                Config.internalHeight = 320;
+                break;
+        }
+        Runtime.applyResolutionMode();
     }
 
     private static void cycleFps(int d) {

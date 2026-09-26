@@ -19,14 +19,18 @@ public final class Config {
     private static final Properties props = new Properties();
 
     /* Display */
-    public static int internalWidth = 360;
-    public static int internalHeight = 480;
-    public static boolean fullscreen = false;
+    /** "auto" = match window/screen, "half" = half of it, "fixed" = presets. */
+    public static String resolutionMode = "auto";
+    public static int internalWidth = 480;
+    public static int internalHeight = 640;
+    public static boolean fullscreen = true;
     public static boolean integerScaling = false;
     public static int windowWidth = 0;    // 0 = derive from internal size
     public static int windowHeight = 0;
     public static int fpsCap = 60;        // 0 = uncapped
     public static int brightness = 100;   // 50..150 percent
+    public static boolean textureFilter = true;
+    public static boolean showFps = false;
 
     /* Audio (0..100) */
     public static int masterVolume = 100;
@@ -47,6 +51,16 @@ public final class Config {
                 System.err.println("[config] cannot read " + FILE + ": " + e);
             }
         }
+        // v2 introduced auto resolution + fullscreen defaults; older files
+        // keep their explicit choices only from v2 on.
+        boolean v1File = props.getProperty("config.version") == null
+                && !props.isEmpty();
+        if (v1File) {
+            props.remove("display.fullscreen");
+            props.remove("display.internal_width");
+            props.remove("display.internal_height");
+        }
+        resolutionMode = props.getProperty("display.resolution_mode", resolutionMode);
         internalWidth = getInt("display.internal_width", internalWidth);
         internalHeight = getInt("display.internal_height", internalHeight);
         fullscreen = getBool("display.fullscreen", fullscreen);
@@ -59,9 +73,15 @@ public final class Config {
         musicVolume = clamp(getInt("audio.music", musicVolume));
         sfxVolume = clamp(getInt("audio.sfx", sfxVolume));
         gamepadEnabled = getBool("input.gamepad", gamepadEnabled);
+        textureFilter = getBool("display.texture_filter", textureFilter);
+        showFps = getBool("display.show_fps", showFps);
     }
 
     public static void save() {
+        props.setProperty("config.version", "2");
+        props.setProperty("display.resolution_mode", resolutionMode);
+        props.setProperty("display.texture_filter", String.valueOf(textureFilter));
+        props.setProperty("display.show_fps", String.valueOf(showFps));
         props.setProperty("display.internal_width", String.valueOf(internalWidth));
         props.setProperty("display.internal_height", String.valueOf(internalHeight));
         props.setProperty("display.fullscreen", String.valueOf(fullscreen));

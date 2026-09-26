@@ -37,11 +37,11 @@ public final class Main {
             }
         }
 
-        Runtime.screenWidth = Config.internalWidth;
-        Runtime.screenHeight = Config.internalHeight;
         Runtime.setAppProperty("MIDlet-Name", "Deep");
         Runtime.setAppProperty("MIDlet-Vendor", "www.fishlabs.net");
         Runtime.setAppProperty("MIDlet-Version", "1.0.8");
+
+        ru.woesss.j2me.micro3d.Render.textureFilter = Config.textureFilter;
 
         AudioSettings.master = Config.masterVolume;
         AudioSettings.music = Config.musicVolume;

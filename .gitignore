@@ -10,3 +10,9 @@ out/
 # Save data
 saves/
 dist/
+
+# Runtime-generated
+deep3d.cfg
+screenshots/
+*.sf2
+*.dls

@@ -9,11 +9,14 @@ native Java application with full PC-game UX — no phone emulator involved.
 
 ## PC features
 
-- **Native resolution rendering** — the game's adaptive engine renders 3D
-  and lays out its UI at any internal resolution (240×320 up to 600×800),
-  not just upscaled phone pixels.
+- **Launches fullscreen at your display's native resolution** — the game's
+  adaptive engine renders true widescreen 3D and lays out its UI at any
+  size; the internal resolution follows the window live (Native, Native/2
+  or classic presets, switchable in the pause menu without restarting).
+- **Multithreaded software rasterizer** with optional bilinear texture
+  filtering (or crisp original texels), correct culling/fill rules.
 - **Resizable window & fullscreen** (F11 / Alt+Enter), aspect-correct
-  letterboxing, smooth or integer scaling, brightness control, FPS limit.
+  scaling, brightness control, FPS limit and FPS counter.
 - **Pause menu on Esc** — mouse, keyboard and controller navigable overlay
   with Display / Audio / Controls settings; the game freezes cleanly while
   it is open. Settings persist in `deep3d.cfg` next to the game.
@@ -24,6 +27,8 @@ native Java application with full PC-game UX — no phone emulator involved.
 - **Rebindable keyboard controls** with sensible PC defaults (WASD +
   arrows, Space fire, Enter confirm, E dock, Shift boost, Tab autopilot).
 - **Volume mixer** — master / music / effects sliders applied live.
+- **SoundFont support** — drop a `.sf2` next to the game and the MIDI
+  soundtrack uses it automatically.
 - **F12 screenshots** to `screenshots/`.
 - **First-run setup** — when launched without game data, a dialog asks for
   the original JAR and installs its data automatically.

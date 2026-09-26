@@ -22,9 +22,9 @@ public class Graphics {
     public static final int SOLID = 0;
     public static final int DOTTED = 1;
 
-    final Graphics2D g2;
-    private final int surfaceWidth;
-    private final int surfaceHeight;
+    Graphics2D g2;
+    private int surfaceWidth;
+    private int surfaceHeight;
     /** The image this graphics draws into, if any (used by Graphics3D binding). */
     BufferedImage target;
 
@@ -52,6 +52,26 @@ public class Graphics {
 
     public void setTargetImage(BufferedImage img) {
         target = img;
+    }
+
+    /** Points this Graphics at a new backing image (live resolution change). */
+    public synchronized void retarget(BufferedImage img) {
+        Graphics2D old = g2;
+        g2 = img.createGraphics();
+        target = img;
+        surfaceWidth = img.getWidth();
+        surfaceHeight = img.getHeight();
+        translateX = 0;
+        translateY = 0;
+        clipX = 0;
+        clipY = 0;
+        clipW = surfaceWidth;
+        clipH = surfaceHeight;
+        g2.setClip(0, 0, surfaceWidth, surfaceHeight);
+        g2.setColor(new Color(color));
+        if (old != null) {
+            old.dispose();
+        }
     }
 
     public Graphics2D getGraphics2D() {

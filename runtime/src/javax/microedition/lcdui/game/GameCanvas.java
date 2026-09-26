@@ -19,17 +19,35 @@ public abstract class GameCanvas extends Canvas {
     public static final int GAME_C_PRESSED = 1 << GAME_C;
     public static final int GAME_D_PRESSED = 1 << GAME_D;
 
-    private final BufferedImage buffer;
+    private volatile BufferedImage buffer;
+    private final java.util.List<Graphics> issued =
+            java.util.Collections.synchronizedList(new java.util.ArrayList<>());
 
     protected GameCanvas(boolean suppressKeyEvents) {
         buffer = new BufferedImage(Runtime.screenWidth, Runtime.screenHeight,
                 BufferedImage.TYPE_INT_RGB);
+        Runtime.registerGameCanvas(this);
     }
 
     protected Graphics getGraphics() {
         Graphics g = new Graphics(buffer.createGraphics(), buffer.getWidth(), buffer.getHeight());
         g.setTargetImage(buffer);
+        issued.add(g);
         return g;
+    }
+
+    /** Live resolution change: swap the buffer and retarget issued Graphics. */
+    public void resizeBuffer(int width, int height) {
+        BufferedImage next = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = next.createGraphics();
+        g.drawImage(buffer, 0, 0, width, height, null);
+        g.dispose();
+        buffer = next;
+        synchronized (issued) {
+            for (Graphics ig : issued) {
+                ig.retarget(next);
+            }
+        }
     }
 
     public int getKeyStates() {

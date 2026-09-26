@@ -64,6 +64,14 @@ public final class Runtime {
     /** Where the game frame lands inside the window (for mouse mapping). */
     private static volatile Rectangle viewRect = new Rectangle(0, 0, 1, 1);
 
+    private static volatile javax.microedition.lcdui.game.GameCanvas gameCanvas;
+    private static javax.swing.Timer resizeDebounce;
+
+    /* FPS counter */
+    private static int frameCounter;
+    private static long fpsWindowStart;
+    private static volatile int displayFps;
+
     private Runtime() {
     }
 
@@ -71,7 +79,78 @@ public final class Runtime {
         midlet = m;
     }
 
+    public static void registerGameCanvas(javax.microedition.lcdui.game.GameCanvas c) {
+        gameCanvas = c;
+    }
+
+    /** Picks the internal render size for a given output (window) size. */
+    private static Dimension internalSizeFor(int outW, int outH) {
+        switch (Config.resolutionMode) {
+            case "auto":
+                return new Dimension(clampDim(outW), clampDim(outH));
+            case "half":
+                return new Dimension(clampDim(outW / 2), clampDim(outH / 2));
+            default:
+                return new Dimension(Config.internalWidth, Config.internalHeight);
+        }
+    }
+
+    private static int clampDim(int v) {
+        return Math.max(240, Math.min(2560, v));
+    }
+
+    /** Applies a new internal resolution live (game adapts next frame). */
+    public static void applyInternalSize(int w, int h) {
+        if (w == screenWidth && h == screenHeight) {
+            return;
+        }
+        synchronized (Runtime.class) {
+            screenWidth = w;
+            screenHeight = h;
+            screen = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        }
+        javax.microedition.lcdui.game.GameCanvas c = gameCanvas;
+        if (c != null) {
+            c.resizeBuffer(w, h);
+        }
+        repaintWindow();
+    }
+
+    /** Called (debounced) when the window/panel size changes. */
+    private static void handlePanelResized() {
+        JPanel p = panel;
+        if (p == null || p.getWidth() <= 0) {
+            return;
+        }
+        Dimension d = internalSizeFor(p.getWidth(), p.getHeight());
+        applyInternalSize(d.width, d.height);
+    }
+
+    /** Re-applies the resolution mode to the current window size. */
+    public static void applyResolutionMode() {
+        handlePanelResized();
+    }
+
     public static void init() {
+        Rectangle screenBounds = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                .getMaximumWindowBounds();
+        int outW;
+        int outH;
+        if (Config.fullscreen) {
+            Dimension full = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+            outW = full.width;
+            outH = full.height;
+        } else if (Config.windowWidth > 0 && Config.windowHeight > 0) {
+            outW = Config.windowWidth;
+            outH = Config.windowHeight;
+        } else {
+            outW = screenBounds.width * 3 / 4;
+            outH = screenBounds.height * 3 / 4;
+        }
+        Dimension internal = internalSizeFor(outW, outH);
+        screenWidth = internal.width;
+        screenHeight = internal.height;
+
         screen = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
         loadIcon();
 
@@ -157,13 +236,19 @@ public final class Runtime {
 
         if (fullscreen) {
             f.setUndecorated(true);
-            f.setExtendedState(JFrame.MAXIMIZED_BOTH);
+            Dimension full = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+            f.setBounds(0, 0, full.width, full.height);
             f.setVisible(true);
-            GraphicsEnvironment.getLocalGraphicsEnvironment()
-                    .getDefaultScreenDevice().setFullScreenWindow(f);
+            try {
+                GraphicsEnvironment.getLocalGraphicsEnvironment()
+                        .getDefaultScreenDevice().setFullScreenWindow(f);
+            } catch (Exception ignored) {
+            }
         } else {
-            int w = Config.windowWidth > 0 ? Config.windowWidth : screenWidth * defaultScale();
-            int h = Config.windowHeight > 0 ? Config.windowHeight : screenHeight * defaultScale();
+            Rectangle b = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                    .getMaximumWindowBounds();
+            int w = Config.windowWidth > 0 ? Config.windowWidth : b.width * 3 / 4;
+            int h = Config.windowHeight > 0 ? Config.windowHeight : b.height * 3 / 4;
             panel.setPreferredSize(new Dimension(w, h));
             f.pack();
             f.setResizable(true);
@@ -176,14 +261,6 @@ public final class Runtime {
         }
         panel.requestFocusInWindow();
         frame = f;
-    }
-
-    private static int defaultScale() {
-        Rectangle bounds = GraphicsEnvironment.getLocalGraphicsEnvironment()
-                .getMaximumWindowBounds();
-        int s = Math.max(1, Math.min((bounds.width - 80) / screenWidth,
-                (bounds.height - 80) / screenHeight));
-        return Math.min(s, 3);
     }
 
     private static JPanel buildPanel() {
@@ -215,6 +292,17 @@ public final class Runtime {
                     }
                 }
                 Overlay.render(g, pw, ph);
+                if (Config.showFps) {
+                    g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                            RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                    g.setFont(new java.awt.Font(java.awt.Font.DIALOG,
+                            java.awt.Font.BOLD, Math.max(12, ph / 50)));
+                    String fps = displayFps + " FPS";
+                    g.setColor(Color.BLACK);
+                    g.drawString(fps, 9, ph - 8);
+                    g.setColor(new Color(83, 200, 239));
+                    g.drawString(fps, 8, ph - 9);
+                }
             }
         };
         p.setFocusable(true);
@@ -250,6 +338,14 @@ public final class Runtime {
         p.addMouseMotionListener(mouse);
         p.addMouseWheelListener(mouse);
         installCursorAutoHide(p);
+        resizeDebounce = new javax.swing.Timer(150, e -> handlePanelResized());
+        resizeDebounce.setRepeats(false);
+        p.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                resizeDebounce.restart();
+            }
+        });
         return p;
     }
 
@@ -378,6 +474,13 @@ public final class Runtime {
             g.drawImage(frameBuffer, 0, 0, null);
             g.dispose();
         }
+        frameCounter++;
+        long now = System.currentTimeMillis();
+        if (now - fpsWindowStart >= 1000) {
+            displayFps = frameCounter;
+            frameCounter = 0;
+            fpsWindowStart = now;
+        }
         repaintWindow();
         java.awt.Toolkit.getDefaultToolkit().sync();
     }
@@ -504,6 +607,9 @@ public final class Runtime {
                     case "back": Overlay.handleKey(KeyEvent.VK_BACK_SPACE); break;
                     default: break;
                 }
+                break;
+            case "fps":
+                System.out.println("[fps] " + displayFps + " @ " + screenWidth + "x" + screenHeight);
                 break;
             case "shot": {
                 // Render the composed window view (game + overlay) offscreen.

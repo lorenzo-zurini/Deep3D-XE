@@ -40,6 +40,19 @@ public class Render {
 	private static final int PDATA_NORMAL_MASK = Graphics3D.PDATA_NORMAL_PER_VERTEX;
 	private static final int PDATA_TEXCOORD_MASK = Graphics3D.PDATA_TEXURE_COORD;
 
+	/** Optional bilinear texture filtering (never for color-keyed polys). */
+	public static volatile boolean textureFilter = true;
+
+	private static final int POOL_THREADS =
+			Math.max(1, java.lang.Runtime.getRuntime().availableProcessors() - 1);
+	private static final java.util.concurrent.ExecutorService POOL =
+			POOL_THREADS > 1 ? java.util.concurrent.Executors.newFixedThreadPool(
+					POOL_THREADS, r -> {
+						Thread t = new Thread(r, "Raster-Worker");
+						t.setDaemon(true);
+						return t;
+					}) : null;
+
 	final Environment env = new Environment();
 
 	private final float[] MVP_TMP = new float[16];
@@ -652,7 +665,7 @@ public class Render {
 			}
 			float invW = 1.0f / v[3];
 			int sx = (int) ((v[0] * invW * 0.5f + 0.5f) * env.width);
-			int sy = (int) ((0.5f - v[1] * invW * 0.5f) * env.height);
+			int sy = (int) ((v[1] * invW * 0.5f + 0.5f) * env.height);
 			float z = v[2] * invW;
 			int ci = perVertex ? i * 3 : 0;
 			int rgb = (colors.get(ci) & 0xFF) << 16 | (colors.get(ci + 1) & 0xFF) << 8
@@ -681,10 +694,10 @@ public class Render {
 			float iwa = 1.0f / va[3];
 			float iwb = 1.0f / vb[3];
 			float x0 = (va[0] * iwa * 0.5f + 0.5f) * env.width;
-			float y0 = (0.5f - va[1] * iwa * 0.5f) * env.height;
+			float y0 = (va[1] * iwa * 0.5f + 0.5f) * env.height;
 			float z0 = va[2] * iwa;
 			float x1 = (vb[0] * iwb * 0.5f + 0.5f) * env.width;
-			float y1 = (0.5f - vb[1] * iwb * 0.5f) * env.height;
+			float y1 = (vb[1] * iwb * 0.5f + 0.5f) * env.height;
 			float z1 = vb[2] * iwb;
 			int steps = (int) Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
 			if (steps == 0) {
@@ -716,7 +729,7 @@ public class Render {
 	// Triangle pipeline: near clip, perspective divide, raster
 	// ------------------------------------------------------------------
 
-	private static final float NEAR_EPS = 1e-5f;
+	private static final float NEAR_EPS = 1.0f;
 	private static final int NUM_ATTRS = 6;
 
 	/** v: 3 clip-space float4; attr: 3 float[6]. */
@@ -779,26 +792,26 @@ public class Render {
 		float iw1 = 1.0f / c1[3];
 		float iw2 = 1.0f / c2[3];
 		float x0 = (c0[0] * iw0 * 0.5f + 0.5f) * w;
-		float y0 = (0.5f - c0[1] * iw0 * 0.5f) * h;
+		float y0 = (c0[1] * iw0 * 0.5f + 0.5f) * h;
 		float z0 = c0[2] * iw0;
 		float x1 = (c1[0] * iw1 * 0.5f + 0.5f) * w;
-		float y1 = (0.5f - c1[1] * iw1 * 0.5f) * h;
+		float y1 = (c1[1] * iw1 * 0.5f + 0.5f) * h;
 		float z1 = c1[2] * iw1;
 		float x2 = (c2[0] * iw2 * 0.5f + 0.5f) * w;
-		float y2 = (0.5f - c2[1] * iw2 * 0.5f) * h;
+		float y2 = (c2[1] * iw2 * 0.5f + 0.5f) * h;
 		float z2 = c2[2] * iw2;
 
 		float area = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0);
 		if (area == 0) {
 			return;
 		}
-		// GL front face is CCW in y-up window coords == negative area in y-down.
-		if (area > 0) {
+		// Front face matches the reference GL pipeline: positive signed area
+		// in these (un-flipped) device coordinates.
+		if (area < 0) {
 			if (cullEnabled) {
 				return;
 			}
 			// swap to canonical winding
-			float[] tc = c1; c1 = c2; c2 = tc;
 			float[] ta = a1; a1 = a2; a2 = ta;
 			float tf;
 			tf = x1; x1 = x2; x2 = tf;
@@ -828,7 +841,68 @@ public class Render {
 			pa2[i] = a2[i] * iw2;
 		}
 
-		for (int py = minY; py <= maxY; py++) {
+		// Fill rule: each shared edge belongs to exactly one triangle, so
+		// abutting additive/half blended polygons do not double-blend seams.
+		boolean tl0 = fillEdge(x2 - x1, y2 - y1);
+		boolean tl1 = fillEdge(x0 - x2, y0 - y2);
+		boolean tl2 = fillEdge(x1 - x0, y1 - y0);
+
+		final float fx0 = x0, fy0 = y0, fz0 = z0, fiw0 = iw0;
+		final float fx1 = x1, fy1 = y1, fz1 = z1, fiw1 = iw1;
+		final float fx2 = x2, fy2 = y2, fz2 = z2, fiw2 = iw2;
+		final float[] fpa0 = pa0, fpa1 = pa1, fpa2 = pa2;
+		final boolean ftex = textured, fkey = colorKey;
+		final int fMinX = minX, fMaxX = maxX;
+		final float fInvArea = invArea;
+
+		int rows = maxY - minY + 1;
+		if (POOL == null || rows < 96) {
+			rasterRows(minY, maxY, fMinX, fMaxX, fInvArea,
+					fx0, fy0, fz0, fiw0, fx1, fy1, fz1, fiw1, fx2, fy2, fz2, fiw2,
+					fpa0, fpa1, fpa2, ftex, fkey, tl0, tl1, tl2);
+		} else {
+			int bands = POOL_THREADS;
+			java.util.List<java.util.concurrent.Callable<Void>> tasks =
+					new java.util.ArrayList<>(bands);
+			int step = (rows + bands - 1) / bands;
+			for (int b = 0; b < bands; b++) {
+				final int ys = minY + b * step;
+				final int ye = Math.min(maxY, ys + step - 1);
+				if (ys > maxY) {
+					break;
+				}
+				final boolean t0 = tl0, t1 = tl1, t2 = tl2;
+				tasks.add(() -> {
+					rasterRows(ys, ye, fMinX, fMaxX, fInvArea,
+							fx0, fy0, fz0, fiw0, fx1, fy1, fz1, fiw1, fx2, fy2, fz2, fiw2,
+							fpa0, fpa1, fpa2, ftex, fkey, t0, t1, t2);
+					return null;
+				});
+			}
+			try {
+				for (java.util.concurrent.Future<Void> f : POOL.invokeAll(tasks)) {
+					f.get();
+				}
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+	}
+
+	/** Edge inclusion rule (consistent half-space, see rasterTriangle). */
+	private static boolean fillEdge(float dx, float dy) {
+		return dy > 0 || (dy == 0 && dx < 0);
+	}
+
+	private void rasterRows(int yStart, int yEnd, int minX, int maxX, float invArea,
+							float x0, float y0, float z0, float iw0,
+							float x1, float y1, float z1, float iw1,
+							float x2, float y2, float z2, float iw2,
+							float[] pa0, float[] pa1, float[] pa2,
+							boolean textured, boolean colorKey,
+							boolean tl0, boolean tl1, boolean tl2) {
+		int w = env.width;
+		for (int py = yStart; py <= yEnd; py++) {
 			float fy = py + 0.5f;
 			int rowBase = py * w;
 			for (int px = minX; px <= maxX; px++) {
@@ -836,8 +910,11 @@ public class Render {
 				float e0 = (x2 - x1) * (fy - y1) - (y2 - y1) * (fx - x1);
 				float e1 = (x0 - x2) * (fy - y2) - (y0 - y2) * (fx - x2);
 				float e2 = (x1 - x0) * (fy - y0) - (y1 - y0) * (fx - x0);
-				// area < 0 ⇒ inside pixels have all edge values <= 0
-				if (e0 > 0 || e1 > 0 || e2 > 0) {
+				// canonical winding => inside pixels have all edges >= 0;
+				// zero-valued edges count only for their owning triangle
+				if (e0 < 0 || (e0 == 0 && !tl0)
+						|| e1 < 0 || (e1 == 0 && !tl1)
+						|| e2 < 0 || (e2 == 0 && !tl2)) {
 					continue;
 				}
 				float l0 = e0 * invArea;
@@ -860,7 +937,7 @@ public class Render {
 				if (textured) {
 					float u = (l0 * pa0[0] + l1 * pa1[0] + l2 * pa2[0]) * rw;
 					float vv = (l0 * pa0[1] + l1 * pa1[1] + l2 * pa2[1]) * rw;
-					int texel = sampleTexture(u, vv);
+					int texel = sampleTexture(u, vv, colorKey);
 					if (colorKey && (texel >>> 24) < 128) {
 						continue;
 					}
@@ -886,23 +963,43 @@ public class Render {
 		}
 	}
 
-	private int sampleTexture(float u, float v) {
+	private int sampleTexture(float u, float v, boolean colorKey) {
 		if (texPixels == null) {
 			return 0xFF000000;
 		}
-		int px = (int) u;
-		int py = (int) v;
-		if (px < 0) {
-			px = 0;
-		} else if (px >= texWidth) {
-			px = texWidth - 1;
+		if (!textureFilter || colorKey) {
+			int px = clampTex((int) u, texWidth);
+			int py = clampTex((int) v, texHeight);
+			return texPixels[py * texWidth + px];
 		}
-		if (py < 0) {
-			py = 0;
-		} else if (py >= texHeight) {
-			py = texHeight - 1;
-		}
-		return texPixels[py * texWidth + px];
+		float uu = u - 0.5f;
+		float vv = v - 0.5f;
+		int px = (int) Math.floor(uu);
+		int py = (int) Math.floor(vv);
+		float fu = uu - px;
+		float fv = vv - py;
+		int x0 = clampTex(px, texWidth);
+		int x1 = clampTex(px + 1, texWidth);
+		int y0 = clampTex(py, texHeight);
+		int y1 = clampTex(py + 1, texHeight);
+		int c00 = texPixels[y0 * texWidth + x0];
+		int c10 = texPixels[y0 * texWidth + x1];
+		int c01 = texPixels[y1 * texWidth + x0];
+		int c11 = texPixels[y1 * texWidth + x1];
+		int r = lerp2((c00 >> 16) & 0xFF, (c10 >> 16) & 0xFF, (c01 >> 16) & 0xFF, (c11 >> 16) & 0xFF, fu, fv);
+		int g = lerp2((c00 >> 8) & 0xFF, (c10 >> 8) & 0xFF, (c01 >> 8) & 0xFF, (c11 >> 8) & 0xFF, fu, fv);
+		int b = lerp2(c00 & 0xFF, c10 & 0xFF, c01 & 0xFF, c11 & 0xFF, fu, fv);
+		return 0xFF000000 | r << 16 | g << 8 | b;
+	}
+
+	private static int clampTex(int v, int size) {
+		return v < 0 ? 0 : (v >= size ? size - 1 : v);
+	}
+
+	private static int lerp2(int a, int b, int c, int d, float fu, float fv) {
+		float top = a + (b - a) * fu;
+		float bot = c + (d - c) * fu;
+		return (int) (top + (bot - top) * fv + 0.5f);
 	}
 
 	private static int packColor(float r, float g, float b) {

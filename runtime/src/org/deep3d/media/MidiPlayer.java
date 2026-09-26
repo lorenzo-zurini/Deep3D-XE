@@ -15,6 +15,27 @@ import javax.sound.midi.Synthesizer;
 
 public class MidiPlayer extends BasePlayer implements VolumeControl {
 
+    private static javax.sound.midi.Soundbank customBank;
+    private static boolean bankChecked;
+
+    private static synchronized javax.sound.midi.Soundbank customBank() {
+        if (!bankChecked) {
+            bankChecked = true;
+            try {
+                java.io.File dir = org.deep3d.AppDirs.base();
+                java.io.File[] banks = dir.listFiles((d, n) ->
+                        n.toLowerCase().endsWith(".sf2") || n.toLowerCase().endsWith(".dls"));
+                if (banks != null && banks.length > 0) {
+                    customBank = MidiSystem.getSoundbank(banks[0]);
+                    System.out.println("[audio] using soundbank " + banks[0].getName());
+                }
+            } catch (Exception e) {
+                System.err.println("[audio] soundbank load failed: " + e);
+            }
+        }
+        return customBank;
+    }
+
     private final byte[] data;
     private Sequencer sequencer;
     private Synthesizer synthesizer;
@@ -36,6 +57,14 @@ public class MidiPlayer extends BasePlayer implements VolumeControl {
             synthesizer = MidiSystem.getSynthesizer();
             sequencer.open();
             synthesizer.open();
+            javax.sound.midi.Soundbank bank = customBank();
+            if (bank != null && synthesizer.isSoundbankSupported(bank)) {
+                javax.sound.midi.Soundbank def = synthesizer.getDefaultSoundbank();
+                if (def != null) {
+                    synthesizer.unloadAllInstruments(def);
+                }
+                synthesizer.loadAllInstruments(bank);
+            }
             sequencer.getTransmitter().setReceiver(synthesizer.getReceiver());
             Sequence seq = MidiSystem.getSequence(new ByteArrayInputStream(data));
             sequencer.setSequence(seq);
