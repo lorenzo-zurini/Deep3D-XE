@@ -114,6 +114,10 @@ public final class Overlay {
         Runtime.setGamePaused(false);
     }
 
+    public static boolean hasToast() {
+        return toast != null && System.currentTimeMillis() <= toastUntil;
+    }
+
     public static void showToast(String message) {
         toast = message;
         toastUntil = System.currentTimeMillis() + 2500;
@@ -139,20 +143,34 @@ public final class Overlay {
                 items.add(Item.button("Back", Overlay::back));
                 break;
             case DISPLAY: {
+                items.add(Item.choice("Renderer",
+                        () -> "gl".equals(Config.renderer) ? "OpenGL (GPU)" : "Software",
+                        d -> {
+                            Config.renderer = "gl".equals(Config.renderer) ? "software" : "gl";
+                            showToast("Applies on next launch");
+                        }));
+                items.add(Item.choice("VSync",
+                        () -> Config.vsync ? "On" : "Off",
+                        d -> {
+                            Config.vsync = !Config.vsync;
+                            org.deep3d.gl.GLBackend.applyVsync();
+                        }));
                 items.add(Item.choice("Fullscreen",
                         () -> Config.fullscreen ? "On" : "Off",
                         d -> {
                             Runtime.toggleFullscreen();
                         }));
-                items.add(Item.choice("Scaling",
-                        () -> Config.integerScaling ? "Integer (sharp)" : "Smooth",
-                        d -> {
-                            Config.integerScaling = !Config.integerScaling;
-                            Runtime.repaintWindow();
-                        }));
-                items.add(Item.choice("Render resolution",
-                        Overlay::resolutionLabel,
-                        Overlay::cycleResolution));
+                if (!org.deep3d.gl.GLBackend.isActive()) {
+                    items.add(Item.choice("Scaling",
+                            () -> Config.integerScaling ? "Integer (sharp)" : "Smooth",
+                            d -> {
+                                Config.integerScaling = !Config.integerScaling;
+                                Runtime.repaintWindow();
+                            }));
+                    items.add(Item.choice("Render resolution",
+                            Overlay::resolutionLabel,
+                            Overlay::cycleResolution));
+                }
                 items.add(Item.choice("Texture filtering",
                         () -> Config.textureFilter ? "Smooth" : "Crisp (original)",
                         d -> {

@@ -169,7 +169,15 @@ public final class Input {
 
     /** Entry point for AWT key events. */
     public static void handleKeyEvent(KeyEvent e, boolean pressed) {
-        int code = e.getKeyCode();
+        handleKey(e.getKeyCode(), e.getKeyChar(), pressed, e.isAltDown(), false);
+    }
+
+    /**
+     * Backend-independent key handling. charSeparate is true when printable
+     * characters arrive through a dedicated text callback (GLFW).
+     */
+    public static void handleKey(int code, char keyChar, boolean pressed,
+                                 boolean altDown, boolean charSeparate) {
 
         // Rebind capture has priority over everything.
         if (pressed && Overlay.captureKey(code)) {
@@ -179,7 +187,7 @@ public final class Input {
         // Global hotkeys (never rebindable, never reach the game).
         if (pressed) {
             if (code == KeyEvent.VK_F11
-                    || (code == KeyEvent.VK_ENTER && e.isAltDown())) {
+                    || (code == KeyEvent.VK_ENTER && altDown)) {
                 Runtime.toggleFullscreen();
                 return;
             }
@@ -237,9 +245,8 @@ public final class Input {
                 sendMidpKey(-6, false);
                 return;
             }
-            char tc = e.getKeyChar();
-            if (tc >= ' ' && tc < 127) {
-                GameUi.pushTypedChar(tc);
+            if (!charSeparate && keyChar >= ' ' && keyChar < 127) {
+                GameUi.pushTypedChar(keyChar);
             }
             return;
         }
@@ -252,7 +259,7 @@ public final class Input {
 
         // Anything unbound falls through as a raw phone character so the
         // game's own QWERTY map and text entry keep working.
-        char c = Character.toLowerCase(e.getKeyChar());
+        char c = Character.toLowerCase(keyChar);
         if (c >= ' ' && c < 127) {
             sendMidpKey(c, pressed);
         }

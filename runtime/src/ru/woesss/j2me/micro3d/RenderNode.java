@@ -19,7 +19,7 @@ package ru.woesss.j2me.micro3d;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-abstract class RenderNode {
+public abstract class RenderNode {
 	final float[] viewMatrix = new float[12];
 	final float[] projMatrix = new float[16];
 	int attrs;

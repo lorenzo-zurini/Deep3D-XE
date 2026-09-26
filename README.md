@@ -9,14 +9,18 @@ native Java application with full PC-game UX — no phone emulator involved.
 
 ## PC features
 
-- **Launches fullscreen at your display's native resolution** — the game's
-  adaptive engine renders true widescreen 3D and lays out its UI at any
-  size; the internal resolution follows the window live (Native, Native/2
-  or classic presets, switchable in the pause menu without restarting).
-- **Multithreaded software rasterizer** with optional bilinear texture
-  filtering (or crisp original texels), correct culling/fill rules,
-  incremental span rasterization and GC-free frame rendering (no
-  stutter: heap buffers, no explicit GC, zero per-pixel allocation).
+- **Hardware OpenGL renderer (LWJGL/GLFW)** — the whole frame is drawn by
+  the GPU: the game's 2D output is recorded as a command stream and
+  replayed as batched textured quads, and the Mascot Capsule 3D pipeline
+  runs as GL shaders (a desktop port of JL-Mod's GLES2 renderer). No
+  readbacks, no software rasterization; with VSync and the FPS limit off
+  it runs as fast as the GPU can swap (hundreds of FPS even on Mesa's
+  software GL; thousands on a real GPU).
+- **Launches fullscreen at your display's native resolution** in true
+  widescreen; VSync toggle, FPS limit (Off/30/60/120), FPS counter.
+- **Software fallback renderer** (`display.renderer=software` or the
+  Renderer option): the original multithreaded CPU rasterizer, for
+  systems without OpenGL.
 - **Resizable window & fullscreen** (F11 / Alt+Enter), aspect-correct
   scaling, brightness control, FPS limit and FPS counter.
 - **PC-native menus everywhere** — the game's own menus are mouse-driven

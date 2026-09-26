@@ -82,6 +82,11 @@ public class Render {
 
 	public synchronized void bind(Graphics graphics) {
 		targetGraphics = graphics;
+		if (org.deep3d.gl.GLBackend.isActive()) {
+			env.width = org.deep3d.gl.GLBackend.fbWidth;
+			env.height = org.deep3d.gl.GLBackend.fbHeight;
+			return;
+		}
 		BufferedImage img = graphics.getTargetImage();
 		if (img == null) {
 			throw new IllegalStateException("Graphics3D can only bind an offscreen buffer");
@@ -125,6 +130,11 @@ public class Render {
 
 	public synchronized void flush() {
 		if (stack.isEmpty()) {
+			return;
+		}
+		if (org.deep3d.gl.GLBackend.isActive()) {
+			org.deep3d.gl.GLBackend.record3D(stack);
+			stack.clear();
 			return;
 		}
 		if (pixels == null) {

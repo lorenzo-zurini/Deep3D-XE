@@ -131,6 +131,31 @@ public final class Runtime {
         handlePanelResized();
     }
 
+    /** GL mode: only the MIDP event thread and the test pipe, no Swing UI. */
+    public static void initEventThreadOnly() {
+        startEventThread();
+        startInputPipe();
+    }
+
+    private static void startEventThread() {
+        if (eventThread != null) {
+            return;
+        }
+        eventThread = new Thread(() -> {
+            while (running) {
+                try {
+                    eventQueue.take().run();
+                } catch (InterruptedException e) {
+                    return;
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                }
+            }
+        }, "MIDP-Event");
+        eventThread.setDaemon(true);
+        eventThread.start();
+    }
+
     public static void init() {
         Rectangle screenBounds = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getMaximumWindowBounds();
@@ -153,21 +178,7 @@ public final class Runtime {
 
         screen = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
         loadIcon();
-
-        eventThread = new Thread(() -> {
-            while (running) {
-                try {
-                    eventQueue.take().run();
-                } catch (InterruptedException e) {
-                    return;
-                } catch (Throwable t) {
-                    t.printStackTrace();
-                }
-            }
-        }, "MIDP-Event");
-        eventThread.setDaemon(true);
-        eventThread.start();
-
+        startEventThread();
         startInputPipe();
         SwingUtilities.invokeLater(() -> createWindow(Config.fullscreen));
         while (frame == null) {
@@ -422,10 +433,18 @@ public final class Runtime {
     public static void toggleFullscreen() {
         Config.fullscreen = !Config.fullscreen;
         Config.save();
+        if (org.deep3d.gl.GLBackend.isActive()) {
+            org.deep3d.gl.GLBackend.toggleFullscreen();
+            return;
+        }
         SwingUtilities.invokeLater(() -> createWindow(Config.fullscreen));
     }
 
     public static void repaintWindow() {
+        if (org.deep3d.gl.GLBackend.isActive()) {
+            org.deep3d.gl.GLBackend.markOverlayDirty();
+            return;
+        }
         JPanel p = panel;
         if (p != null) {
             p.repaint();
@@ -504,6 +523,21 @@ public final class Runtime {
         return current;
     }
 
+    public static void tickFpsCounter() {
+        GameUi.commitFrame();
+        frameCounter++;
+        long now = System.currentTimeMillis();
+        if (now - fpsWindowStart >= 1000) {
+            displayFps = frameCounter;
+            frameCounter = 0;
+            fpsWindowStart = now;
+        }
+    }
+
+    public static int getDisplayFps() {
+        return displayFps;
+    }
+
     /** Copy a full-screen frame onto the visible screen and repaint. */
     public static void present(BufferedImage frameBuffer) {
         GameUi.commitFrame();
@@ -519,10 +553,21 @@ public final class Runtime {
             frameCounter = 0;
             fpsWindowStart = now;
         }
-        repaintWindow();
+        repaintWindowSoftware();
+    }
+
+    private static void repaintWindowSoftware() {
+        JPanel p = panel;
+        if (p != null) {
+            p.repaint();
+        }
     }
 
     public static void saveScreenshot() {
+        if (org.deep3d.gl.GLBackend.isActive()) {
+            org.deep3d.gl.GLBackend.requestScreenshot();
+            return;
+        }
         try {
             File dir = AppDirs.dir("screenshots");
             String name = "deep_" + new SimpleDateFormat("yyyyMMdd_HHmmss_SSS")
@@ -582,6 +627,10 @@ public final class Runtime {
 
     public static void shutdown() {
         running = false;
+        try {
+            org.deep3d.gl.GLBackend.stop();
+        } catch (Throwable ignored) {
+        }
         setGamePaused(false);
         try {
             javax.microedition.media.Manager.closeAll();
@@ -662,6 +711,9 @@ public final class Runtime {
             case "mw":
                 GameUi.mouseWheel(Integer.parseInt(parts[1]));
                 break;
+            case "dump2d":
+                org.deep3d.gl.GLBackend.requestDump2d();
+                break;
             case "fps": {
                 long raster = ru.woesss.j2me.micro3d.Render.rasterNanos.getAndSet(0);
                 int fps = displayFps;
@@ -671,6 +723,10 @@ public final class Runtime {
                 break;
             }
             case "shot": {
+                if (org.deep3d.gl.GLBackend.isActive()) {
+                    org.deep3d.gl.GLBackend.screenshotTo(new java.io.File(parts[1]));
+                    break;
+                }
                 // Render the composed window view (game + overlay) offscreen.
                 JPanel p = panel;
                 int w = p != null && p.getWidth() > 0 ? p.getWidth() : screenWidth * 2;

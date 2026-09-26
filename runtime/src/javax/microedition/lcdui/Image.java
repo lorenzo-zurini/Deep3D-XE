@@ -14,6 +14,7 @@ public class Image {
 
     final BufferedImage bitmap;
     private final boolean mutable;
+    private volatile boolean everDrawnInto;
 
     private Image(BufferedImage bitmap, boolean mutable) {
         this.bitmap = bitmap;
@@ -115,6 +116,7 @@ public class Image {
         if (!mutable) {
             throw new IllegalStateException("image is immutable");
         }
+        everDrawnInto = true;
         Graphics g = new Graphics(bitmap.createGraphics(), bitmap.getWidth(), bitmap.getHeight());
         g.target = bitmap;
         return g;
@@ -130,6 +132,13 @@ public class Image {
 
     public boolean isMutable() {
         return mutable;
+    }
+
+    /** GL texture cache: re-upload mutable images that were drawn into. */
+    public boolean consumeDirty() {
+        boolean d = everDrawnInto;
+        everDrawnInto = false;
+        return d;
     }
 
     public void getRGB(int[] rgbData, int offset, int scanlength, int x, int y, int w, int h) {

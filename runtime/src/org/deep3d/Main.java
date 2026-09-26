@@ -53,11 +53,28 @@ public final class Main {
 
         Input.init();
         Gamepad.init();
-        Runtime.init();
+
+        boolean gl = "gl".equals(Config.renderer);
+        if (gl) {
+            try {
+                org.deep3d.gl.GLBackend.init();
+                Runtime.initEventThreadOnly();
+            } catch (Throwable t) {
+                System.err.println("[gl] init failed, falling back to software: " + t);
+                gl = false;
+            }
+        }
+        if (!gl) {
+            Runtime.init();
+        }
 
         MIDlet midlet = (MIDlet) Class.forName("DeepMIDlet")
                 .getDeclaredConstructor().newInstance();
         Runtime.setMidlet(midlet);
         midlet.invokeStartApp();
+
+        if (gl) {
+            org.deep3d.gl.GLBackend.eventLoop();   // main thread = GLFW events
+        }
     }
 }

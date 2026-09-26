@@ -90,10 +90,8 @@ public class DeepMIDlet extends MIDlet implements Runnable {
                   this.field_1040 = 3;
             }
 
-            try {
-               Thread.sleep(2L);
-            } catch (InterruptedException var2) {
-            }
+            // Deep3D-PC: pacing is handled by the runtime's FPS limiter.
+            Thread.onSpinWait();
          }
       } catch (Exception var3) {
          var3.printStackTrace();

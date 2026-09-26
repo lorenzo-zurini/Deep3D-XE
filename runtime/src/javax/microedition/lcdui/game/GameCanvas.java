@@ -30,6 +30,9 @@ public abstract class GameCanvas extends Canvas {
     }
 
     protected Graphics getGraphics() {
+        if (org.deep3d.gl.GLBackend.isActive()) {
+            return org.deep3d.gl.GLBackend.screenGraphics();
+        }
         Graphics g = new Graphics(buffer.createGraphics(), buffer.getWidth(), buffer.getHeight());
         g.setTargetImage(buffer);
         issued.add(g);
@@ -55,6 +58,11 @@ public abstract class GameCanvas extends Canvas {
     }
 
     public void flushGraphics() {
+        if (org.deep3d.gl.GLBackend.isActive()) {
+            org.deep3d.gl.GLBackend.endFrame();   // includes the pause loop
+            Runtime.framePace();
+            return;
+        }
         Runtime.present(buffer);
         Runtime.framePace();
         Runtime.pauseBlock();

@@ -22,14 +22,17 @@ rm -rf dist
 mkdir -p dist/deep3d
 
 echo "Creating deep3d.jar..."
+LIBJARS=$(cd lib && ls *.jar | sed 's|^|lib/|' | tr '\n' ' ')
 cat > build/MANIFEST.MF <<EOF
 Manifest-Version: 1.0
 Main-Class: org.deep3d.Main
-Class-Path: assets/
+Class-Path: assets/ $LIBJARS
 EOF
 jar --create --file dist/deep3d/deep3d.jar --manifest build/MANIFEST.MF -C build/classes .
 
 cp -r assets dist/deep3d/assets
+mkdir -p dist/deep3d/lib
+cp lib/*.jar dist/deep3d/lib/
 
 # Big icon for the desktop entry
 if command -v magick >/dev/null 2>&1; then
@@ -40,7 +43,7 @@ fi
 cat > dist/deep3d/deep3d <<'EOF'
 #!/usr/bin/env bash
 cd "$(dirname "$0")"
-exec java -jar deep3d.jar "$@"
+exec java --enable-native-access=ALL-UNNAMED -jar deep3d.jar "$@"
 EOF
 chmod +x dist/deep3d/deep3d
 
@@ -63,6 +66,7 @@ if command -v jpackage >/dev/null 2>&1; then
         --name Deep3D \
         --input dist/deep3d \
         --main-jar deep3d.jar \
+        --java-options --enable-native-access=ALL-UNNAMED \
         --dest dist \
         ${DEEP3D_JPACKAGE_ICON:+--icon "$DEEP3D_JPACKAGE_ICON"} \
         > /dev/null

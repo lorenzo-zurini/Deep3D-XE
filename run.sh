@@ -7,4 +7,5 @@ if [[ ! -d build/classes ]]; then
     ./build.sh
 fi
 # If assets/ is missing, the game shows a first-run setup dialog.
-exec java -cp build/classes:assets org.deep3d.Main "$@"
+exec java --enable-native-access=ALL-UNNAMED -XX:+UseZGC \
+    -cp "build/classes:assets:lib/*" org.deep3d.Main "$@"

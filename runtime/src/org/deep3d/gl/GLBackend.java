@@ -1,0 +1,632 @@
+package org.deep3d.gl;
+
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.*;
+
+import java.awt.Graphics2D;
+import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import javax.imageio.ImageIO;
+
+import org.deep3d.AppDirs;
+import org.deep3d.Config;
+import org.deep3d.GameUi;
+import org.deep3d.Input;
+import org.deep3d.Overlay;
+import org.deep3d.Runtime;
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.opengl.GL;
+import org.lwjgl.system.MemoryUtil;
+
+import ru.woesss.j2me.micro3d.GLRender;
+import ru.woesss.j2me.micro3d.RenderNode;
+
+/**
+ * OpenGL presentation backend: GLFW window and input on the main thread,
+ * rendering on the game thread (which owns the GL context). The game's 2D
+ * output is a recorded command stream; 3D flushes are batches of render
+ * nodes spliced into it. Everything is drawn by the GPU — no readbacks.
+ */
+public final class GLBackend {
+
+    private static boolean active;
+    private static long window;
+    private static volatile boolean contextClaimed;
+
+    /* Framebuffer size, updated by callbacks on the main thread. */
+    public static volatile int fbWidth = 1280;
+    public static volatile int fbHeight = 720;
+    private static volatile float mouseScaleX = 1;
+    private static volatile float mouseScaleY = 1;
+
+    /* Each presenting thread (game thread, loading thread) records its own
+       frame; sharing one stream corrupts frames during transitions. */
+    private static final ThreadLocal<Draw2D> recorders =
+            ThreadLocal.withInitial(Draw2D::new);
+    private static javax.microedition.lcdui.RecordingGraphics screenGraphics;
+    private static volatile Draw2D lastFrame = new Draw2D();
+
+    private static GL2D gl2d;
+    private static GLRender gl3d;
+
+    /* Overlay compositing */
+    private static volatile boolean overlayDirty = true;
+    private static BufferedImage overlayImage;
+    private static int overlayTex = -1;
+    private static long lastFpsStamp;
+
+    private static volatile boolean screenshotRequested;
+    private static volatile boolean vsyncApplied;
+    private static final ConcurrentLinkedQueue<Runnable> mainThreadTasks =
+            new ConcurrentLinkedQueue<>();
+    private static volatile boolean running = true;
+
+    private GLBackend() {
+    }
+
+    public static boolean isActive() {
+        return active;
+    }
+
+    public static Draw2D recorder() {
+        return recorders.get();
+    }
+
+    public static javax.microedition.lcdui.Graphics screenGraphics() {
+        if (screenGraphics == null) {
+            screenGraphics = new javax.microedition.lcdui.RecordingGraphics(
+                    fbWidth, fbHeight);
+        }
+        return screenGraphics;
+    }
+
+    // ------------------------------------------------------------------
+    // Init (main thread)
+    // ------------------------------------------------------------------
+
+    public static void init() {
+        GLFWErrorCallback.createPrint(System.err).set();
+        // Prefer X11 (runs under XWayland too); fall back to whatever works.
+        if (glfwPlatformSupported(GLFW_PLATFORM_X11)
+                && System.getenv("DISPLAY") != null) {
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+        }
+        if (!glfwInit()) {
+            glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
+            if (!glfwInit()) {
+                throw new IllegalStateException("GLFW init failed");
+            }
+        }
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
+        long monitor = glfwGetPrimaryMonitor();
+        org.lwjgl.glfw.GLFWVidMode mode = glfwGetVideoMode(monitor);
+        int w;
+        int h;
+        if (Config.fullscreen && mode != null) {
+            w = mode.width();
+            h = mode.height();
+            window = glfwCreateWindow(w, h, "Deep — Submarine Odyssey", monitor, 0);
+        } else {
+            w = Config.windowWidth > 0 ? Config.windowWidth
+                    : (mode != null ? mode.width() * 3 / 4 : 1280);
+            h = Config.windowHeight > 0 ? Config.windowHeight
+                    : (mode != null ? mode.height() * 3 / 4 : 720);
+            window = glfwCreateWindow(w, h, "Deep — Submarine Odyssey", 0, 0);
+        }
+        if (window == 0) {
+            glfwTerminate();
+            throw new IllegalStateException("window creation failed");
+        }
+
+        int[] fw = new int[1];
+        int[] fh = new int[1];
+        glfwGetFramebufferSize(window, fw, fh);
+        fbWidth = fw[0];
+        fbHeight = fh[0];
+        updateMouseScale();
+
+        Runtime.screenWidth = fbWidth;
+        Runtime.screenHeight = fbHeight;
+
+        installCallbacks();
+        glfwShowWindow(window);
+        active = true;
+    }
+
+    private static void updateMouseScale() {
+        int[] ww = new int[1];
+        int[] wh = new int[1];
+        glfwGetWindowSize(window, ww, wh);
+        mouseScaleX = ww[0] > 0 ? (float) fbWidth / ww[0] : 1;
+        mouseScaleY = wh[0] > 0 ? (float) fbHeight / wh[0] : 1;
+    }
+
+    private static void installCallbacks() {
+        glfwSetFramebufferSizeCallback(window, (win, w, h) -> {
+            if (w > 0 && h > 0) {
+                fbWidth = w;
+                fbHeight = h;
+                updateMouseScale();
+                overlayDirty = true;
+            }
+        });
+        glfwSetWindowCloseCallback(window, win -> Runtime.requestQuit());
+        glfwSetKeyCallback(window, (win, key, scancode, action, mods) -> {
+            if (action == GLFW_REPEAT) {
+                return;
+            }
+            boolean pressed = action == GLFW_PRESS;
+            int awt = mapKey(key);
+            char ch = keyChar(key, mods);
+            Input.handleKey(awt, ch, pressed, (mods & GLFW_MOD_ALT) != 0, true);
+        });
+        glfwSetCharCallback(window, (win, codepoint) -> {
+            if (GameUi.textEntryActive() && !Overlay.isOpen()
+                    && codepoint >= 32 && codepoint < 127) {
+                GameUi.pushTypedChar((char) codepoint);
+            }
+        });
+        glfwSetCursorPosCallback(window, (win, x, y) -> {
+            int px = (int) (x * mouseScaleX);
+            int py = (int) (y * mouseScaleY);
+            if (Overlay.isOpen()) {
+                Overlay.mouseMoved(px, py);
+            } else {
+                GameUi.mouseMoved(px, py);
+            }
+        });
+        glfwSetMouseButtonCallback(window, (win, button, action, mods) -> {
+            if (action != GLFW_PRESS) {
+                return;
+            }
+            double[] cx = new double[1];
+            double[] cy = new double[1];
+            glfwGetCursorPos(window, cx, cy);
+            int px = (int) (cx[0] * mouseScaleX);
+            int py = (int) (cy[0] * mouseScaleY);
+            if (Overlay.isOpen()) {
+                if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                    Overlay.mouseClicked(px, py);
+                }
+            } else {
+                GameUi.mouseClicked(px, py, button == GLFW_MOUSE_BUTTON_RIGHT);
+            }
+        });
+        glfwSetScrollCallback(window, (win, dx, dy) -> {
+            int rot = dy > 0 ? -1 : (dy < 0 ? 1 : 0);
+            if (rot == 0) {
+                return;
+            }
+            if (Overlay.isOpen()) {
+                Overlay.mouseWheel(rot);
+            } else {
+                GameUi.mouseWheel(rot);
+            }
+        });
+    }
+
+    /** Main-thread event loop; returns when the game shuts down. */
+    public static void eventLoop() {
+        while (running) {
+            glfwWaitEventsTimeout(0.05);
+            Runnable task;
+            while ((task = mainThreadTasks.poll()) != null) {
+                task.run();
+            }
+        }
+    }
+
+    public static void stop() {
+        running = false;
+        glfwPostEmptyEvent();
+    }
+
+    // ------------------------------------------------------------------
+    // Frame lifecycle (game thread)
+    // ------------------------------------------------------------------
+
+    private static Thread ctxOwner;
+    private static org.lwjgl.opengl.GLCapabilities caps;
+
+    /**
+     * The game presents from more than one thread (its loader thread also
+     * draws), so the context follows whichever thread is inside endFrame.
+     */
+    private static void claimContext() {
+        Thread me = Thread.currentThread();
+        if (ctxOwner != me) {
+            glfwMakeContextCurrent(window);
+            if (caps == null) {
+                caps = GL.createCapabilities();
+            } else {
+                GL.setCapabilities(caps);
+            }
+            ctxOwner = me;
+            if (glfwGetCurrentContext() != window) {
+                throw new IllegalStateException("could not make GL context current");
+            }
+        }
+        if (!contextClaimed) {
+            gl2d = new GL2D();
+            gl2d.init();
+            gl3d = new GLRender();
+            gl3d.init();
+            contextClaimed = true;
+            System.out.println("[gl] renderer: " + glGetString(GL_RENDERER)
+                    + " / " + glGetString(GL_VERSION));
+        }
+        if (!vsyncApplied) {
+            glfwSwapInterval(Config.vsync ? 1 : 0);
+            vsyncApplied = true;
+        }
+    }
+
+    public static void applyVsync() {
+        vsyncApplied = false;
+    }
+
+    /** Splices a 3D flush batch into the 2D command stream. */
+    public static void record3D(List<RenderNode> nodes) {
+        Draw2D rec = recorders.get();
+        rec.op(Draw2D.OP_BATCH_3D, rec.obj(new ArrayList<>(nodes)));
+    }
+
+    private static volatile boolean dump2dNext;
+
+    public static void requestDump2d() {
+        dump2dNext = true;
+    }
+
+    /** Called from GameCanvas.flushGraphics on a presenting thread. */
+    public static synchronized void endFrame() {
+        claimContext();
+        if (dump2dNext) {
+            dump2dNext = false;
+            String dumpDir = System.getenv("DEEP3D_DUMP_TEX");
+            if (dumpDir != null && gl2d != null) {
+                claimContext();
+                gl2d.dumpTextures(new java.io.File(dumpDir));
+            }
+            Draw2D d = recorders.get();
+            StringBuilder sb = new StringBuilder("[2d] thread=" + Thread.currentThread().getName() + "\n");
+            int i = 0;
+            while (i < d.opLen) {
+                int op = d.ops[i];
+                int n = opLength(op);
+                sb.append("  op").append(op).append('(');
+                for (int k = 1; k < n; k++) {
+                    sb.append(d.ops[i + k]).append(k < n - 1 ? "," : "");
+                }
+                sb.append(')');
+                if (op == Draw2D.OP_IMAGE || op == Draw2D.OP_REGION || op == Draw2D.OP_RGB) {
+                    Object o = d.objects[d.ops[i + 1]];
+                    if (o instanceof javax.microedition.lcdui.Image) {
+                        javax.microedition.lcdui.Image im = (javax.microedition.lcdui.Image) o;
+                        sb.append(" img#").append(System.identityHashCode(im))
+                          .append(' ').append(im.getWidth()).append('x').append(im.getHeight());
+                    }
+                }
+                sb.append('\n');
+                i += n;
+            }
+            System.out.print(sb);
+        }
+
+        Draw2D frame = recorders.get();
+        renderFrame(frame);
+        if (screenshotRequested) {
+            screenshotRequested = false;
+            captureScreenshot();
+        }
+        checkPipeShot();
+        glfwSwapBuffers(window);
+        Runtime.tickFpsCounter();
+
+        lastFrame = frame.snapshot();
+        frame.reset();
+        if (screenGraphics != null) {
+            screenGraphics.beginFrame(fbWidth, fbHeight);
+        }
+        Runtime.screenWidth = fbWidth;
+        Runtime.screenHeight = fbHeight;
+
+        // Pause: keep redrawing the last frame + overlay until resumed.
+        while (Runtime.isGamePaused() && running) {
+            renderFrame(lastFrame);
+            if (screenshotRequested) {
+                screenshotRequested = false;
+                captureScreenshot();
+            }
+            checkPipeShot();
+            glfwSwapBuffers(window);
+            try {
+                Thread.sleep(16);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        // Release the context: the game presents from more than one thread,
+        // and GLX refuses to move a context that is still current elsewhere.
+        glfwMakeContextCurrent(0);
+        GL.setCapabilities(null);
+        ctxOwner = null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void renderFrame(Draw2D frame) {
+        int w = fbWidth;
+        int h = fbHeight;
+        glViewport(0, 0, w, h);
+        glDisable(GL_SCISSOR_TEST);
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        gl2d.beginFrame(w, h);
+
+        // Replay 2D, splicing 3D batches at their markers.
+        int segStart = 0;
+        int i = 0;
+        while (i < frame.opLen) {
+            int op = frame.ops[i];
+            int len = opLength(op);
+            if (op == Draw2D.OP_BATCH_3D) {
+                gl2d.replay(frame, segStart, i);
+                List<RenderNode> nodes = (List<RenderNode>) frame.objects[frame.ops[i + 1]];
+                gl3d.renderBatch(nodes);
+                segStart = i + len;
+            }
+            i += len;
+        }
+        gl2d.replay(frame, segStart, frame.opLen);
+
+        renderOverlayLayer(w, h);
+    }
+
+    private static int opLength(int op) {
+        switch (op) {
+            case Draw2D.OP_COLOR: return 2;
+            case Draw2D.OP_FILL_RECT:
+            case Draw2D.OP_DRAW_RECT:
+            case Draw2D.OP_LINE:
+            case Draw2D.OP_CLIP: return 5;
+            case Draw2D.OP_TRIANGLE: return 7;
+            case Draw2D.OP_ARC: return 8;
+            case Draw2D.OP_IMAGE: return 5;
+            case Draw2D.OP_REGION: return 10;
+            case Draw2D.OP_RGB: return 9;
+            case Draw2D.OP_BATCH_3D: return 2;
+            default: throw new IllegalStateException("op " + op);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Overlay / FPS / toast layer
+    // ------------------------------------------------------------------
+
+    public static void markOverlayDirty() {
+        overlayDirty = true;
+    }
+
+    private static void renderOverlayLayer(int w, int h) {
+        boolean wantLayer = Overlay.isOpen() || Overlay.hasToast() || Config.showFps;
+        if (!wantLayer) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (Config.showFps && now - lastFpsStamp >= 500) {
+            lastFpsStamp = now;
+            overlayDirty = true;
+        }
+        if (Overlay.hasToast()) {
+            overlayDirty = true;   // toasts fade by time
+        }
+        if (overlayImage == null || overlayImage.getWidth() != w
+                || overlayImage.getHeight() != h) {
+            overlayImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+            overlayDirty = true;
+        }
+        if (overlayDirty) {
+            overlayDirty = false;
+            Graphics2D g = overlayImage.createGraphics();
+            g.setComposite(java.awt.AlphaComposite.Clear);
+            g.fillRect(0, 0, w, h);
+            g.setComposite(java.awt.AlphaComposite.SrcOver);
+            Overlay.render(g, w, h);
+            if (Config.showFps) {
+                g.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g.setFont(new java.awt.Font(java.awt.Font.DIALOG,
+                        java.awt.Font.BOLD, Math.max(12, h / 50)));
+                String fps = Runtime.getDisplayFps() + " FPS";
+                g.setColor(java.awt.Color.BLACK);
+                g.drawString(fps, 9, h - 8);
+                g.setColor(new java.awt.Color(83, 200, 239));
+                g.drawString(fps, 8, h - 9);
+            }
+            g.dispose();
+            if (overlayTex < 0) {
+                overlayTex = gl2d.createTexture();
+            }
+            gl2d.uploadArgb(overlayTex, overlayImage);
+        }
+        if (overlayTex >= 0) {
+            gl2d.drawOverlay(overlayTex, w, h);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Services
+    // ------------------------------------------------------------------
+
+    public static void requestScreenshot() {
+        screenshotRequested = true;
+    }
+
+    private static void captureScreenshot() {
+        int w = fbWidth;
+        int h = fbHeight;
+        ByteBuffer buf = MemoryUtil.memAlloc(w * h * 4);
+        glReadBuffer(GL_BACK);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < h; y++) {
+            int srcRow = (h - 1 - y) * w * 4;
+            for (int x = 0; x < w; x++) {
+                int r = buf.get(srcRow + x * 4) & 0xFF;
+                int g = buf.get(srcRow + x * 4 + 1) & 0xFF;
+                int b = buf.get(srcRow + x * 4 + 2) & 0xFF;
+                img.setRGB(x, y, r << 16 | g << 8 | b);
+            }
+        }
+        MemoryUtil.memFree(buf);
+        try {
+            File dir = AppDirs.dir("screenshots");
+            File out = new File(dir, "deep_" + new SimpleDateFormat("yyyyMMdd_HHmmss_SSS")
+                    .format(new Date()) + ".png");
+            ImageIO.write(img, "png", out);
+            Overlay.showToast("Screenshot saved: " + out.getPath());
+        } catch (Exception e) {
+            Overlay.showToast("Screenshot failed: " + e.getMessage());
+        }
+    }
+
+    /** Saves the current frame to the given file (test pipe). */
+    public static void screenshotTo(File file) {
+        // The pipe thread cannot touch GL; capture on the next frame.
+        pipeShotFile = file;
+        pipeShotPending = true;
+    }
+
+    private static volatile File pipeShotFile;
+    private static volatile boolean pipeShotPending;
+
+    private static void checkPipeShot() {
+        if (pipeShotPending) {
+            pipeShotPending = false;
+            int w = fbWidth;
+            int h = fbHeight;
+            ByteBuffer buf = MemoryUtil.memAlloc(w * h * 4);
+            glReadBuffer(GL_BACK);
+            glPixelStorei(GL_PACK_ALIGNMENT, 1);
+            glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+            BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+            for (int y = 0; y < h; y++) {
+                int srcRow = (h - 1 - y) * w * 4;
+                for (int x = 0; x < w; x++) {
+                    int r = buf.get(srcRow + x * 4) & 0xFF;
+                    int g = buf.get(srcRow + x * 4 + 1) & 0xFF;
+                    int b = buf.get(srcRow + x * 4 + 2) & 0xFF;
+                    img.setRGB(x, y, r << 16 | g << 8 | b);
+                }
+            }
+            MemoryUtil.memFree(buf);
+            try {
+                ImageIO.write(img, "png", pipeShotFile);
+            } catch (Exception e) {
+                System.err.println("[shot] " + e);
+            }
+        }
+    }
+
+    public static void toggleFullscreen() {
+        mainThreadTasks.add(() -> {
+            long monitor = glfwGetPrimaryMonitor();
+            org.lwjgl.glfw.GLFWVidMode mode = glfwGetVideoMode(monitor);
+            if (mode == null) {
+                return;
+            }
+            if (Config.fullscreen) {
+                glfwSetWindowMonitor(window, monitor, 0, 0,
+                        mode.width(), mode.height(), mode.refreshRate());
+            } else {
+                int w = mode.width() * 3 / 4;
+                int h = mode.height() * 3 / 4;
+                glfwSetWindowMonitor(window, 0,
+                        (mode.width() - w) / 2, (mode.height() - h) / 2, w, h, 0);
+            }
+            vsyncApplied = false;   // mode switches can reset swap interval
+        });
+        glfwPostEmptyEvent();
+    }
+
+    // ------------------------------------------------------------------
+    // GLFW -> AWT key mapping
+    // ------------------------------------------------------------------
+
+    private static int mapKey(int glfwKey) {
+        if (glfwKey >= GLFW_KEY_A && glfwKey <= GLFW_KEY_Z) {
+            return KeyEvent.VK_A + (glfwKey - GLFW_KEY_A);
+        }
+        if (glfwKey >= GLFW_KEY_0 && glfwKey <= GLFW_KEY_9) {
+            return KeyEvent.VK_0 + (glfwKey - GLFW_KEY_0);
+        }
+        if (glfwKey >= GLFW_KEY_KP_0 && glfwKey <= GLFW_KEY_KP_9) {
+            return KeyEvent.VK_NUMPAD0 + (glfwKey - GLFW_KEY_KP_0);
+        }
+        if (glfwKey >= GLFW_KEY_F1 && glfwKey <= GLFW_KEY_F12) {
+            return KeyEvent.VK_F1 + (glfwKey - GLFW_KEY_F1);
+        }
+        switch (glfwKey) {
+            case GLFW_KEY_SPACE: return KeyEvent.VK_SPACE;
+            case GLFW_KEY_ENTER:
+            case GLFW_KEY_KP_ENTER: return KeyEvent.VK_ENTER;
+            case GLFW_KEY_ESCAPE: return KeyEvent.VK_ESCAPE;
+            case GLFW_KEY_TAB: return KeyEvent.VK_TAB;
+            case GLFW_KEY_BACKSPACE: return KeyEvent.VK_BACK_SPACE;
+            case GLFW_KEY_DELETE: return KeyEvent.VK_DELETE;
+            case GLFW_KEY_UP: return KeyEvent.VK_UP;
+            case GLFW_KEY_DOWN: return KeyEvent.VK_DOWN;
+            case GLFW_KEY_LEFT: return KeyEvent.VK_LEFT;
+            case GLFW_KEY_RIGHT: return KeyEvent.VK_RIGHT;
+            case GLFW_KEY_LEFT_SHIFT:
+            case GLFW_KEY_RIGHT_SHIFT: return KeyEvent.VK_SHIFT;
+            case GLFW_KEY_LEFT_CONTROL:
+            case GLFW_KEY_RIGHT_CONTROL: return KeyEvent.VK_CONTROL;
+            case GLFW_KEY_LEFT_ALT:
+            case GLFW_KEY_RIGHT_ALT: return KeyEvent.VK_ALT;
+            case GLFW_KEY_COMMA: return KeyEvent.VK_COMMA;
+            case GLFW_KEY_PERIOD: return KeyEvent.VK_PERIOD;
+            case GLFW_KEY_MINUS: return KeyEvent.VK_MINUS;
+            case GLFW_KEY_EQUAL: return KeyEvent.VK_EQUALS;
+            default: return 0;
+        }
+    }
+
+    private static char keyChar(int glfwKey, int mods) {
+        boolean shift = (mods & GLFW_MOD_SHIFT) != 0;
+        if (glfwKey >= GLFW_KEY_A && glfwKey <= GLFW_KEY_Z) {
+            char c = (char) ('a' + (glfwKey - GLFW_KEY_A));
+            return shift ? Character.toUpperCase(c) : c;
+        }
+        if (glfwKey >= GLFW_KEY_0 && glfwKey <= GLFW_KEY_9) {
+            return (char) ('0' + (glfwKey - GLFW_KEY_0));
+        }
+        if (glfwKey >= GLFW_KEY_KP_0 && glfwKey <= GLFW_KEY_KP_9) {
+            return (char) ('0' + (glfwKey - GLFW_KEY_KP_0));
+        }
+        switch (glfwKey) {
+            case GLFW_KEY_SPACE: return ' ';
+            case GLFW_KEY_KP_MULTIPLY: return '*';
+            case GLFW_KEY_KP_SUBTRACT: return '-';
+            case GLFW_KEY_KP_ADD: return '+';
+            case GLFW_KEY_COMMA: return ',';
+            case GLFW_KEY_PERIOD: return '.';
+            case GLFW_KEY_MINUS: return '-';
+            case GLFW_KEY_3: return shift ? '#' : '3';
+            case GLFW_KEY_8: return shift ? '*' : '8';
+            default: return 0;
+        }
+    }
+}

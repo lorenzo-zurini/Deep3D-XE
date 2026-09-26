@@ -19,7 +19,10 @@ public final class Config {
     private static final Properties props = new Properties();
 
     /* Display */
-    /** "auto" = match window/screen, "half" = half of it, "fixed" = presets. */
+    /** "gl" = OpenGL (GPU), "software" = CPU rasterizer fallback. */
+    public static String renderer = "gl";
+    public static boolean vsync = true;
+    /** Software renderer only: "auto", "half" or "fixed" presets. */
     public static String resolutionMode = "auto";
     public static int internalWidth = 480;
     public static int internalHeight = 640;
@@ -60,6 +63,8 @@ public final class Config {
             props.remove("display.internal_width");
             props.remove("display.internal_height");
         }
+        renderer = props.getProperty("display.renderer", renderer);
+        vsync = getBool("display.vsync", vsync);
         resolutionMode = props.getProperty("display.resolution_mode", resolutionMode);
         internalWidth = getInt("display.internal_width", internalWidth);
         internalHeight = getInt("display.internal_height", internalHeight);
@@ -79,6 +84,8 @@ public final class Config {
 
     public static void save() {
         props.setProperty("config.version", "2");
+        props.setProperty("display.renderer", renderer);
+        props.setProperty("display.vsync", String.valueOf(vsync));
         props.setProperty("display.resolution_mode", resolutionMode);
         props.setProperty("display.texture_filter", String.valueOf(textureFilter));
         props.setProperty("display.show_fps", String.valueOf(showFps));
