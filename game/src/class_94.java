@@ -41,7 +41,7 @@ public final class class_94 implements Runnable {
       this.field_1219 = new int[18];
       this.field_1212 = class_41.field_537 - 50;
 
-      for (byte var2 = 0; var2 < this.field_1219.length; var2 += 2) {
+      for (int var2 = 0; var2 < this.field_1219.length; var2 += 2) {
          this.field_1219[var2] = this.field_1212 + (int)(field_1213[var2 >> 1] / 100.0F * 50.0F);
          this.field_1219[var2 + 1] = class_41.field_538 - (var2 >> 1) * (class_41.field_538 / 8);
       }

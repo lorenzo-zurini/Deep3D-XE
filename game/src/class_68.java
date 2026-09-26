@@ -268,7 +268,7 @@ public final class class_68 {
          this.field_955 = new short[var2.length / 4 * 2];
          int var3 = 0;
 
-         for (byte var4 = 0; var4 < var2.length; var4 += 4) {
+         for (int var4 = 0; var4 < var2.length; var4 += 4) {
             this.field_955[var3++] = (short)(this.field_936 + (int)(var2[var4 + 1] / 100.0F * this.field_934));
             this.field_955[var3++] = (short)(this.field_937 + (int)(var2[var4 + 2] / 100.0F * this.field_935));
          }
@@ -373,7 +373,7 @@ public final class class_68 {
          if (!this.field_984 && var1 == 256 || this.field_984 && var1 == 16384) {
             int var2 = 0;
 
-            for (byte var3 = 0; var3 < this.field_955.length; var3 += 2) {
+            for (int var3 = 0; var3 < this.field_955.length; var3 += 2) {
                if (this.field_955[var3] > this.field_938
                   && this.field_955[var3] < this.field_942
                   && this.field_955[var3 + 1] > this.field_939
@@ -395,7 +395,7 @@ public final class class_68 {
             this.field_953 = this.field_984 ? 2 : 1;
             this.field_958 = new float[var2 * 2];
 
-            for (byte var9 = 0; var9 < this.field_958.length; var9 += 2) {
+            for (int var9 = 0; var9 < this.field_958.length; var9 += 2) {
                this.field_958[var9] = this.field_955[this.field_956[var9 / 2] * 2];
                this.field_958[var9 + 1] = this.field_955[this.field_956[var9 / 2] * 2 + 1];
             }
@@ -450,7 +450,7 @@ public final class class_68 {
                this.field_944 = this.field_936 + this.field_934 - this.field_940 - 4;
                this.field_945 = this.field_937 + this.field_935 + this.field_941 + 8 - this.field_941 - 4;
 
-               for (byte var14 = 0; var14 < this.field_958.length; var14 += 2) {
+               for (int var14 = 0; var14 < this.field_958.length; var14 += 2) {
                   this.field_958[var14] = this.field_958[var14] + (this.field_936 + this.field_934 - this.field_938 - this.field_940 - 4.0F);
                   this.field_958[var14 + 1] = this.field_958[var14 + 1]
                      + (this.field_937 + this.field_935 + this.field_941 + 8 - this.field_939 - this.field_941 - 4.0F);
@@ -564,7 +564,7 @@ public final class class_68 {
    // $VF: renamed from: c () void
    public final void method_643() {
       if (class_41.field_526 >= class_41.field_525.length) {
-         for (byte var1 = 2; var1 < class_41.field_525.length; var1 += 2) {
+         for (int var1 = 2; var1 < class_41.field_525.length; var1 += 2) {
             class_41.field_525[var1 - 2] = class_41.field_525[var1];
             class_41.field_525[var1 - 1] = class_41.field_525[var1 + 1];
          }
@@ -751,7 +751,7 @@ public final class class_68 {
             this.field_942 = (int)this.field_938 + this.field_940;
             this.field_943 = (int)this.field_939 + this.field_941;
 
-            for (byte var9 = 0; var9 < this.field_955.length; var9 += 2) {
+            for (int var9 = 0; var9 < this.field_955.length; var9 += 2) {
                int var17 = var9 >> 1;
                Image var26 = this.field_992[var17]
                   ? (this.field_993[var17] ? this.field_967 : this.field_966)
@@ -831,7 +831,7 @@ public final class class_68 {
                this.field_945 = this.field_945 + this.field_947;
             }
 
-            for (byte var15 = 0; var15 < this.field_958.length; var15 += 2) {
+            for (int var15 = 0; var15 < this.field_958.length; var15 += 2) {
                this.field_958[var15] = this.field_958[var15] + this.field_946;
                this.field_958[var15 + 1] = this.field_958[var15 + 1] + this.field_947;
                int var25 = this.field_954[var15 >> 1].field_828;
@@ -879,7 +879,7 @@ public final class class_68 {
             class_41.field_534.setColor(-5253121);
             class_41.field_534.fillRect(this.field_936, this.field_937, this.field_934 - 1, this.field_935);
 
-            for (byte var2 = 0; var2 < this.field_948.length; var2 += 3) {
+            for (int var2 = 0; var2 < this.field_948.length; var2 += 3) {
                class_41.field_534.setColor(this.field_948[var2]);
                class_41.field_534.fillRect(this.field_936, this.field_948[var2 + 1], this.field_934 - 1, this.field_948[var2 + 2]);
                class_41.field_534.setColor(0);
@@ -890,7 +890,7 @@ public final class class_68 {
                this.field_981 = var11 == 0 ? class_3.method_108().field_446 : class_3.method_108().field_447;
                this.field_981 = this.field_948[1] + (int)(this.field_981 / 100.0F * (this.field_935 - 2 * this.field_948[11])) + 2;
 
-               for (byte var20 = 1; var20 < this.field_948.length - 1; var20 += 3) {
+               for (int var20 = 1; var20 < this.field_948.length - 1; var20 += 3) {
                   if (class_124.method_945(this.field_981 - this.field_948[var20]) < class_41.field_538 / 20) {
                      this.field_981 = this.field_948[var20];
                   }
@@ -915,7 +915,7 @@ public final class class_68 {
                class_41.field_534.setColor(0);
                class_41.field_534.setClip(this.field_936, this.field_981, this.field_934 - 1, 8);
 
-               for (byte var21 = -4; var21 < this.field_936 + this.field_934; var21 += 3) {
+               for (int var21 = -4; var21 < this.field_936 + this.field_934; var21 += 3) {
                   class_41.field_534.drawLine(var21, this.field_981 + 6, var21 + 4, this.field_981 + 2);
                }
 
@@ -947,7 +947,7 @@ public final class class_68 {
                .drawRect(this.field_936 + this.field_934 - this.field_940 - 6, this.field_937 + this.field_935 + 1, this.field_940 + 6, this.field_941 + 6);
             this.method_648((int)this.field_944, (int)this.field_945, this.field_940, this.field_941, this.field_1002);
 
-            for (byte var12 = 0; var12 < this.field_958.length; var12 += 2) {
+            for (int var12 = 0; var12 < this.field_958.length; var12 += 2) {
                int var22 = this.field_954[var12 >> 1].field_828;
                Image var28 = this.field_992[var22]
                   ? (this.field_993[var22] ? this.field_967 : this.field_966)
@@ -1003,9 +1003,9 @@ public final class class_68 {
                }
             }
 
-            byte var14 = -1;
+            int var14 = -1;
 
-            for (byte var24 = 0; var24 < this.field_957.length; var24 += 2) {
+            for (int var24 = 0; var24 < this.field_957.length; var24 += 2) {
                Image var31 = null;
                Image var29;
                if (this.field_954[var24 >> 1].field_828 == class_3.method_110().field_828) {
@@ -1115,7 +1115,7 @@ public final class class_68 {
                this.field_945 = this.field_945 + this.field_947;
             }
 
-            for (byte var3 = 0; var3 < this.field_958.length; var3 += 2) {
+            for (int var3 = 0; var3 < this.field_958.length; var3 += 2) {
                this.field_958[var3] = this.field_958[var3] + this.field_946;
                this.field_958[var3 + 1] = this.field_958[var3 + 1] + this.field_947;
                int var4 = this.field_954[var3 >> 1].field_828;
@@ -1207,7 +1207,7 @@ public final class class_68 {
 
    // $VF: renamed from: e () void
    private void method_649() {
-      for (byte var1 = 2; var1 < class_41.field_525.length && class_41.field_525[var1] > 0; var1 += 2) {
+      for (int var1 = 2; var1 < class_41.field_525.length && class_41.field_525[var1] > 0; var1 += 2) {
          if (class_41.field_525[var1 + 1] <= 0) {
             return;
          }

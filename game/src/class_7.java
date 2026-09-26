@@ -50,7 +50,7 @@ public final class class_7 {
       this.field_157 = ((class_104)this.field_163).field_1309;
       boolean var5 = false;
 
-      for (byte var6 = 0; var6 < this.field_157.length; var6 += 3) {
+      for (int var6 = 0; var6 < this.field_157.length; var6 += 3) {
          this.field_161 = var6 / 3;
          if (this.field_158[this.field_161] <= 0 && !var5 && this.field_162 > 100) {
             this.field_162 = 0;

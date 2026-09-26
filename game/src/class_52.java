@@ -43,7 +43,7 @@ public final class class_52 {
       boolean var5 = false;
       this.field_722 = ((class_104)this.field_727).field_1309;
 
-      for (byte var6 = 0; var6 < this.field_722.length; var6 += 3) {
+      for (int var6 = 0; var6 < this.field_722.length; var6 += 3) {
          int var7 = var6 / 3;
          if (!var5 && this.field_723[var7] <= 0) {
             int var8 = class_41.field_540.nextInt(18000) - 9000;

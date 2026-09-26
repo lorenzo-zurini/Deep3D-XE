@@ -46,7 +46,7 @@ public class class_108 extends class_106 {
       this.field_1344 = new int[24];
       this.field_1346 = new int[16];
 
-      for (byte var7 = 0; var7 < this.field_1346.length; var7 += 8) {
+      for (int var7 = 0; var7 < this.field_1346.length; var7 += 8) {
          this.field_1346[var7] = field_1341[var5][0];
          this.field_1346[var7 + 1] = field_1341[var5][1];
          this.field_1346[var7 + 2] = field_1341[var5][2];
@@ -231,7 +231,7 @@ public class class_108 extends class_106 {
          this.field_1345[22] = this.field_1338.field_139 - this.field_1342;
          this.field_1345[23] = this.field_1338.field_140;
 
-         for (byte var1 = 0; var1 < this.field_1345.length; var1 += 3) {
+         for (int var1 = 0; var1 < this.field_1345.length; var1 += 3) {
             this.field_1344[var1] = this.field_1345[var1] - this.field_1338.field_138;
             this.field_1344[var1 + 1] = this.field_1345[var1 + 1] - this.field_1338.field_139;
             this.field_1344[var1 + 2] = this.field_1345[var1 + 2] - this.field_1338.field_140;

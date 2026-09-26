@@ -160,7 +160,7 @@ public final class class_39 {
          this.field_484 = 0.0F;
 
          for (int var1 = 0; var1 < this.field_483; var1++) {
-            byte var2 = 1;
+            int var2 = 1;
             float var3 = 1.0F;
 
             for (float var4 = 0.0F; var3 > 0.005; var2 *= 2) {

@@ -25,7 +25,7 @@ public final class class_82 {
       int var2 = 20;
       this.field_1097 = new int[96];
 
-      for (byte var3 = 8; var3 < this.field_1097.length; var3 += 8) {
+      for (int var3 = 8; var3 < this.field_1097.length; var3 += 8) {
          this.field_1097[var3] = 83;
          this.field_1097[var3 + 1] = var1;
          this.field_1097[var3 + 2] = 84;
@@ -75,7 +75,7 @@ public final class class_82 {
          this.field_1096[var7 - 11] = this.field_1096[var7 - 23];
       }
 
-      for (byte var8 = 0; var8 < this.field_1096.length; var8 += 3) {
+      for (int var8 = 0; var8 < this.field_1096.length; var8 += 3) {
          this.field_1095[var8] = this.field_1096[var8] - var1;
          this.field_1095[var8 + 1] = this.field_1096[var8 + 1] - var2;
          this.field_1095[var8 + 2] = this.field_1096[var8 + 2] - var3;
@@ -98,7 +98,7 @@ public final class class_82 {
 
    // $VF: renamed from: b (v) void
    public final void method_739(class_5 var1) {
-      for (byte var2 = 0; var2 < this.field_1096.length; var2 += 3) {
+      for (int var2 = 0; var2 < this.field_1096.length; var2 += 3) {
          this.field_1096[var2] = var1.field_138;
          this.field_1096[var2 + 1] = var1.field_139;
          this.field_1096[var2 + 2] = var1.field_140;

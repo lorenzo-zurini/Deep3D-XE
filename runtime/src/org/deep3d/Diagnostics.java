@@ -57,6 +57,26 @@ public final class Diagnostics {
         watchdog.start();
     }
 
+    private static long lastLoopErrorAt;
+    private static int suppressedLoopErrors;
+
+    /** The game loop survived an exception: log it (rate-limited) and tell the player. */
+    public static synchronized void gameLoopError(Throwable t) {
+        long now = System.currentTimeMillis();
+        if (now - lastLoopErrorAt < 2000) {
+            suppressedLoopErrors++;
+            return;
+        }
+        lastLoopErrorAt = now;
+        if (suppressedLoopErrors > 0) {
+            System.err.println("[diag] (" + suppressedLoopErrors + " similar errors suppressed)");
+            suppressedLoopErrors = 0;
+        }
+        System.err.println("[diag] game loop error (recovered):");
+        t.printStackTrace();
+        Overlay.showToast("Game error recovered - details in logs/deep3d.log");
+    }
+
     /** Called once per presented frame. */
     public static void frame() {
         long now = System.currentTimeMillis();

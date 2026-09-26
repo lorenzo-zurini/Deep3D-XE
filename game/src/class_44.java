@@ -72,8 +72,8 @@ public final class class_44 {
       byte[] var3 = new byte[class_24.method_317().length];
       byte[] var4 = new byte[class_24.method_317().length];
 
-      for (byte var5 = 0; var5 < var3.length; var5++) {
-         var4[var5] = var5;
+      for (int var5 = 0; var5 < var3.length; var5++) {
+         var4[var5] = (byte)var5;
          var3[var5] = (byte)method_437(var0.field_829, var0.field_830, var1[var2[var5].field_628 * 4 + 1], var1[var2[var5].field_628 * 4 + 2]);
          if (var3[var5] < 50) {
             var3[var5] = 0;
@@ -105,7 +105,7 @@ public final class class_44 {
 
       byte[] var11 = new byte[var3.length * 2];
 
-      for (byte var12 = 0; var12 < var11.length; var12 += 2) {
+      for (int var12 = 0; var12 < var11.length; var12 += 2) {
          var11[var12] = var4[var12 / 2];
          var11[var12 + 1] = var3[var12 / 2];
       }

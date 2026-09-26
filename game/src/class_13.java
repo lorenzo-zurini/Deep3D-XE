@@ -11,7 +11,7 @@ public final class class_13 {
       this.field_183 = false;
       this.field_182 = new class_87[var1.length / 3];
 
-      for (byte var2 = 0; var2 < var1.length; var2 += 3) {
+      for (int var2 = 0; var2 < var1.length; var2 += 3) {
          this.field_182[var2 / 3] = new class_87(var1[var2], var1[var2 + 1], var1[var2 + 2], this);
       }
    }

@@ -120,7 +120,7 @@ public final class class_104 extends class_101 {
                field_1311
             );
       } else {
-         byte var1 = 0;
+         int var1 = 0;
 
          for (int var2 = 0; var2 < this.field_1312; var1 += 8) {
             this.field_1310[var1] = this.field_1310[var1 + 1] = this.field_1313[var2];
@@ -160,7 +160,7 @@ public final class class_104 extends class_101 {
 
          int[] var3 = new int[8 * this.field_1312];
 
-         for (byte var2 = 0; var2 < var3.length; var2 += 8) {
+         for (int var2 = 0; var2 < var3.length; var2 += 8) {
             var3[var2] = var3[var2 + 1] = this.field_1310[0];
             var3[var2 + 2] = 0;
             var3[var2 + 3] = this.field_1310[3];

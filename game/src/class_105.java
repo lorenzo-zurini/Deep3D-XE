@@ -116,7 +116,7 @@ public final class class_105 extends class_101 {
       this.field_1321 = var2;
       super.field_1290 = 0;
 
-      for (byte var3 = 0; var3 < this.field_1320.length; var3 += 3) {
+      for (int var3 = 0; var3 < this.field_1320.length; var3 += 3) {
          int var4 = this.field_1320[var3] * this.field_1320[var3]
             + this.field_1320[var3 + 1] * this.field_1320[var3 + 1]
             + this.field_1320[var3 + 2] * this.field_1320[var3 + 2];

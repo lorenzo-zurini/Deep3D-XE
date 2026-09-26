@@ -270,7 +270,7 @@ public final class class_47 {
             if ((var14 = var10 == 0 ? class_58.method_569() : class_58.method_574()) != 0) {
                class_41.field_534.drawImage(var10 == 0 ? this.field_687 : this.field_688, var10 == 0 ? 16 : 14 + class_4.field_65 - 3 - 40, 35, 0);
                int var6 = var10 == 0 ? 28 : 14 + class_4.field_65 - 30;
-               byte var7 = 36;
+               int var7 = 36;
 
                for (int var8 = 0; var8 < var14; var8++) {
                   if ((var8 + 1) % 5 == 0) {

@@ -221,7 +221,7 @@ public final class class_57 {
       short[][] var8 = new short[][]{{255, 255, 128}, {98, 118, 255}, {234, 149, 55}, {239, 90, 95}, {154, 220, 109}};
       byte[] var9 = class_44.method_440(class_3.method_110());
 
-      for (byte var5 = 0; var5 < var9.length; var5 += 2) {
+      for (int var5 = 0; var5 < var9.length; var5 += 2) {
          if (var9[var5] > 12 && var9[var5] < 18) {
             float var6 = var9[var5 + 1] / 100.0F * 1.5F;
             this.field_797 = var6 * var8[var9[var5] - 13][0];
@@ -242,7 +242,7 @@ public final class class_57 {
    private void method_532() {
       if (class_3.method_62().method_789() || class_3.method_62().field_1226 != 6 && (!class_3.method_62().field_1241 || class_3.method_62().field_1226 != 6)) {
          int var1 = 0;
-         byte var2 = 0;
+         int var2 = 0;
          boolean var3 = false;
          this.field_777 = new class_83[class_3.method_77() ? 49 : 20];
          byte[] var4 = class_44.method_440(class_3.method_110());
@@ -1421,7 +1421,7 @@ public final class class_57 {
    public final class_13 method_545(int var1) {
       int[] var2 = new int[var1 * 3];
 
-      for (byte var3 = 0; var3 < var2.length; var3 += 3) {
+      for (int var3 = 0; var3 < var2.length; var3 += 3) {
          var2[var3] = 60000 + class_41.field_540.nextInt(40000);
          var2[var3 + 1] = 0;
          if (var3 != 0) {
