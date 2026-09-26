@@ -130,12 +130,12 @@ public final class class_92 extends class_91 {
          super.field_1110.method_170(this.field_1203[var3 * 3], this.field_1203[var3 * 3 + 1], this.field_1203[var3 * 3 + 2]);
          super.field_1110.method_176(super.field_1109, class_90.field_1194);
          int var4;
-         if ((var4 = class_90.field_1194.method_183()) > 30000) {
+         if ((var4 = class_90.field_1194.method_183()) > org.deep3d.Config.impostorDistance()) {
             class_90.field_1194.method_182();
-            class_90.field_1194.method_178(30000);
+            class_90.field_1194.method_178(org.deep3d.Config.impostorDistance());
             class_90.field_1194.method_175(super.field_1109);
             this.field_1202[var3].method_842(class_90.field_1194);
-            int var5 = (int)(30000.0F / var4 * 4096.0F);
+            int var5 = (int)((float)org.deep3d.Config.impostorDistance() / var4 * 4096.0F);
             this.field_1202[var3].method_865(var5, var5, var5);
          } else {
             this.field_1202[var3].method_865(4096, 4096, 4096);

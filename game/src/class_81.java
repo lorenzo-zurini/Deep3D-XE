@@ -329,7 +329,13 @@ public final class class_81 {
          var3.close();
          field_1093.closeRecordStore();
          field_1093 = null;
+      } catch (javax.microedition.rms.RecordStoreNotFoundException var24) {
+         // empty slot
       } catch (Exception var23) {
+         // Deep3D-PC: a failed read used to show the slot as BLANK silently.
+         System.err.println("[save] slot " + var0 + " could not be read:");
+         var23.printStackTrace();
+         var1 = null;
       }
 
       return var1;
@@ -553,7 +559,9 @@ public final class class_81 {
          field_1093.addRecord(var1.toByteArray(), 0, var1.toByteArray().length);
          field_1093.closeRecordStore();
          field_1093 = null;
+         System.out.println("[save] wrote slot " + var0 + " (" + var1.size() + " bytes)");
       } catch (IOException var17) {
+         var17.printStackTrace();
       } catch (RecordStoreException var18) {
          var18.printStackTrace();
       }

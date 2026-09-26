@@ -77,6 +77,8 @@ public final class GLBackend {
     private GLBackend() {
     }
 
+    public static volatile int lastBackground;
+
     public static boolean isActive() {
         return active;
     }
@@ -408,6 +410,7 @@ public final class GLBackend {
                 gl2d.replay(frame, segStart, i);
                 List<RenderNode> nodes = (List<RenderNode>) frame.objects[frame.ops[i + 1]];
                 gl3d.setFog(Config.fog, gl2d.backgroundColor(), Config.farPlane());
+                lastBackground = gl2d.backgroundColor();
                 gl3d.renderBatch(nodes);
                 segStart = i + len;
             }

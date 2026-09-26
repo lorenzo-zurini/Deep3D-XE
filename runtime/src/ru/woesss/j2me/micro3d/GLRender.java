@@ -90,6 +90,14 @@ public final class GLRender {
 			+ "uniform vec2 uFogRange;\n"
 			+ "uniform float uFogMode;\n"
 			+ "varying float vDepth;\n"
+			+ "uniform vec2 uFade;\n"
+			+ "float bayer2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }\n"
+			+ "float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }\n"
+			+ "void distanceFade() {\n"
+			+ "    if (uFade.y <= 0.0) return;\n"
+			+ "    float v = 1.0 - clamp((vDepth - uFade.x) / (uFade.y - uFade.x), 0.0, 1.0);\n"
+			+ "    if (v < 1.0 && bayer4(gl_FragCoord.xy) >= v) discard;\n"
+			+ "}\n"
 			+ "vec3 fog(vec3 c) {\n"
 			+ "    if (uFogMode < 0.5) return c;\n"
 			+ "    float f = clamp((vDepth - uFogRange.x) / (uFogRange.y - uFogRange.x), 0.0, 1.0);\n"
@@ -109,6 +117,7 @@ public final class GLRender {
 			+ "varying float vIsReflect;\n"
 			+ "varying float vAmbIntensity;\n"
 			+ "void main() {\n"
+			+ "    distanceFade();\n"
 			+ "    vec4 color = texture2D(uTextureUnit, vTexture);\n"
 			+ "    if (vIsTransparency > 0.5 && color.a < 0.5) {\n"
 			+ "        discard;\n"
@@ -159,6 +168,14 @@ public final class GLRender {
 			+ "uniform vec2 uFogRange;\n"
 			+ "uniform float uFogMode;\n"
 			+ "varying float vDepth;\n"
+			+ "uniform vec2 uFade;\n"
+			+ "float bayer2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }\n"
+			+ "float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }\n"
+			+ "void distanceFade() {\n"
+			+ "    if (uFade.y <= 0.0) return;\n"
+			+ "    float v = 1.0 - clamp((vDepth - uFade.x) / (uFade.y - uFade.x), 0.0, 1.0);\n"
+			+ "    if (v < 1.0 && bayer4(gl_FragCoord.xy) >= v) discard;\n"
+			+ "}\n"
 			+ "vec3 fog(vec3 c) {\n"
 			+ "    if (uFogMode < 0.5) return c;\n"
 			+ "    float f = clamp((vDepth - uFogRange.x) / (uFogRange.y - uFogRange.x), 0.0, 1.0);\n"
@@ -176,6 +193,7 @@ public final class GLRender {
 			+ "varying float vIsReflect;\n"
 			+ "varying float vAmbIntensity;\n"
 			+ "void main() {\n"
+			+ "    distanceFade();\n"
 			+ "    if (vAmbIntensity < -0.5) {\n"
 			+ "        gl_FragColor = vec4(fog(vColor), 1.0);\n"
 			+ "        return;\n"
@@ -212,6 +230,14 @@ public final class GLRender {
 			+ "uniform vec2 uFogRange;\n"
 			+ "uniform float uFogMode;\n"
 			+ "varying float vDepth;\n"
+			+ "uniform vec2 uFade;\n"
+			+ "float bayer2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }\n"
+			+ "float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }\n"
+			+ "void distanceFade() {\n"
+			+ "    if (uFade.y <= 0.0) return;\n"
+			+ "    float v = 1.0 - clamp((vDepth - uFade.x) / (uFade.y - uFade.x), 0.0, 1.0);\n"
+			+ "    if (v < 1.0 && bayer4(gl_FragCoord.xy) >= v) discard;\n"
+			+ "}\n"
 			+ "vec3 fog(vec3 c) {\n"
 			+ "    if (uFogMode < 0.5) return c;\n"
 			+ "    float f = clamp((vDepth - uFogRange.x) / (uFogRange.y - uFogRange.x), 0.0, 1.0);\n"
@@ -248,6 +274,7 @@ public final class GLRender {
 		int uFogColor;
 		int uFogRange;
 		int uFogMode;
+		int uFade;
 
 		void locate() {
 			aPosition = glGetAttribLocation(id, "aPosition");
@@ -268,6 +295,7 @@ public final class GLRender {
 			uFogColor = glGetUniformLocation(id, "uFogColor");
 			uFogRange = glGetUniformLocation(id, "uFogRange");
 			uFogMode = glGetUniformLocation(id, "uFogMode");
+			uFade = glGetUniformLocation(id, "uFade");
 			glUseProgram(id);
 			int texUnit = glGetUniformLocation(id, "uTextureUnit");
 			if (texUnit >= 0) {
@@ -291,6 +319,8 @@ public final class GLRender {
 	private boolean fogEnabled;
 	private Prog boundProg;
 	private int blendForFog;
+	private float fadeStart;
+	private float fadeEnd;
 
 	public void setFog(boolean enabled, int rgb, float farPlane) {
 		fogEnabled = enabled;
@@ -323,6 +353,9 @@ public final class GLRender {
 		glUniform1f(p.uFogMode, mode);
 		glUniform3f(p.uFogColor, fogR, fogG, fogB);
 		glUniform2f(p.uFogRange, fogStart, fogEnd);
+		if (p.uFade >= 0) {
+			glUniform2f(p.uFade, fadeStart, fadeEnd);
+		}
 	}
 
 	public void init() {
@@ -393,7 +426,18 @@ public final class GLRender {
 
 	private long lastNodeError;
 
+	private static final boolean SKIP_PRIMS = System.getenv("DEEP3D_SKIP_PRIMS") != null;
+	private static final boolean SKIP_FIGS = System.getenv("DEEP3D_SKIP_FIGS") != null;
+	private static final boolean SUB_SRC_MINUS_DST = System.getenv("DEEP3D_SUB_SRC") != null;
+	private static final boolean NOCULL_BLEND = System.getenv("DEEP3D_NOCULL_BLEND") != null;
+
 	private void renderNode(RenderNode node) {
+		if (SKIP_PRIMS && node instanceof RenderNode.PrimitiveNode) {
+			return;
+		}
+		if (SKIP_FIGS && node instanceof RenderNode.FigureNode) {
+			return;
+		}
 		try {
 			if (node instanceof RenderNode.FigureNode) {
 				RenderNode.FigureNode fn = (RenderNode.FigureNode) node;
@@ -401,10 +445,14 @@ public final class GLRender {
 				if (model == null) {
 					return;   // figure disposed between post and replay
 				}
+				fadeStart = fn.figure.fadeStart;
+				fadeEnd = fn.figure.fadeEnd;
 				renderFigure(model, fn.textures, fn.attrs, fn.projMatrix,
 						fn.viewMatrix, fn.vertices, fn.normals, fn.light, fn.specular,
 						fn.toonThreshold, fn.toonHigh, fn.toonLow);
 			} else if (node instanceof RenderNode.PrimitiveNode) {
+				fadeStart = 0;
+				fadeEnd = 0;
 				renderPrimitive((RenderNode.PrimitiveNode) node);
 			}
 		} catch (RuntimeException e) {
@@ -433,7 +481,7 @@ public final class GLRender {
 				break;
 			case Model.Polygon.BLEND_SUB:
 				glEnable(GL_BLEND);
-				glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+				glBlendEquation(SUB_SRC_MINUS_DST ? GL_FUNC_SUBTRACT : GL_FUNC_REVERSE_SUBTRACT);
 				glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ZERO, GL_ONE);
 				break;
 			default:
@@ -511,6 +559,7 @@ public final class GLRender {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 		ByteBuffer raster = t.image.getRaster();   // heap RGBA bytes
+		boolean swapRB = System.getenv("DEEP3D_SWAP_RB") != null;
 		int need = t.getWidth() * t.getHeight() * 4;
 		if (texScratch.capacity() < need) {
 			MemoryUtil.memFree(texScratch);
@@ -519,6 +568,13 @@ public final class GLRender {
 		texScratch.clear();
 		byte[] tmp = new byte[need];
 		raster.get(tmp, 0, need);
+		if (swapRB) {
+			for (int k = 0; k < need; k += 4) {
+				byte r = tmp[k];
+				tmp[k] = tmp[k + 2];
+				tmp[k + 2] = r;
+			}
+		}
 		texScratch.put(tmp).flip();
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, t.getWidth(), t.getHeight(), 0,
 				GL_RGBA, GL_UNSIGNED_BYTE, texScratch);
@@ -683,7 +739,11 @@ public final class GLRender {
 				setTexture(p, face < textures.length ? textures[face] : null);
 				int cnt = lens[0];
 				if (cnt > 0) {
-					glEnable(GL_CULL_FACE);
+					if (NOCULL_BLEND && flushStep == 2) {
+						glDisable(GL_CULL_FACE);
+					} else {
+						glEnable(GL_CULL_FACE);
+					}
 					glDrawArrays(GL_TRIANGLES, pos, cnt);
 					pos += cnt;
 				}

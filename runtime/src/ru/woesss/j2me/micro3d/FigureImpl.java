@@ -29,6 +29,9 @@ import javax.microedition.shell.AppClassLoader;
 
 public class FigureImpl {
 	final Stack<RenderNode.FigureNode> stack = new Stack<>();
+	/** Deep3D-PC: view-depth band over which this model dithers out (0 = off). */
+	public volatile float fadeStart;
+	public volatile float fadeEnd;
 	Model model;
 	private int pattern;
 

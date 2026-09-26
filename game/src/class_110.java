@@ -115,6 +115,13 @@ public final class class_110 extends class_101 {
       }
    }
 
+   // Deep3D-PC: distance fade for creature models (hides spawn/despawn pop).
+   public final void setDistanceFade(int var1, int var2) {
+      if (this.field_1356 != null) {
+         this.field_1356.setDistanceFade(var1, var2);
+      }
+   }
+
    // $VF: renamed from: g (int) void
    public final void method_877(int var1) {
       this.field_1365 = var1;

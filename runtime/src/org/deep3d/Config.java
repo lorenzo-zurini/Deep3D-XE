@@ -51,6 +51,20 @@ public final class Config {
     private Config() {
     }
 
+    /**
+     * Distance beyond which the game draws a scaled-down stand-in instead of
+     * the real object (a phone trick to stay inside its 31768 far plane).
+     * Moved out to just inside the extended far plane.
+     */
+    public static int impostorDistance() {
+        return Math.max(30000, farPlane() - 1768);
+    }
+
+    /** Creature active radius multiplier (kept modest: it thins population). */
+    public static int creatureRangeScale() {
+        return org.deep3d.gl.GLBackend.isActive() ? Math.min(viewDistance, 2) : 1;
+    }
+
     /** Camera far plane in world units (software renderer keeps the original). */
     public static int farPlane() {
         if (!org.deep3d.gl.GLBackend.isActive()) {

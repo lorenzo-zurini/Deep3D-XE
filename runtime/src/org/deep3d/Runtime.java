@@ -713,6 +713,24 @@ public final class Runtime {
             case "mw":
                 GameUi.mouseWheel(Integer.parseInt(parts[1]));
                 break;
+            case "call": {
+                // test hook: "call <class> <static int-method> <int arg>"
+                final String cls = parts[1];
+                final String m = parts[2];
+                final int arg = Integer.parseInt(parts[3]);
+                postEvent(() -> {
+                    try {
+                        Object r = Class.forName(cls).getMethod(m, int.class).invoke(null, arg);
+                        System.out.println("[call] " + cls + "." + m + "(" + arg + ") -> " + r);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        System.out.println("[call] threw:");
+                        e.getCause().printStackTrace(System.out);
+                    } catch (Exception e) {
+                        System.out.println("[call] failed: " + e);
+                    }
+                });
+                break;
+            }
             case "stick":
                 AnalogInput.setStick(Float.parseFloat(parts[1]), Float.parseFloat(parts[2]));
                 break;
@@ -727,7 +745,8 @@ public final class Runtime {
                 int fps = displayFps;
                 long perFrame = fps > 0 ? raster / Math.max(1, fps) / 1_000_000 : 0;
                 System.out.println("[fps] " + fps + " @ " + screenWidth + "x" + screenHeight
-                        + " raster=" + perFrame + "ms/frame");
+                        + " raster=" + perFrame + "ms/frame"
+                        + " bg=#" + Integer.toHexString(org.deep3d.gl.GLBackend.lastBackground));
                 break;
             }
             case "shot": {

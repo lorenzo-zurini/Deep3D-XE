@@ -36,6 +36,12 @@ public class Figure {
 	}
 
 	@SuppressWarnings("unused")
+	/** Deep3D-PC extension: fade this model out between two view distances. */
+	public final void setDistanceFade(int start, int end) {
+		impl.fadeStart = start;
+		impl.fadeEnd = end;
+	}
+
 	public final void dispose() {
 		impl.dispose();
 	}

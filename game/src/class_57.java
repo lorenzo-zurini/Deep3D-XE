@@ -220,6 +220,9 @@ public final class class_57 {
       ((class_91)this.field_778[1]).method_775();
       short[][] var8 = new short[][]{{255, 255, 128}, {98, 118, 255}, {234, 149, 55}, {239, 90, 95}, {154, 220, 109}};
       byte[] var9 = class_44.method_440(class_3.method_110());
+      if (System.getenv("DEEP3D_DEBUG_WATER") != null) {
+         System.out.println("[water] zone data " + java.util.Arrays.toString(var9));
+      }
 
       for (int var5 = 0; var5 < var9.length; var5 += 2) {
          if (var9[var5] > 12 && var9[var5] < 18) {

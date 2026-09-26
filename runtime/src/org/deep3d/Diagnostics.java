@@ -41,7 +41,13 @@ public final class Diagnostics {
     public static void init() {
         File dir = AppDirs.dir("logs");
         try {
-            OutputStream file = new FileOutputStream(new File(dir, "deep3d.log"));
+            File log = new File(dir, "deep3d.log");
+            if (log.isFile()) {
+                File prev = new File(dir, "deep3d.prev.log");
+                prev.delete();
+                log.renameTo(prev);
+            }
+            OutputStream file = new FileOutputStream(log);
             System.setOut(new PrintStream(new Tee(System.out, file), true));
             System.setErr(new PrintStream(new Tee(System.err, file), true));
         } catch (IOException e) {
