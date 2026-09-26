@@ -28,11 +28,16 @@ public final class class_114 extends class_113 {
          var2.printStackTrace();
       }
 
-      this.field_1386 = System.currentTimeMillis();
-      this.field_1387 = 0;
       this.field_1385 = true;
       this.field_1388 = 0;
-      ;
+      // Deep3D-PC: no music on/off prompt; music is on (volume lives in the
+      // PC options). Same effect as confirming "Music On".
+      class_41.field_497 = true;
+      class_41.field_500 = 1;
+      class_41.field_539.method_422(100);
+      class_41.field_539.method_425(0);
+      this.field_1386 = System.currentTimeMillis();
+      this.field_1387 = 1;
    }
 
    // $VF: renamed from: b () void

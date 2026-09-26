@@ -524,6 +524,7 @@ public final class Runtime {
     }
 
     public static void tickFpsCounter() {
+        Diagnostics.frame();
         GameUi.commitFrame();
         frameCounter++;
         long now = System.currentTimeMillis();
@@ -540,6 +541,7 @@ public final class Runtime {
 
     /** Copy a full-screen frame onto the visible screen and repaint. */
     public static void present(BufferedImage frameBuffer) {
+        Diagnostics.frame();
         GameUi.commitFrame();
         synchronized (Runtime.class) {
             Graphics2D g = screen.createGraphics();
@@ -710,6 +712,9 @@ public final class Runtime {
                 break;
             case "mw":
                 GameUi.mouseWheel(Integer.parseInt(parts[1]));
+                break;
+            case "stick":
+                AnalogInput.setStick(Float.parseFloat(parts[1]), Float.parseFloat(parts[2]));
                 break;
             case "sel":
                 GameUi.selectByText(parts[1].replace('_', ' '));

@@ -37,9 +37,10 @@ public final class class_16 {
    // $VF: renamed from: f int
    private int field_216;
    // $VF: renamed from: g int
-   private int field_217;
+   // Deep3D-PC: float so a controller stick can command partial rates.
+   private float field_217;
    // $VF: renamed from: h int
-   private int field_218;
+   private float field_218;
    // $VF: renamed from: i int
    private int field_219;
    // $VF: renamed from: a int
@@ -488,6 +489,25 @@ public final class class_16 {
       if (this.field_219 > -384) {
          this.field_219 = (int)(this.field_219 - var1);
       }
+   }
+
+   /**
+    * Deep3D-PC: analogue steering. yaw > 0 turns left (like method_254),
+    * pitch uses the same sign as method_256/257. Magnitudes 0..1 scale the
+    * turn rate and the visual bank.
+    */
+   public final void steerAnalog(long var1, float yaw, float pitch) {
+      this.field_218 = yaw;
+      float bankLimit = 384.0F * Math.abs(yaw);
+      if (yaw > 0.0F) {
+         if (this.field_219 < bankLimit) {
+            this.field_219 = (int)(this.field_219 + var1);
+         }
+      } else if (yaw < 0.0F && this.field_219 > -bankLimit) {
+         this.field_219 = (int)(this.field_219 - var1);
+      }
+
+      this.field_217 = pitch;
    }
 
    // $VF: renamed from: e (long) void

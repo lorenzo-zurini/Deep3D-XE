@@ -51,7 +51,6 @@ public final class GameUi {
     private static volatile boolean clickPending;
     private static volatile int wheelSteps;
 
-    private static boolean musicPromptHandled;
     private static volatile String selectTarget;   // test pipe: select-by-text
 
     /* Selection walking waits for the game to act on the previous step:
@@ -155,7 +154,6 @@ public final class GameUi {
         buildingBarLeft = null;
         buildingBarRight = null;
 
-        autoSkipMusicPrompt(snapshot);
         applySelectTarget(snapshot);
         applyMouseIntent(snapshot);
     }
@@ -197,21 +195,6 @@ public final class GameUi {
 
     public static boolean menuVisible() {
         return !visible.isEmpty();
-    }
-
-    private static void autoSkipMusicPrompt(List<Item> items) {
-        if (musicPromptHandled) {
-            return;
-        }
-        if (items.size() == 2
-                && items.get(0).text != null && items.get(0).text.startsWith("Music")) {
-            musicPromptHandled = true;
-            // Music prompt is a phone-ism; audio lives in our options.
-            tap(-6);
-        } else if (!items.isEmpty()) {
-            // First menu was something else: never auto-press afterwards.
-            musicPromptHandled = true;
-        }
     }
 
     private static void applyMouseIntent(List<Item> items) {

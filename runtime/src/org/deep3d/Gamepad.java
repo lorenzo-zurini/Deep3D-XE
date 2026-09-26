@@ -95,6 +95,8 @@ public final class Gamepad {
         boolean[] dir = new boolean[4];        // up, down, left, right
         boolean lt = false;
         boolean rt = false;
+        float stickX = 0;
+        float stickY = 0;
         try (FileInputStream in = new FileInputStream(path)) {
             status = "Connected";
             byte[] ev = new byte[8];
@@ -120,6 +122,13 @@ public final class Gamepad {
                 if (type == 0x01) {
                     handleButton(number, value != 0);
                 } else if (type == 0x02) {
+                    if (number == AXIS_LX) {
+                        stickX = value / 32767f;
+                        AnalogInput.setStick(stickX, stickY);
+                    } else if (number == AXIS_LY) {
+                        stickY = value / 32767f;
+                        AnalogInput.setStick(stickX, stickY);
+                    }
                     switch (number) {
                         case AXIS_LX:
                         case AXIS_HATX:
@@ -143,6 +152,7 @@ public final class Gamepad {
                 }
             }
         } catch (IOException e) {
+            AnalogInput.setStick(0, 0);
             // Release anything still held so the game does not get stuck keys.
             if (dir[0]) Input.handleAction(Input.Action.UP, false);
             if (dir[1]) Input.handleAction(Input.Action.DOWN, false);

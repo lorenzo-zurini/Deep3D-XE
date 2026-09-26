@@ -376,6 +376,20 @@ public final class class_116 extends class_113 {
                      this.field_1407.method_237(this.field_1401);
                   }
 
+                  // Deep3D-PC: analogue stick steering overrides the digital
+                  // direction bits while the stick is deflected.
+                  if (org.deep3d.AnalogInput.active()) {
+                     var1 &= ~(2 | 4 | 32 | 64);
+                     float var90 = -org.deep3d.AnalogInput.x();
+                     float var91 = -org.deep3d.AnalogInput.y();
+                     if (this.field_1407.field_240) {
+                        class_4.method_154(7, this.field_1407);
+                     } else {
+                        this.field_1407.steerAnalog(this.field_1401, var90,
+                              class_41.field_499 ? var91 : -var91);
+                     }
+                  }
+
                   if ((var1 & 4) != 0) {
                      if (this.field_1407.field_240) {
                         class_4.method_154(7, this.field_1407);

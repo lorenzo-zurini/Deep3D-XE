@@ -199,6 +199,11 @@ public final class Input {
                 Overlay.toggle();
                 return;
             }
+            if (code == KeyEvent.VK_F9) {
+                java.io.File f = Diagnostics.dump("manual", "F9 pressed");
+                Overlay.showToast("Diagnostics saved: logs/" + f.getName());
+                return;
+            }
             if (code == KeyEvent.VK_ESCAPE) {
                 // PC semantics: Esc backs out of game menus; otherwise it
                 // opens the pause overlay (F10 always opens it).
@@ -219,8 +224,8 @@ public final class Input {
                 }
                 return;
             }
-            if (code == KeyEvent.VK_F10 || code == KeyEvent.VK_F11
-                    || code == KeyEvent.VK_F12) {
+            if (code == KeyEvent.VK_F9 || code == KeyEvent.VK_F10
+                    || code == KeyEvent.VK_F11 || code == KeyEvent.VK_F12) {
                 return;
             }
         }

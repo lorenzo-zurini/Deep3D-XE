@@ -12,6 +12,7 @@ public final class Main {
 
     public static void main(String[] args) throws Exception {
         Config.load();
+        Diagnostics.init();
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
