@@ -37,9 +37,9 @@ public final class class_70 {
    // $VF: renamed from: f int
    private int field_983;
    // $VF: renamed from: g int
-   private int field_984;
+   private float field_984; // Deep3D-PC: float, for partial stick deflection
    // $VF: renamed from: h int
-   private int field_985;
+   private float field_985;
    // $VF: renamed from: i int
    private int field_986;
    // $VF: renamed from: a int
@@ -487,6 +487,19 @@ public final class class_70 {
       if (this.field_986 > -384) {
          this.field_986 = (int)(this.field_986 - var1);
       }
+   }
+
+   // Deep3D-PC: analogue steering, -1..1 per axis; signs as method_673
+   // (yaw > 0 = left) and method_675 (pitch). Bank follows the yaw amount.
+   public final void steerAnalog(long var1, float yaw, float pitch) {
+      this.field_985 = yaw;
+      float bank = 384.0F * Math.abs(yaw);
+      if (yaw > 0.0F && this.field_986 < bank) {
+         this.field_986 = (int)(this.field_986 + var1);
+      } else if (yaw < 0.0F && this.field_986 > -bank) {
+         this.field_986 = (int)(this.field_986 - var1);
+      }
+      this.field_984 = pitch;
    }
 
    // $VF: renamed from: e (long) void

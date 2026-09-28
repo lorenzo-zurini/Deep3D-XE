@@ -23,6 +23,15 @@ official English text from the international release.
   off it runs at well over a thousand FPS at 1080p on a GTX 1070.
 - **Smooth or original texturing** — trilinear + 16x anisotropic
   filtering, or the phones' crisp nearest-neighbour look.
+- **Extended view distance** (up to 8x the original far plane), with the
+  station impostor distance and the creature radius scaled to match.
+- **PC-native menus everywhere** — the game's own menus are mouse-driven
+  (hover moves the selection, click confirms, right-click/Esc backs out,
+  wheel scrolls) with their original look; the phone softkey boxes are
+  replaced by an Enter/Esc command bar in the same style, name entry uses
+  real keyboard typing, and help texts name your actual key bindings.
+- **Analogue steering** with a controller stick; no music on/off prompt
+  (volume is in the options).
 - **Launches fullscreen at your display's native resolution** in true
   widescreen; VSync toggle, FPS limit (Off/30/60/120), FPS counter.
 - **Resolution-independent UI scale** — the interface keeps its classic
@@ -141,6 +150,11 @@ extract-assets.sh / build.sh / run.sh / package.sh
   Its `System.gc()` calls are neutralised by the launcher
   (`-XX:+DisableExplicitGC`), and the English text is installed where the
   Nokia build reads its language, so neither needs a code change.
+  On top of that clean baseline, the PC features are small hooks marked
+  `Deep3D-PC` (grep for it): command bar and menu/mouse registration
+  (class_67), keyboard typing (class_32), key names in texts (class_1),
+  music prompt (class_62), analogue steering (class_64/class_70) and view
+  distance (class_3/39/64/65/95/99/100/101).
 - **Graphics (2D)**: MIDP `Graphics` calls are recorded as a command stream
   and replayed by the GPU at the window's native resolution (or drawn with
   Java2D in the software fallback).

@@ -49,8 +49,29 @@ public final class class_32 {
       }
    }
 
+   // Deep3D-PC: characters typed on a real keyboard (multi-tap still works).
+   private void typeFromKeyboard() {
+      org.deep3d.GameUi.textEntryTick();
+      String typed = org.deep3d.GameUi.pollTypedText();
+      for (int i = 0; i < typed.length(); i++) {
+         char c = typed.charAt(i);
+         if (c == '\b') {
+            if (this.field_327.length() > 0) {
+               this.field_327 = this.field_327.substring(0, this.field_327.length() - 1);
+            }
+         } else if (this.field_327.length() < this.field_321 && (Character.isLetterOrDigit(c) || c == ' ')) {
+            this.field_327 = this.field_327 + c;
+         } else {
+            continue;
+         }
+         this.field_326 = ' ';
+         this.field_323 = 0;
+      }
+   }
+
    // $VF: renamed from: a (int) int
    public final int method_290(int var1) {
+      this.typeFromKeyboard(); // Deep3D-PC
       this.field_325 += var1;
       if (this.field_328 == 16384) {
          return 0;

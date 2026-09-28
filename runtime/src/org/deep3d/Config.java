@@ -22,6 +22,8 @@ public final class Config {
     /** "gl" = OpenGL (GPU), "software" = CPU rasterizer fallback. */
     public static String renderer = "gl";
     public static boolean vsync = true;
+    /** View distance: multiple of the original 31768 far plane (1..8). */
+    public static int viewDistance = 8;
     /** GL mode UI scale: 0 = auto (match classic proportions), else 1..6. */
     public static int uiScale = 0;
     /** Software renderer only: "auto", "half" or "fixed" presets. */
@@ -48,6 +50,24 @@ public final class Config {
     private Config() {
     }
 
+    /** Camera far plane in world units. */
+    public static int farPlane() {
+        return 31768 * viewDistance;
+    }
+
+    /**
+     * Beyond this distance the game swaps stations for scaled-down stand-ins
+     * kept inside the phone's far plane; moved out to the extended plane.
+     */
+    public static int impostorDistance() {
+        return Math.max(30000, farPlane() - 1768);
+    }
+
+    /** Creature spawn / despawn radius multiplier (larger thins them out). */
+    public static int creatureRange() {
+        return Math.min(viewDistance, 2);
+    }
+
     public static void load() {
         if (FILE.isFile()) {
             try (FileInputStream in = new FileInputStream(FILE)) {
@@ -67,6 +87,7 @@ public final class Config {
         }
         renderer = props.getProperty("display.renderer", renderer);
         vsync = getBool("display.vsync", vsync);
+        viewDistance = Math.max(1, Math.min(8, getInt("display.view_distance", viewDistance)));
         uiScale = Math.max(0, Math.min(6, getInt("display.ui_scale", uiScale)));
         resolutionMode = props.getProperty("display.resolution_mode", resolutionMode);
         internalWidth = getInt("display.internal_width", internalWidth);
@@ -89,6 +110,7 @@ public final class Config {
         props.setProperty("config.version", "2");
         props.setProperty("display.renderer", renderer);
         props.setProperty("display.vsync", String.valueOf(vsync));
+        props.setProperty("display.view_distance", String.valueOf(viewDistance));
         props.setProperty("display.ui_scale", String.valueOf(uiScale));
         props.setProperty("display.resolution_mode", resolutionMode);
         props.setProperty("display.texture_filter", String.valueOf(textureFilter));

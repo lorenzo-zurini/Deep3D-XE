@@ -87,7 +87,7 @@ public final class class_65 extends class_61 {
                   this.field_835[var2] = class_43.method_381(class_90.field_1205[var1[var2].field_863]);
                }
 
-               this.field_825 = class_106.method_886(class_84.field_1120, class_84.field_1121, 800, 100, 31768);
+               this.field_825 = class_106.method_886(class_84.field_1120, class_84.field_1121, 800, 100, org.deep3d.Config.farPlane());
                this.field_825.method_843(0, 1000, -1400);
                this.field_825.method_860(400, 2048, 0);
                this.field_836 = new class_103();
@@ -149,7 +149,7 @@ public final class class_65 extends class_61 {
    public final void method_569(int var1) {
       this.field_833 = var1;
       if (this.field_825 == null) {
-         this.field_825 = class_106.method_886(class_84.field_1120, class_84.field_1121, 800, 100, 31768);
+         this.field_825 = class_106.method_886(class_84.field_1120, class_84.field_1121, 800, 100, org.deep3d.Config.farPlane());
          this.field_825.method_843(0, 1000, -2200);
          this.field_825.method_860(400, 2048, 0);
          this.field_836 = new class_103();

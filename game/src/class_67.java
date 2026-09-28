@@ -159,6 +159,7 @@ public final class class_67 {
 
    // $VF: renamed from: a (java.lang.String, int, int, int, boolean, boolean, boolean) void
    public static final void method_585(String var0, int var1, int var2, int var3, boolean var4, boolean var5, boolean var6) {
+      org.deep3d.GameUi.registerItem(var0, var1, var2, var3, 12, var4); // Deep3D-PC: mouse
       int var7 = class_58.method_523(var0);
       if (var4) {
          class_84.field_1117.setColor(field_844);
@@ -309,36 +310,42 @@ public final class class_67 {
    }
 
    // $VF: renamed from: a (java.lang.String, java.lang.String, boolean, boolean) void
+   // Deep3D-PC: the phone's softkey boxes become a PC command bar (same
+   // palette and font) naming the actual keys; zones take mouse clicks.
    public static final void method_602(String var0, String var1, boolean var2, boolean var3) {
-      class_84.field_1117.setColor(field_845);
-      if ((!field_861 || field_860 <= 0 || var0 == "") && !field_862) {
-         class_84.field_1117.setColor(field_846);
-      } else {
-         class_84.field_1117.setColor(field_844);
-      }
-
-      class_84.field_1117.fillRect(1, class_84.field_1121 - 3 - field_852, field_850, field_852);
-      if (!field_861 && field_860 > 0 && var1 != "") {
-         class_84.field_1117.setColor(field_844);
-      } else {
-         class_84.field_1117.setColor(field_846);
-      }
-
-      class_84.field_1117.fillRect(class_84.field_1120 - field_850 - 1, class_84.field_1121 - 3 - field_852, field_850 - 1, field_852);
-      class_84.field_1117.setColor(field_846);
-      class_84.field_1117.fillRect(3 + field_850, class_84.field_1121 - 3 - field_852, field_851, field_852);
-      class_84.field_1117.setColor(field_844);
-      class_84.field_1117.drawRect(1, class_84.field_1121 - 3 - field_852, field_850, field_852);
-      class_84.field_1117.drawRect(class_84.field_1120 - field_850 - 1, class_84.field_1121 - 3 - field_852, field_850 - 1, field_852);
-      class_84.field_1117.drawRect(3 + field_850, class_84.field_1121 - 3 - field_852, field_851, field_852);
-      method_599(var0, 1 + (field_850 >> 1), class_84.field_1121 - 2, field_850 + 2, 1, 40);
-      method_599(var1, class_84.field_1120 - 1 - (field_850 >> 1), class_84.field_1121 - 2, field_850 + 2, 1, 40);
+      javax.microedition.lcdui.Graphics g = class_84.field_1117;
+      int h = field_852;
+      int y = class_84.field_1121 - 3 - h;
+      int w = class_84.field_1120;
+      g.setColor(field_847);
+      g.fillRect(0, y - 2, w, h + 5);
+      g.setColor(field_844);
+      g.drawLine(0, y - 2, w, y - 2);
+      int lw = drawCommand(var0, org.deep3d.GameUi.confirmKeyLabel(), 2, y, h, false, field_861 && field_860 > 0);
+      int rw = drawCommand(var1, org.deep3d.GameUi.backKeyLabel(), w - 2, y, h, true, !field_861 && field_860 > 0);
+      org.deep3d.GameUi.registerBarZones(2, y, lw, h, w - 2 - rw, y, rw, h);
       if (var2) {
-         method_590(class_21.method_182(), false, class_84.field_1120 >> 1, class_84.field_1121 - 2, 0, 40);
-      } else {
-         if (var3) {
-            class_84.field_1117.drawImage(field_855, class_84.field_1120 >> 1, class_84.field_1121 - 3, 33);
-         }
+         method_590(class_21.method_182(), false, w >> 1, class_84.field_1121 - 2, 0, 40);
+      } else if (var3) {
+         g.drawImage(field_855, w >> 1, class_84.field_1121 - 3, 33);
       }
+   }
+
+   // Deep3D-PC: one "[key] label" chip of the command bar; returns its width.
+   private static int drawCommand(String label, String key, int x, int y, int h, boolean alignRight, boolean lit) {
+      if (label == null || label.equals("")) {
+         return 0;
+      }
+      javax.microedition.lcdui.Graphics g = class_84.field_1117;
+      int kw = class_58.method_523(key);
+      int cw = kw + class_58.method_523(label) + 16;
+      int cx = alignRight ? x - cw : x;
+      g.setColor(lit ? field_844 : field_846);
+      g.fillRect(cx, y, cw, h);
+      g.setColor(field_844);
+      g.drawRect(cx, y, cw, h);
+      class_58.method_518(key, cx + 4, y, 1);
+      class_58.method_518(label, cx + 4 + kw + 7, y, 0);
+      return cw;
    }
 }

@@ -33,6 +33,13 @@ public final class class_62 extends class_61 {
       this.field_726 = true;
       this.field_729 = 0;
       System.gc();
+      // Deep3D-PC: no music on/off prompt; same as confirming "Music On"
+      // (volume lives in the PC options).
+      class_84.field_1080 = true;
+      class_84.field_1083 = 1;
+      class_84.field_1122.method_765(100);
+      class_84.field_1122.method_768(0);
+      this.field_728 = 1;
    }
 
    // $VF: renamed from: b () void
