@@ -399,14 +399,6 @@ public final class Overlay {
                 () -> Config.antialiasing ? "4x MSAA" : "Off",
                 d -> Config.antialiasing = !Config.antialiasing);
         items.add(aa);
-        Item vd = Item.choice("  View distance",
-                () -> Config.viewDistance == 1 ? "Original"
-                        : Config.viewDistance == 8 ? "Max (8x)"
-                        : Config.viewDistance + "x",
-                d -> Config.viewDistance = Math.max(1, Math.min(8,
-                        Config.viewDistance + (d == 0 ? 1 : d))));
-        vd.note = "applies on next area load";
-        items.add(vd);
     }
 
     /** Pushes graphics settings that are not read every frame. */

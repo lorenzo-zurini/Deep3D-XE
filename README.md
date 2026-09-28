@@ -25,16 +25,13 @@ official English text from the international release.
   game looks as it did on the phone: the whole frame is rendered at the
   phone's resolution (its 320 lines, widened to your screen's aspect
   ratio so pixels stay square, or the 240x320 phone screen itself), scaled
-  up sharply, in the phones' 4096 colours (the banding in real-hardware
-  footage), with crisp textures and the original view distance.
+  up sharply, with the phones' 16-bit textures (the banding in
+  real-hardware footage) and crisp texture filtering.
   **Enhanced graphics** turns on, each with its own toggle:
   - native resolution (with the UI scale option),
-  - full colour depth,
+  - full texture colours,
   - smooth textures (trilinear + 16x anisotropic filtering),
-  - 4x MSAA antialiasing,
-  - extended view distance (up to 8x the original far plane, with the
-    station impostor distance moved out to match; creatures keep the
-    phone's numbers, radius and behaviour).
+  - 4x MSAA antialiasing.
 - **One control scheme for every screen** — the game's own screens keep
   their original look but are fully drivable by mouse, keyboard or
   controller with the same logic everywhere (A / Enter confirm, B / Esc
@@ -179,8 +176,7 @@ build.sh / run.sh / package.sh
   On top of that clean baseline, the PC features are small hooks marked
   `Deep3D-PC` (grep for it): command bar and menu/mouse registration
   (class_67), keyboard typing (class_32), key names in texts (class_1),
-  music prompt (class_62), analogue steering (class_64/class_70) and view
-  distance (class_3/39/64/65/95/99/100/101).
+  music prompt (class_62) and analogue steering (class_64/class_70).
 - **Graphics (2D)**: MIDP `Graphics` calls are recorded as a command stream
   and replayed by the GPU at the window's native resolution (or drawn with
   Java2D in the software fallback).

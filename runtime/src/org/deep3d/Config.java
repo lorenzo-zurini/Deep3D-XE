@@ -27,8 +27,7 @@ public final class Config {
      * Graphics. Off, "Enhanced" keeps the phone's look: the whole frame at
      * the phone's resolution (square pixels, widened to the display's
      * aspect ratio or as the 240x320 phone screen), 16-bit textures, crisp
-     * texture filtering, original view distance. On, each sub-option below
-     * applies.
+     * texture filtering. On, each sub-option below applies.
      */
     public static boolean enhanced = false;
     /** Original look: "widescreen" (320 lines) or "phone" (240x320). */
@@ -42,8 +41,6 @@ public final class Config {
     public static boolean antialiasing = true;
     /** Enhanced: full texture colour instead of the phones' 16-bit texels. */
     public static boolean fullColour = true;
-    /** Enhanced: multiple of the original 31768 far plane (1..8). */
-    public static int viewDistance = 8;
     /** Enhanced + native resolution UI scale: 0 = auto, else 1..6. */
     public static int uiScale = 0;
     /** Software renderer only: "auto", "half" or "fixed" presets. */
@@ -85,24 +82,6 @@ public final class Config {
         return enhanced && fullColour;
     }
 
-    public static int viewDistanceOn() {
-        return enhanced ? viewDistance : 1;
-    }
-
-    /** Camera far plane in world units (31768 on the phone). */
-    public static int farPlane() {
-        return 31768 * viewDistanceOn();
-    }
-
-    /**
-     * Beyond this distance the game swaps stations for scaled-down stand-ins
-     * kept inside the phone's far plane; moved out to the extended plane.
-     */
-    public static int impostorDistance() {
-        return Math.max(30000, farPlane() - 1768);
-    }
-
-
     public static void load() {
         if (FILE.isFile()) {
             try (FileInputStream in = new FileInputStream(FILE)) {
@@ -128,7 +107,6 @@ public final class Config {
         nativeResolution = getBool("graphics.native_resolution", nativeResolution);
         antialiasing = getBool("graphics.antialiasing", antialiasing);
         fullColour = getBool("graphics.full_colour", fullColour);
-        viewDistance = Math.max(1, Math.min(8, getInt("display.view_distance", viewDistance)));
         uiScale = Math.max(0, Math.min(6, getInt("display.ui_scale", uiScale)));
         resolutionMode = props.getProperty("display.resolution_mode", resolutionMode);
         internalWidth = getInt("display.internal_width", internalWidth);
@@ -157,7 +135,6 @@ public final class Config {
         props.setProperty("graphics.native_resolution", String.valueOf(nativeResolution));
         props.setProperty("graphics.antialiasing", String.valueOf(antialiasing));
         props.setProperty("graphics.full_colour", String.valueOf(fullColour));
-        props.setProperty("display.view_distance", String.valueOf(viewDistance));
         props.setProperty("display.ui_scale", String.valueOf(uiScale));
         props.setProperty("display.resolution_mode", resolutionMode);
         props.setProperty("display.texture_filter", String.valueOf(textureFilter));
