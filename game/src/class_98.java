@@ -14,6 +14,9 @@ public class class_98 extends class_91 {
       this.field_1300 = var3;
       this.field_1301 = var4;
       this.field_1302 = var5;
+      if (var2 != null) {
+         var2.deep3dNoCull = true; // Deep3D-PC: structures are never culled
+      }
    }
 
    // $VF: renamed from: a (long) void

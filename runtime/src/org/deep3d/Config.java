@@ -85,7 +85,7 @@ public final class Config {
 
     /** The flight camera's base field of view in game angle units (4096 = 360 degrees). */
     public static int flightFov() {
-        return Math.round(fov * 4096f / 360f);
+        return (int) (fov * 4096f / 360f);
     }
 
     public static void load() {

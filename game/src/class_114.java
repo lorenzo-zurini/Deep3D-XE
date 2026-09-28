@@ -67,7 +67,9 @@ public class class_114 extends class_112 {
    // $VF: renamed from: d () void
    public final void method_887() {
       super.field_1409.method_50();
-      if (super.field_1411 != null) {
+      // Deep3D-PC: not while parked at x 50000 (unfired): the phone's far
+      // plane hid it there, the PC's reaches it (see class_112)
+      if (super.field_1411 != null && super.field_1409.field_78[0].field_37 != 50000) {
          class_84.field_1110.method_25(super.field_1411);
       }
 

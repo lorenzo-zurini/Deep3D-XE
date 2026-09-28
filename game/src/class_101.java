@@ -52,6 +52,7 @@ public final class class_101 extends class_91 {
    public class_101(int var1, class_108 var2, class_40 var3, int var4, int var5, int var6) {
       super(var1, false, new class_37(1500.0F, var3.field_392 * 2, 0), var2, var4, var5, var6);
       super.field_1225.field_379 = this;
+      var2.deep3dNoCull = true; // Deep3D-PC: ships are never culled
       this.field_1312 = var3;
       this.field_1331 = var1 == 4444 || var1 == 4445 || var1 == 4443 || var1 == 4446 || var1 == 4447;
       if (this.field_1331) {
@@ -85,6 +86,7 @@ public final class class_101 extends class_91 {
       if (var1 == 4424 || var1 == 4427 || var1 == 4430 || var1 == 4432 || var1 == 4434 || var1 == 4440 || var1 == 4436 || var1 == 4438) {
          this.field_1317 = class_43.method_381(var1 + 1);
          this.field_1317.field_1367 = 2;
+         this.field_1317.deep3dNoCull = true; // Deep3D-PC
          this.field_1317.method_870(super.field_1226.field_1341);
       }
 
@@ -371,10 +373,6 @@ public final class class_101 extends class_91 {
 
    // $VF: renamed from: c () void
    public final void method_809() {
-      if (deep3dBeyondPhoneFar(super.field_1226)) { // Deep3D-PC: see class_91
-         return;
-      }
-
       if (this.field_1317 != null) {
          class_84.field_1110.method_25(this.field_1317);
       }

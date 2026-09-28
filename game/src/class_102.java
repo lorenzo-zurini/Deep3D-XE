@@ -8,6 +8,8 @@ public abstract class class_102 {
    public class_102 field_1337;
    // $VF: renamed from: a boolean
    public boolean field_1338;
+   // Deep3D-PC: never frustum-culled (ships and structures: few, low-poly)
+   public boolean deep3dNoCull;
    // $VF: renamed from: b boolean
    public boolean field_1339;
    // $VF: renamed from: c boolean
@@ -33,6 +35,7 @@ public abstract class class_102 {
 
    public class_102(class_102 var1) {
       this.field_1338 = var1.field_1338;
+      this.deep3dNoCull = var1.deep3dNoCull;
       this.field_1341 = new class_57(var1.field_1341);
       this.field_1342 = new class_57(var1.field_1342);
       this.field_1343 = new class_15(var1.field_1343);
