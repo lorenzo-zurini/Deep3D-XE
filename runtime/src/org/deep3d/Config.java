@@ -26,8 +26,9 @@ public final class Config {
     /*
      * Graphics. Off, "Enhanced" keeps the phone's look: the whole frame at
      * the phone's resolution (square pixels, widened to the display's
-     * aspect ratio or as the 240x320 phone screen), 12-bit colour, crisp
-     * textures, original view distance. On, each sub-option below applies.
+     * aspect ratio or as the 240x320 phone screen), 16-bit textures, crisp
+     * texture filtering, original view distance. On, each sub-option below
+     * applies.
      */
     public static boolean enhanced = false;
     /** Original look: "widescreen" (320 lines) or "phone" (240x320). */
@@ -39,7 +40,7 @@ public final class Config {
     public static boolean textureFilter = true;
     /** Enhanced: multisampled 3D. */
     public static boolean antialiasing = true;
-    /** Enhanced: 24-bit colour instead of the phones' 4096 colours. */
+    /** Enhanced: full texture colour instead of the phones' 16-bit texels. */
     public static boolean fullColour = true;
     /** Enhanced: multiple of the original 31768 far plane (1..8). */
     public static int viewDistance = 8;

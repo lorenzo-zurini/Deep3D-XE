@@ -325,7 +325,7 @@ public final class Overlay {
                     Config.enhanced = !Config.enhanced;
                     applyGraphics();
                 });
-        enh.note = Config.enhanced ? null : "as on the phone: 4096 colours, phone resolution";
+        enh.note = Config.enhanced ? null : "as on the phone: its resolution and 16-bit textures";
         items.add(enh);
         if (!Config.enhanced) {
             if (gl) {
@@ -357,10 +357,13 @@ public final class Overlay {
                             applyGraphics();
                         }));
             }
-            items.add(Item.choice("  Colour depth",
-                    () -> Config.fullColour ? "Full" : "4096 colours (phone)",
-                    d -> Config.fullColour = !Config.fullColour));
         }
+        items.add(Item.choice("  Texture colours",
+                () -> Config.fullColour ? "Full" : "16-bit (phone)",
+                d -> {
+                    Config.fullColour = !Config.fullColour;
+                    applyGraphics();
+                }));
         items.add(Item.choice("  Textures",
                 () -> Config.textureFilter ? "Smooth" : "Crisp (original)",
                 d -> {
@@ -384,6 +387,7 @@ public final class Overlay {
     /** Pushes graphics settings that are not read every frame. */
     static void applyGraphics() {
         javax.microedition.m3g.Platform.setTextureFilter(Config.smoothTexturesOn());
+        javax.microedition.m3g.Platform.setPhoneTextures(!Config.fullColourOn());
         if (org.deep3d.gl.GLBackend.isActive()) {
             org.deep3d.gl.GLBackend.updateVirtualSize();
         }

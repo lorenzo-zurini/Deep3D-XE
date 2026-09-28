@@ -71,6 +71,9 @@ struct M3GImageImpl
      * deleted until we are */
     
     Image *copyOf;
+
+    /* Deep3D-PC: texture-depth setting this image was uploaded with */
+    M3Gint deep3dGen;
 };
 
 /*!

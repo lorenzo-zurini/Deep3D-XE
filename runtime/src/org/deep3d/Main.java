@@ -46,6 +46,7 @@ public final class Main {
         Runtime.setAppProperty("MIDlet-Version", "1.0.8");
 
         javax.microedition.m3g.Platform.setTextureFilter(Config.smoothTexturesOn());
+        javax.microedition.m3g.Platform.setPhoneTextures(!Config.fullColourOn());
 
         AudioSettings.master = Config.masterVolume;
         AudioSettings.music = Config.musicVolume;

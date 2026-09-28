@@ -100,6 +100,21 @@ public class Platform {
 
 	private static volatile boolean textureFilter = true;
 
+	private static native void _setPhoneTextures(boolean phone);
+
+	private static volatile boolean phoneTextures;
+
+	/**
+	 * Deep3D-PC: store textures at the phones' 16 bits per texel (RGBA4444 /
+	 * RGB565), which bands gradients as on real hardware; false = full depth.
+	 */
+	public static synchronized void setPhoneTextures(boolean phone) {
+		phoneTextures = phone;
+		if (libraryLoaded) {
+			_setPhoneTextures(phone);
+		}
+	}
+
 	/** Deep3D-PC: smooth (trilinear + anisotropic) or original nearest texturing. */
 	public static synchronized void setTextureFilter(boolean smooth) {
 		textureFilter = smooth;
@@ -127,6 +142,7 @@ public class Platform {
 						loadNativeLibrary();
 						libraryLoaded = true;
 						_setTextureFilter(textureFilter);
+						_setPhoneTextures(phoneTextures);
 						if (shareContext != 0) {
 							_setShareContext(shareDisplay, shareContext);
 						}

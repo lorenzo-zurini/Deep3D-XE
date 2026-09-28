@@ -157,6 +157,14 @@ static void m3gBindTextureObject(Image *img, M3Gbool mipmap)
         glBindTexture(GL_TEXTURE_2D, img->texObject);
     }
 
+    /* Deep3D-PC: re-upload when the texture colour depth setting changed */
+    if (img->deep3dGen != deep3d_texture_gen) {
+        img->deep3dGen = deep3d_texture_gen;
+        if (img->data) {
+            img->dirty = M3G_TRUE;
+        }
+    }
+
     /* Upload the texture image to OpenGL if the one in the texture
      * object isn't up to date */
 
@@ -187,14 +195,22 @@ static void m3gBindTextureObject(Image *img, M3Gbool mipmap)
                 glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP,
                                 mipmap ? GL_TRUE : GL_FALSE);
 #               endif
-                glTexImage2D(GL_TEXTURE_2D,
-                             0,
-                             img->glFormat,
-                             img->width, img->height,
-                             0,
-                             img->glFormat,
-                             GL_UNSIGNED_BYTE,
-                             pixels);
+                {
+                    /* Deep3D-PC: phone texture colour depth (see gl.h) */
+                    M3Gubyte *q = deep3d_phone_textures
+                        ? deep3d_quantize_texels(img->glFormat, pixels,
+                                                 img->width * img->height)
+                        : NULL;
+                    glTexImage2D(GL_TEXTURE_2D,
+                                 0,
+                                 img->glFormat,
+                                 img->width, img->height,
+                                 0,
+                                 img->glFormat,
+                                 GL_UNSIGNED_BYTE,
+                                 q ? q : pixels);
+                    free(q);
+                }
 #               if defined(M3G_GL_ES_1_1)
                 img->mipmapsDirty = M3G_FALSE;
 #               else
@@ -255,9 +271,8 @@ static void m3gBindTextureObject(Image *img, M3Gbool mipmap)
          * levels, so OpenGL will keep them for us for the rest of the
          * lifetime of this object */
 
-        if (!img->pinned && !img->mipmapsDirty) {
-            m3gFreeImageData(img);
-        }
+        /* Deep3D-PC: keep the pixels so textures can be re-uploaded when
+         * the texture colour depth setting changes (they are tiny) */
 
         /* Raise out-of-memory if the OpenGL implementation ran out of
          * resources */

@@ -71,6 +71,8 @@ static inline void deep3d_glDepthRangef(GLfloat n, GLfloat f) {
 extern "C" {
 #endif
 extern int deep3d_texture_filter;
+extern int deep3d_phone_textures;
+extern int deep3d_texture_gen;
 extern unsigned deep3d_target_texture;
 extern int deep3d_target_texture_mode;
 extern int deep3d_target_texture_w;
@@ -87,6 +89,38 @@ extern void *deep3d_underlay_fence;
 #define GL_TEXTURE_MAX_ANISOTROPY_EXT 0x84FE
 #endif
 
+/*
+ * Phone texture colour depth: the phones' M3G implementations stored
+ * textures in 16 bits per texel - RGBA4444 with alpha, RGB565 without -
+ * which is where the banding of the skybox gradient (colour and alpha) in
+ * real-hardware footage comes from. Returns a malloc'd quantised copy of
+ * count texels, or NULL for formats left alone.
+ */
+static inline unsigned char deep3d_q4(unsigned char c) { return (unsigned char) ((c >> 4) * 17); }
+static inline unsigned char deep3d_q5(unsigned char c) { unsigned q = c >> 3; return (unsigned char) ((q << 3) | (q >> 2)); }
+static inline unsigned char deep3d_q6(unsigned char c) { unsigned q = c >> 2; return (unsigned char) ((q << 2) | (q >> 4)); }
+
+static inline unsigned char *deep3d_quantize_texels(GLenum fmt, const void *src, size_t count) {
+    int comps = fmt == GL_RGBA ? 4 : fmt == GL_RGB ? 3 : fmt == GL_LUMINANCE_ALPHA ? 2 : 0;
+    if (!comps || !src) {
+        return NULL;
+    }
+    unsigned char *out = (unsigned char *) malloc(count * comps);
+    const unsigned char *in = (const unsigned char *) src;
+    for (size_t i = 0; i < count * comps; i += comps) {
+        if (comps == 4 || comps == 2) {
+            for (int k = 0; k < comps; k++) {
+                out[i + k] = deep3d_q4(in[i + k]);
+            }
+        } else {
+            out[i] = deep3d_q5(in[i]);
+            out[i + 1] = deep3d_q6(in[i + 1]);
+            out[i + 2] = deep3d_q5(in[i + 2]);
+        }
+    }
+    return out;
+}
+
 /* OES paletted textures: expand to RGB(A) and upload uncompressed. */
 static inline void deep3d_glCompressedTexImage2D(GLenum target, GLint level, GLenum fmt,
                                                  GLsizei w, GLsizei h, GLint border,
@@ -98,6 +132,11 @@ static inline void deep3d_glCompressedTexImage2D(GLenum target, GLint level, GLe
         unsigned char *out = (unsigned char *)malloc((size_t)w * h * comps);
         for (GLsizei i = 0; i < w * h; i++) {
             memcpy(out + (size_t)i * comps, pal + (size_t)idx[i] * comps, comps);
+        }
+        if (deep3d_phone_textures) {
+            unsigned char *q = deep3d_quantize_texels(comps == 4 ? GL_RGBA : GL_RGB, out, (size_t)w * h);
+            free(out);
+            out = q;
         }
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexImage2D(target, level, comps == 4 ? GL_RGBA : GL_RGB, w, h, border,

@@ -559,7 +559,7 @@ public final class GLBackend {
         glDisable(GL_SCISSOR_TEST);
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        present.draw(frameTex, rw, rh, dstX, dstY, dstW, dstH, w, h, !Config.fullColourOn());
+        present.draw(frameTex, rw, rh, dstX, dstY, dstW, dstH, w, h);
 
         renderOverlayLayer(w, h);
     }

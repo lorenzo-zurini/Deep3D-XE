@@ -8,9 +8,7 @@ import static org.lwjgl.opengl.GL20.*;
 /**
  * Puts the rendered frame on the window: scales it into the destination
  * rectangle with "sharp bilinear" filtering (square pixels stay square and
- * even at non-integer scales, with only their edges blended) and, for the
- * original look, reduces it to the 4096 colours (4 bits per channel) of the
- * phones Deep ran on — the source of the reference footage's banding.
+ * even at non-integer scales, with only their edges blended).
  */
 final class Present {
 
@@ -29,7 +27,6 @@ final class Present {
             + "uniform sampler2D uTex;\n"
             + "uniform vec2 uSrcSize;\n"      // frame size in pixels
             + "uniform vec2 uScale;\n"        // window pixels per frame pixel
-            + "uniform bool uQuantize;\n"
             + "in vec2 vUV;\n"
             + "out vec4 fragColor;\n"
             + "void main() {\n"
@@ -39,9 +36,6 @@ final class Present {
             + "  vec2 range = 0.5 - 0.5 / max(uScale, vec2(1.0));\n"
             + "  vec2 f = (d - clamp(d, -range, range)) * max(uScale, vec2(1.0)) + 0.5;\n"
             + "  vec3 c = texture(uTex, (base + f) / uSrcSize).rgb;\n"
-            + "  if (uQuantize) {\n"
-            + "    c = floor(floor(c * 255.0 + 0.5) / 16.0) * 17.0 / 255.0;\n"
-            + "  }\n"
             + "  fragColor = vec4(c, 1.0);\n"
             + "}\n";
 
@@ -49,7 +43,6 @@ final class Present {
     private int uDst;
     private int uSrcSize;
     private int uScale;
-    private int uQuantize;
     private int uTex;
 
     void init() {
@@ -57,7 +50,6 @@ final class Present {
         uDst = glGetUniformLocation(program, "uDst");
         uSrcSize = glGetUniformLocation(program, "uSrcSize");
         uScale = glGetUniformLocation(program, "uScale");
-        uQuantize = glGetUniformLocation(program, "uQuantize");
         uTex = glGetUniformLocation(program, "uTex");
     }
 
@@ -67,7 +59,7 @@ final class Present {
      * window.
      */
     void draw(int tex, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH,
-              int fbW, int fbH, boolean quantize) {
+              int fbW, int fbH) {
         glViewport(0, 0, fbW, fbH);
         glDisable(GL_SCISSOR_TEST);
         glDisable(GL_BLEND);
@@ -81,7 +73,6 @@ final class Present {
         glUniform4f(uDst, x, y, dstW * 2f / fbW, dstH * 2f / fbH);
         glUniform2f(uSrcSize, srcW, srcH);
         glUniform2f(uScale, (float) dstW / srcW, (float) dstH / srcH);
-        glUniform1i(uQuantize, quantize ? 1 : 0);
         glUniform1i(uTex, 0);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, tex);
