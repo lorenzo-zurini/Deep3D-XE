@@ -34,9 +34,7 @@ official English text from the international release.
   - 4x MSAA antialiasing,
   - extended view distance (up to 8x the original far plane, with the
     station impostor distance moved out to match; creatures keep the
-    original spawn radius and density but respawn behind the camera, and
-    one in view is not removed before twice that radius, so they neither
-    pop in nor out).
+    phone's numbers, radius and behaviour).
 - **One control scheme for every screen** — the game's own screens keep
   their original look but are fully drivable by mouse, keyboard or
   controller with the same logic everywhere (A / Enter confirm, B / Esc
