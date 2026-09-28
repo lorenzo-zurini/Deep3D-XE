@@ -779,12 +779,7 @@ public final class Runtime {
                 org.deep3d.gl.GLBackend.requestDump2d();
                 break;
             case "fps": {
-                long raster = ru.woesss.j2me.micro3d.Render.rasterNanos.getAndSet(0);
-                int fps = displayFps;
-                long perFrame = fps > 0 ? raster / Math.max(1, fps) / 1_000_000 : 0;
-                System.out.println("[fps] " + fps + " @ " + screenWidth + "x" + screenHeight
-                        + " raster=" + perFrame + "ms/frame"
-                        + " bg=#" + Integer.toHexString(org.deep3d.gl.GLBackend.lastBackground)
+                System.out.println("[fps] " + displayFps + " @ " + screenWidth + "x" + screenHeight
                         + " " + org.deep3d.gl.M3GTargets.statsAndReset(framesSinceStats()));
                 break;
             }

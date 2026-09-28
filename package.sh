@@ -45,7 +45,7 @@ fi
 cat > dist/deep3d/deep3d <<'EOF'
 #!/usr/bin/env bash
 cd "$(dirname "$0")"
-exec java --enable-native-access=ALL-UNNAMED -jar deep3d.jar "$@"
+exec java --enable-native-access=ALL-UNNAMED -XX:+DisableExplicitGC -jar deep3d.jar "$@"
 EOF
 chmod +x dist/deep3d/deep3d
 
@@ -69,6 +69,7 @@ if command -v jpackage >/dev/null 2>&1; then
         --input dist/deep3d \
         --main-jar deep3d.jar \
         --java-options --enable-native-access=ALL-UNNAMED \
+        --java-options -XX:+DisableExplicitGC \
         --dest dist \
         ${DEEP3D_JPACKAGE_ICON:+--icon "$DEEP3D_JPACKAGE_ICON"} \
         > /dev/null

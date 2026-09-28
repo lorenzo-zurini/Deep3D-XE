@@ -66,11 +66,8 @@ public class DeepMIDlet extends MIDlet implements Runnable {
 
    // $VF: renamed from: run () void
    public void run() {
-      // Deep3D-PC: an exception in one frame used to end this loop for good
-      // (the phone build caught outside the loop), leaving a loading screen
-      // animating forever. Log it and keep the game running instead.
-      while (true) {
-         try {
+      try {
+         while (true) {
             switch (this.field_1525) {
                case 1:
                   if (class_84.field_1114 && !this.field_1529 && class_84.field_1115 != -1) {
@@ -92,12 +89,14 @@ public class DeepMIDlet extends MIDlet implements Runnable {
                   this.field_1526.method_947();
                   this.field_1525 = 3;
             }
-         } catch (Exception var3) {
-            org.deep3d.Diagnostics.gameLoopError(var3);
-         }
 
-         // Deep3D-PC: pacing is handled by the runtime's FPS limiter.
-         Thread.onSpinWait();
+            try {
+               Thread.sleep(2L);
+            } catch (InterruptedException var2) {
+            }
+         }
+      } catch (Exception var3) {
+         var3.printStackTrace();
       }
    }
 

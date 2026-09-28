@@ -122,7 +122,7 @@ public final class class_64 extends class_61 {
       this.field_800 = null;
       this.field_786 = false;
       this.field_807 = null;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 
    // $VF: renamed from: a () void
@@ -169,7 +169,7 @@ public final class class_64 extends class_61 {
 
          class_67.method_597(false);
          class_69.method_634(-1, -1, "");
-         // System.gc() removed: full GCs stall the desktop JVM
+         System.gc();
          this.field_779 = System.currentTimeMillis();
          this.field_780 = System.currentTimeMillis();
          this.field_784 = 0L;
@@ -183,7 +183,7 @@ public final class class_64 extends class_61 {
       this.field_787 = this.field_799.field_272;
       this.field_802 = new class_34();
       this.field_802.method_298(this.field_799.field_280);
-      this.field_788 = class_106.method_886(class_84.field_1120, class_84.field_1121, 500, 100, org.deep3d.Config.farPlane());
+      this.field_788 = class_106.method_886(class_84.field_1120, class_84.field_1121, 500, 100, 31768);
       this.field_789 = new class_104();
       this.field_789.method_879(this.field_788);
       class_84.field_1110.method_24(this.field_788);
@@ -374,20 +374,6 @@ public final class class_64 extends class_61 {
                if (!this.field_796 && !this.field_795) {
                   if (this.field_787.field_987 >= 0 && this.field_792 && !this.field_787.method_662()) {
                      this.field_787.method_656(this.field_781);
-                  }
-
-                  // Deep3D-PC: analogue stick steering overrides the digital
-                  // direction bits while the stick is deflected.
-                  if (org.deep3d.AnalogInput.active()) {
-                     var1 &= ~(2 | 4 | 32 | 64);
-                     float var90 = -org.deep3d.AnalogInput.x();
-                     float var91 = -org.deep3d.AnalogInput.y();
-                     if (this.field_787.field_1007) {
-                        class_69.method_633(7, this.field_787);
-                     } else {
-                        this.field_787.steerAnalog(this.field_781, var90,
-                              class_84.field_1082 ? var91 : -var91);
-                     }
                   }
 
                   if ((var1 & 4) != 0) {

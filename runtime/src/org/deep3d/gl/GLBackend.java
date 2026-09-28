@@ -26,14 +26,11 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
 
-import ru.woesss.j2me.micro3d.GLRender;
-import ru.woesss.j2me.micro3d.RenderNode;
-
 /**
  * OpenGL presentation backend: GLFW window and input on the main thread,
  * rendering on the game thread (which owns the GL context). The game's 2D
- * output is a recorded command stream; 3D flushes are batches of render
- * nodes spliced into it. Everything is drawn by the GPU — no readbacks.
+ * output is a recorded command stream replayed by the GPU; 3D passes from
+ * the M3G engine are spliced into it as textures.
  */
 public final class GLBackend {
 
@@ -60,7 +57,13 @@ public final class GLBackend {
     private static volatile Draw2D lastFrame = new Draw2D();
 
     private static GL2D gl2d;
-    private static GLRender gl3d;
+
+    /* Underlay for M3G passes: the frame recorded so far, rendered offscreen */
+    private static int underlayFbo;
+    private static int underlayTex;
+    private static int underlayW;
+    private static int underlayH;
+    private static final List<Long> underlayFences = new ArrayList<>();
 
     /* Overlay compositing */
     private static volatile boolean overlayDirty = true;
@@ -76,8 +79,6 @@ public final class GLBackend {
 
     private GLBackend() {
     }
-
-    public static volatile int lastBackground;
 
     public static boolean isActive() {
         return active;
@@ -292,8 +293,6 @@ public final class GLBackend {
         if (!contextClaimed) {
             gl2d = new GL2D();
             gl2d.init();
-            gl3d = new GLRender();
-            gl3d.init();
             contextClaimed = true;
             System.out.println("[gl] renderer: " + glGetString(GL_RENDERER)
                     + " / " + glGetString(GL_VERSION));
@@ -308,10 +307,81 @@ public final class GLBackend {
         vsyncApplied = false;
     }
 
-    /** Splices a 3D flush batch into the 2D command stream. */
-    public static void record3D(List<RenderNode> nodes) {
-        Draw2D rec = recorders.get();
-        rec.op(Draw2D.OP_BATCH_3D, rec.obj(new ArrayList<>(nodes)));
+    /**
+     * Renders the calling thread's frame recorded so far into an offscreen
+     * texture of w x h pixels (virtual screen x UI scale, top-left aligned
+     * like the window), for an M3G pass to start from: on the phone, 3D is
+     * drawn into the same buffer as the 2D beneath it (the game only clears
+     * depth). Returns {texture, fence}; the fence is deleted after the frame.
+     */
+    public static synchronized long[] renderUnderlay(int w, int h) {
+        try {
+            claimContext();
+            if (underlayFbo == 0) {
+                underlayFbo = org.lwjgl.opengl.GL30.glGenFramebuffers();
+                underlayTex = glGenTextures();
+            }
+            glBindTexture(GL_TEXTURE_2D, underlayTex);
+            if (underlayW != w || underlayH != h) {
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                        (ByteBuffer) null);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                underlayW = w;
+                underlayH = h;
+            }
+            glBindTexture(GL_TEXTURE_2D, 0);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, underlayFbo);
+            org.lwjgl.opengl.GL30.glFramebufferTexture2D(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER,
+                    org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, underlayTex, 0);
+            glViewport(0, 0, w, h);
+            glDisable(GL_SCISSOR_TEST);
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT);
+            Draw2D frame = recorders.get();
+            gl2d.beginFrame(virtWidth, virtHeight, w, h);
+            gl2d.replay(frame, 0, frame.opLen);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, 0);
+            long fence = org.lwjgl.opengl.GL32.glFenceSync(
+                    org.lwjgl.opengl.GL32.GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+            glFlush();
+            underlayFences.add(fence);
+            return new long[]{underlayTex, fence};
+        } finally {
+            glfwMakeContextCurrent(0);
+            GL.setCapabilities(null);
+            ctxOwner = null;
+        }
+    }
+
+    /**
+     * Read-back variant for when the M3G engine cannot share textures: the
+     * frame so far as top-down RGBA rows of w x h pixels in {@code out}.
+     */
+    public static synchronized void readUnderlay(int w, int h, ByteBuffer out) {
+        long[] t = renderUnderlay(w, h);
+        try {
+            claimContext();
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, underlayFbo);
+            ByteBuffer tmp = MemoryUtil.memAlloc(w * h * 4);
+            try {
+                glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+                int row = w * 4;
+                for (int y = 0; y < h; y++) {
+                    tmp.limit((y + 1) * row).position(y * row);
+                    out.position((h - 1 - y) * row);
+                    out.put(tmp);
+                }
+                out.clear();
+            } finally {
+                MemoryUtil.memFree(tmp);
+            }
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, 0);
+        } finally {
+            glfwMakeContextCurrent(0);
+            GL.setCapabilities(null);
+            ctxOwner = null;
+        }
     }
 
     private static volatile boolean dump2dNext;
@@ -381,6 +451,10 @@ public final class GLBackend {
         lastFrame = frame.snapshot();
         frame.reset();
         M3GTargets.frameDone();
+        for (long f : underlayFences) {
+            org.lwjgl.opengl.GL32.glDeleteSync(f);
+        }
+        underlayFences.clear();
         if (screenGraphics != null) {
             screenGraphics.beginFrame(virtWidth, virtHeight);
         }
@@ -406,7 +480,6 @@ public final class GLBackend {
 
     }
 
-    @SuppressWarnings("unchecked")
     private static void renderFrame(Draw2D frame) {
         int w = fbWidth;
         int h = fbHeight;
@@ -416,23 +489,7 @@ public final class GLBackend {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gl2d.beginFrame(virtWidth, virtHeight, w, h);
 
-        // Replay 2D, splicing 3D batches at their markers.
-        int segStart = 0;
-        int i = 0;
-        while (i < frame.opLen) {
-            int op = frame.ops[i];
-            int len = opLength(op);
-            if (op == Draw2D.OP_BATCH_3D) {
-                gl2d.replay(frame, segStart, i);
-                List<RenderNode> nodes = (List<RenderNode>) frame.objects[frame.ops[i + 1]];
-                gl3d.setFog(Config.fog, gl2d.backgroundColor(), Config.farPlane());
-                lastBackground = gl2d.backgroundColor();
-                gl3d.renderBatch(nodes);
-                segStart = i + len;
-            }
-            i += len;
-        }
-        gl2d.replay(frame, segStart, frame.opLen);
+        gl2d.replay(frame, 0, frame.opLen);
 
         renderOverlayLayer(w, h);
     }
@@ -449,7 +506,6 @@ public final class GLBackend {
             case Draw2D.OP_IMAGE: return 5;
             case Draw2D.OP_REGION: return 10;
             case Draw2D.OP_RGB: return 9;
-            case Draw2D.OP_BATCH_3D: return 2;
             case Draw2D.OP_M3G:
             case Draw2D.OP_M3G_TEX: return 13;
             default: throw new IllegalStateException("op " + op);

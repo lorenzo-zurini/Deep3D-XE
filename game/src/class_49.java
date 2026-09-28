@@ -24,7 +24,8 @@ public final class class_49 {
    private static void method_399(String var0) throws Exception {
       if (field_544 != var0 || field_540 == null) {
          field_539 = class_49.class.getResourceAsStream(var0);
-         field_540 = field_539.readAllBytes();
+         field_540 = new byte[field_539.available()];
+         field_539.read(field_540, 0, field_539.available());
          field_539.close();
          field_544 = var0;
       }
@@ -44,9 +45,9 @@ public final class class_49 {
          field_541 = new StringBuffer(30);
          String var2 = "";
          byte[] var3 = new byte[4];
-         int var4 = 0;
-         int var5 = 0;
-         int var6 = 0;
+         short var4 = 0;
+         short var5 = 0;
+         short var6 = 0;
          boolean var7 = 0 == var0[0];
 
          for (int var8 = 0; var8 < field_540.length; var8++) {

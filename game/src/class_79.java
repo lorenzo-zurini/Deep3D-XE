@@ -21,7 +21,7 @@ public class class_79 extends class_76 {
          }
       }
 
-      int var8 = 1;
+      byte var8 = 1;
       if (var2[13] || var2[14] || var2[15] || var2[16] || var2[17]) {
          var8 = 2;
       }

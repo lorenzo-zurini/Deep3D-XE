@@ -76,6 +76,10 @@ extern int deep3d_target_texture_mode;
 extern int deep3d_target_texture_w;
 extern int deep3d_target_texture_h;
 extern void *deep3d_target_fence;
+extern unsigned deep3d_underlay_texture;
+extern int deep3d_underlay_w;
+extern int deep3d_underlay_h;
+extern void *deep3d_underlay_fence;
 #ifdef __cplusplus
 }
 #endif

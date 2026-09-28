@@ -39,11 +39,7 @@ public final class class_3 {
 
    // $VF: renamed from: a (x) int
    public final int method_11(class_3 var1) {
-      // Deep3D-PC: 64-bit products so extended view distances cannot overflow
-      // (identical results wherever the original int math did not).
-      return (int)(
-         ((long)this.field_37 * var1.field_37 >> 12) + ((long)this.field_38 * var1.field_38 >> 12) + ((long)this.field_39 * var1.field_39 >> 12)
-      );
+      return (this.field_37 * var1.field_37 >> 12) + (this.field_38 * var1.field_38 >> 12) + (this.field_39 * var1.field_39 >> 12);
    }
 
    // $VF: renamed from: b (x) int

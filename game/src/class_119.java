@@ -67,7 +67,7 @@ public final class class_119 {
 
       byte[] var2 = new byte[field_1457];
       int var3 = 0;
-      int var4 = 0;
+      byte var4 = 0;
       int var5 = 0;
       boolean var6 = var0 && class_84.field_1123.nextInt(100) < field_1461;
 
@@ -85,7 +85,7 @@ public final class class_119 {
             var4 = -1;
          }
 
-         var2[var3++] = (byte)var4;
+         var2[var3++] = var4;
       }
 
       return var2;

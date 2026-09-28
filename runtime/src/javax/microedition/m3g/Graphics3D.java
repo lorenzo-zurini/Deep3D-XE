@@ -53,7 +53,6 @@ public class Graphics3D {
 	private int clipGX, clipGY, clipGW, clipGH;
 	/* True once clear(Background) ran for this bind: phone canvases have no
 	   alpha, so the result is composited opaque. */
-	private boolean clearedThisBind;
 
 	private Camera camera = null;
 	private Vector lights = new Vector();
@@ -180,14 +179,22 @@ public class Graphics3D {
 			if (clipGW * sc > Defs.MAX_VIEWPORT_WIDTH || clipGH * sc > Defs.MAX_VIEWPORT_HEIGHT) {
 				throw new IllegalArgumentException();
 			}
+			// The pass starts from the 2D drawn so far, as on the phone (the
+			// game clears depth only): a shared texture, or pixels in memory.
 			if (gl && Platform.sharesWindowContext()) {
 				texSlot = org.deep3d.gl.M3GTargets.acquireTexture();
 				buffer = org.deep3d.gl.M3GTargets.dummyBuffer();
+				long[] underlay = org.deep3d.gl.GLBackend.renderUnderlay(width, height);
+				Platform._setUnderlay((int) underlay[0], width, height, underlay[1]);
 			} else {
 				texSlot = null;
 				buffer = org.deep3d.gl.M3GTargets.acquire(width * height * 4);
+				if (gl) {
+					org.deep3d.gl.GLBackend.readUnderlay(width, height, buffer);
+				} else {
+					org.deep3d.gl.M3GTargets.copyImage(img, buffer, width, height);
+				}
 			}
-			clearedThisBind = false;
 
 			final int nClipX = clipGX * sc, nClipY = clipGY * sc;
 			final int nClipW = clipGW * sc, nClipH = clipGH * sc;
@@ -258,17 +265,18 @@ public class Graphics3D {
 				slot.height = texInfo[2];
 				slot.fence = Platform._takeTargetFence();
 				Platform._setTargetTexture(false, 0, 0, 0);
+				Platform._setUnderlay(0, 0, 0, 0);
 				texSlot = null;
 			}
 			long end = System.nanoTime();
 			org.deep3d.gl.M3GTargets.recordPass(end - bindStartNanos, end - releaseStart);
 			if (slot != null) {
 				org.deep3d.gl.M3GTargets.compositeTexture((Graphics) currentTarget, slot, targetScale,
-						clipGX, clipGY, clipGW, clipGH, clearedThisBind);
+						clipGX, clipGY, clipGW, clipGH, true);
 			} else {
 				org.deep3d.gl.M3GTargets.composite((Graphics) currentTarget, buffer,
 						cur_width, cur_height, targetScale,
-						clipGX, clipGY, clipGW, clipGH, clearedThisBind);
+						clipGX, clipGY, clipGW, clipGH, true);
 			}
 		} else if (currentTarget instanceof Image2D) {
 			Platform.executeInUIThread(
@@ -303,7 +311,6 @@ public class Graphics3D {
 	 */
 	public void clear(Background background) {
 		integrityCheck();
-		clearedThisBind = true;
 		final Background finalBackground = background;
 		Platform.executeInUIThread(
 				new M3gRunnable() {

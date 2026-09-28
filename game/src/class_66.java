@@ -23,7 +23,7 @@ public final class class_66 extends class_61 {
 
       this.field_842 = null;
       this.field_841 = false;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 
    // $VF: renamed from: a () void
@@ -40,7 +40,7 @@ public final class class_66 extends class_61 {
          this.field_843 = new class_51();
          this.field_843.method_427(0);
          class_67.method_578(false);
-         // System.gc() removed: full GCs stall the desktop JVM
+         System.gc();
          this.field_837 = System.currentTimeMillis();
          this.field_838 = System.currentTimeMillis();
          this.field_841 = true;

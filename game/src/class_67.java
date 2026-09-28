@@ -159,7 +159,6 @@ public final class class_67 {
 
    // $VF: renamed from: a (java.lang.String, int, int, int, boolean, boolean, boolean) void
    public static final void method_585(String var0, int var1, int var2, int var3, boolean var4, boolean var5, boolean var6) {
-      org.deep3d.GameUi.registerItem(var0, var1, var2, var3, 12, var4);
       int var7 = class_58.method_523(var0);
       if (var4) {
          class_84.field_1117.setColor(field_844);
@@ -310,55 +309,36 @@ public final class class_67 {
    }
 
    // $VF: renamed from: a (java.lang.String, java.lang.String, boolean, boolean) void
-   // Deep3D-PC: phone softkey boxes replaced with a PC command bar (same
-   // palette and font); zones are registered for mouse clicks.
    public static final void method_602(String var0, String var1, boolean var2, boolean var3) {
-      javax.microedition.lcdui.Graphics g = class_84.field_1117;
-      int barH = field_852;
-      int y = class_84.field_1121 - 3 - barH;
-      int w = class_84.field_1120;
-      g.setColor(field_847);
-      g.fillRect(0, y - 2, w, barH + 5);
-      g.setColor(field_844);
-      g.drawLine(0, y - 2, w, y - 2);
-
-      int lx = 0;
-      int lw = 0;
-      int rx = 0;
-      int rw = 0;
-      if (var0 != null && !var0.equals("")) {
-         String key = org.deep3d.GameUi.confirmKeyLabel();
-         int kw = class_58.method_523(key);
-         int tw = class_58.method_523(var0);
-         lw = kw + tw + 16;
-         lx = 2;
-         g.setColor(field_861 && field_860 > 0 ? field_844 : field_846);
-         g.fillRect(lx, y, lw, barH);
-         g.setColor(field_844);
-         g.drawRect(lx, y, lw, barH);
-         class_58.method_518(key, lx + 4, y, 1);
-         class_58.method_518(var0, lx + 4 + kw + 7, y, 0);
+      class_84.field_1117.setColor(field_845);
+      if ((!field_861 || field_860 <= 0 || var0 == "") && !field_862) {
+         class_84.field_1117.setColor(field_846);
+      } else {
+         class_84.field_1117.setColor(field_844);
       }
 
-      if (var1 != null && !var1.equals("")) {
-         String key = org.deep3d.GameUi.backKeyLabel();
-         int kw = class_58.method_523(key);
-         int tw = class_58.method_523(var1);
-         rw = kw + tw + 16;
-         rx = w - rw - 2;
-         g.setColor(!field_861 && field_860 > 0 ? field_844 : field_846);
-         g.fillRect(rx, y, rw, barH);
-         g.setColor(field_844);
-         g.drawRect(rx, y, rw, barH);
-         class_58.method_518(key, rx + 4, y, 1);
-         class_58.method_518(var1, rx + 4 + kw + 7, y, 0);
+      class_84.field_1117.fillRect(1, class_84.field_1121 - 3 - field_852, field_850, field_852);
+      if (!field_861 && field_860 > 0 && var1 != "") {
+         class_84.field_1117.setColor(field_844);
+      } else {
+         class_84.field_1117.setColor(field_846);
       }
 
-      org.deep3d.GameUi.registerBarZones(lx, y, lw, barH, rx, y, rw, barH);
+      class_84.field_1117.fillRect(class_84.field_1120 - field_850 - 1, class_84.field_1121 - 3 - field_852, field_850 - 1, field_852);
+      class_84.field_1117.setColor(field_846);
+      class_84.field_1117.fillRect(3 + field_850, class_84.field_1121 - 3 - field_852, field_851, field_852);
+      class_84.field_1117.setColor(field_844);
+      class_84.field_1117.drawRect(1, class_84.field_1121 - 3 - field_852, field_850, field_852);
+      class_84.field_1117.drawRect(class_84.field_1120 - field_850 - 1, class_84.field_1121 - 3 - field_852, field_850 - 1, field_852);
+      class_84.field_1117.drawRect(3 + field_850, class_84.field_1121 - 3 - field_852, field_851, field_852);
+      method_599(var0, 1 + (field_850 >> 1), class_84.field_1121 - 2, field_850 + 2, 1, 40);
+      method_599(var1, class_84.field_1120 - 1 - (field_850 >> 1), class_84.field_1121 - 2, field_850 + 2, 1, 40);
       if (var2) {
-         method_590(class_21.method_182(), false, w >> 1, class_84.field_1121 - 2, 0, 40);
-      } else if (var3) {
-         g.drawImage(field_855, w >> 1, class_84.field_1121 - 3, 33);
+         method_590(class_21.method_182(), false, class_84.field_1120 >> 1, class_84.field_1121 - 2, 0, 40);
+      } else {
+         if (var3) {
+            class_84.field_1117.drawImage(field_855, class_84.field_1120 >> 1, class_84.field_1121 - 3, 33);
+         }
       }
    }
 }

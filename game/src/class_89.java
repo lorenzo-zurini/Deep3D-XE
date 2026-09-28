@@ -42,7 +42,7 @@ public final class class_89 {
       this.field_1192 = null;
       this.field_1193 = null;
       this.field_1188 = false;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 
    // $VF: renamed from: b () void
@@ -62,7 +62,7 @@ public final class class_89 {
       this.field_1197[1] = this.field_1197[0];
       this.field_1197[2] = this.field_1196 - this.field_1197[0] - this.field_1197[1] - 4;
       this.field_1189.method_702(field_1185);
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
       this.field_1188 = true;
    }
 

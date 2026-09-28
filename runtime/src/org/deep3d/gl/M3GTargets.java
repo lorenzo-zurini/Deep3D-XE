@@ -51,6 +51,25 @@ public final class M3GTargets {
         return s;
     }
 
+    /** The software renderer's target image as top-down RGBA rows (w x h). */
+    public static void copyImage(BufferedImage img, ByteBuffer out, int w, int h) {
+        if (img == null) {
+            return;
+        }
+        int cw = Math.min(w, img.getWidth());
+        int ch = Math.min(h, img.getHeight());
+        int[] row = new int[cw];
+        for (int y = 0; y < ch; y++) {
+            img.getRGB(0, y, cw, 1, row, 0, cw);
+            out.position(y * w * 4);
+            for (int x = 0; x < cw; x++) {
+                int p = row[x];
+                out.put((byte) (p >> 16)).put((byte) (p >> 8)).put((byte) p).put((byte) 0xFF);
+            }
+        }
+        out.clear();
+    }
+
     /** Placeholder memory target: in texture mode the engine never writes it. */
     public static ByteBuffer dummyBuffer() {
         return DUMMY;
@@ -111,8 +130,8 @@ public final class M3GTargets {
      * @param pixels   RGBA8 rows, top-down, texW x texH
      * @param scale    native pixels per game pixel
      * @param clipX..  game-space clip rectangle that was rendered
-     * @param opaque   the pass cleared its background (phone canvases have
-     *                 no alpha, so the result replaces what was below)
+     * @param opaque   the result replaces what is below (the pass started
+     *                 from the 2D underlay, so it holds the whole picture)
      */
     public static void composite(Graphics g, ByteBuffer pixels, int texW, int texH, int scale,
                                  int clipX, int clipY, int clipW, int clipH, boolean opaque) {

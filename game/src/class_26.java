@@ -273,7 +273,7 @@ public final class class_26 {
 
    // $VF: renamed from: a (int, bi) ah
    private class_101 method_243(int var1, class_97 var2) {
-      int var3 = class_90.field_1202[var1];
+      short var3 = class_90.field_1202[var1];
       int var4 = 0;
       int var5 = 0;
       int var6 = 0;
@@ -1860,6 +1860,6 @@ public final class class_26 {
       this.field_289 = null;
       this.field_290 = null;
       this.field_292 = 0;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 }

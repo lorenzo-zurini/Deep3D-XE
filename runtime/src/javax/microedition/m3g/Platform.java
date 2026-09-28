@@ -74,6 +74,8 @@ public class Platform {
 
 	static native long _takeTargetFence();
 
+	static native void _setUnderlay(int texture, int w, int h, long fence);
+
 	private static long shareDisplay;
 	private static long shareContext;
 

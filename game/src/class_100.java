@@ -74,7 +74,7 @@ public final class class_100 extends class_99 {
          if ((var4 = this.method_825(this.field_1307[var3].field_1344, var1.method_752())) != null) {
             this.field_1307[var3].method_873(this.field_1307[var3].field_1344 == 3304 ? 60 : (this.field_1307[var3].field_1344 == 3300 ? 800 : 170));
             this.field_1307[var3].method_876(var4[0], var4[1]);
-            this.field_1307[var3].method_877((byte)(var4[0] == var4[1] ? 1 : 2));
+            this.field_1307[var3].method_877(var4[0] == var4[1] ? (byte)1 : (byte)2);
          }
       }
 
@@ -128,12 +128,12 @@ public final class class_100 extends class_99 {
          super.field_1233.method_10(this.field_1308[var3 * 3], this.field_1308[var3 * 3 + 1], this.field_1308[var3 * 3 + 2]);
          super.field_1233.method_16(super.field_1232, class_98.field_1299);
          int var4;
-         if ((var4 = class_98.field_1299.method_23()) > org.deep3d.Config.impostorDistance()) {
+         if ((var4 = class_98.field_1299.method_23()) > 30000) {
             class_98.field_1299.method_22();
-            class_98.field_1299.method_18(org.deep3d.Config.impostorDistance());
+            class_98.field_1299.method_18(30000);
             class_98.field_1299.method_15(super.field_1232);
             this.field_1307[var3].method_846(class_98.field_1299);
-            int var5 = (int)((float)org.deep3d.Config.impostorDistance() / var4 * 4096.0F);
+            int var5 = (int)(30000.0F / var4 * 4096.0F);
             this.field_1307[var3].method_869(var5, var5, var5);
          } else {
             this.field_1307[var3].method_869(4096, 4096, 4096);

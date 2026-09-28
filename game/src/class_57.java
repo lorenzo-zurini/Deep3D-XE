@@ -758,7 +758,7 @@ public final class class_57 {
          var1.field_1511 = (this.field_690 - this.field_692) * var7 >> 12;
          return var1;
       } else {
-         int var3 = 0;
+         byte var3 = 0;
          if (this.field_693 > this.field_689) {
             var3 = 1;
          }

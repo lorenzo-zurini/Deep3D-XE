@@ -18,7 +18,7 @@ public final class class_28 {
          int[] var8 = new int[(int)(var5 * var3) * (int)(var6 * var4)];
          var0.getRGB(var7, 0, var5, 0, 0, var5, var6);
          var0 = Image.createRGBImage(method_281(var7, var8, var5, (int)(var5 * var3)), (int)(var5 * var3), (int)(var6 * var4), true);
-         // System.gc() removed: full GCs stall the desktop JVM
+         System.gc();
       } catch (Exception var9) {
          var9.printStackTrace();
       }
@@ -64,9 +64,9 @@ public final class class_28 {
          InputStream var2 = class_28.class.getResourceAsStream(var0);
          DataInputStream var3;
          int var4;
-         byte[] var5 = var2.readAllBytes();
-         var4 = var5.length;
-         var2.close();
+         byte[] var5 = new byte[var4 = (var3 = new DataInputStream(var2)).available()];
+         var3.read(var5, 0, var4);
+         var3.close();
          int var6;
          if (var4 < 100) {
             var6 = 10 + var4 % 10;
@@ -79,14 +79,14 @@ public final class class_28 {
          }
 
          for (int var7 = 0; var7 < var6; var7++) {
-            int var8 = var5[var7];
+            byte var8 = var5[var7];
             var5[var7] = var5[var4 - var7 - 1];
-            var5[var4 - var7 - 1] = (byte)var8;
+            var5[var4 - var7 - 1] = var8;
          }
 
          var1 = Image.createImage(var5, 0, var4);
+         System.gc();
       } catch (Exception var9) {
-         System.err.println("[res] image load failed: " + var0 + ": " + var9);
       }
 
       return var1;
@@ -100,9 +100,9 @@ public final class class_28 {
          InputStream var2 = class_28.class.getResourceAsStream(var0);
          DataInputStream var3;
          int var4;
-         var1 = var2.readAllBytes();
-         var4 = var1.length;
-         var2.close();
+         var1 = new byte[var4 = (var3 = new DataInputStream(var2)).available()];
+         var3.read(var1, 0, var4);
+         var3.close();
          int var5;
          if (var4 < 100) {
             var5 = 10 + var4 % 10;
@@ -115,9 +115,9 @@ public final class class_28 {
          }
 
          for (int var6 = 0; var6 < var5; var6++) {
-            int var7 = var1[var6];
+            byte var7 = var1[var6];
             var1[var6] = var1[var4 - var6 - 1];
-            var1[var4 - var6 - 1] = (byte)var7;
+            var1[var4 - var6 - 1] = var7;
          }
       } catch (Exception var8) {
       }

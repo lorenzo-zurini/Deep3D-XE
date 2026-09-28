@@ -70,9 +70,7 @@ public final class class_101 extends class_91 {
          field_1321.method_22();
          super.field_1226.field_1341.method_512(field_1321);
          field_1320.method_10(
-            (-30000 + class_84.field_1123.nextInt(59000)) * org.deep3d.Config.creatureRangeScale(),
-            (-30000 + class_84.field_1123.nextInt(59000)) * org.deep3d.Config.creatureRangeScale(),
-            (-30000 + class_84.field_1123.nextInt(59000)) * org.deep3d.Config.creatureRangeScale()
+            -30000 + class_84.field_1123.nextInt(59000), -30000 + class_84.field_1123.nextInt(59000), -30000 + class_84.field_1123.nextInt(59000)
          );
       } else {
          field_1320.method_10(
@@ -343,7 +341,7 @@ public final class class_101 extends class_91 {
    private boolean method_835() {
       super.field_1232 = class_84.field_1110.field_40.method_849(super.field_1232);
       super.field_1233 = super.field_1232.method_16(super.field_1226.method_848(field_1311), super.field_1233);
-      return super.field_1233.method_23() > 40000 * org.deep3d.Config.creatureRangeScale();
+      return super.field_1233.method_23() > 40000;
    }
 
    // $VF: renamed from: g () void
@@ -357,12 +355,12 @@ public final class class_101 extends class_91 {
       field_1318[0] = field_1320.field_37;
       field_1318[1] = field_1320.field_38;
       field_1318[2] = field_1320.field_39;
-      field_1320.method_18(30000 * org.deep3d.Config.creatureRangeScale());
+      field_1320.method_18(30000);
       field_1320.method_15(class_84.field_1110.field_40.method_848(super.field_1233));
       super.field_1226.method_846(field_1320);
 
       for (int var2 = 0; var2 < field_1319.length; var2++) {
-         field_1319[var2] = (-15000 + class_84.field_1123.nextInt(30000)) * org.deep3d.Config.creatureRangeScale();
+         field_1319[var2] = -15000 + class_84.field_1123.nextInt(30000);
          field_1319[var2] = field_1319[var2] - field_1318[var2];
       }
 

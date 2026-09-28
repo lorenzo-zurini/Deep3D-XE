@@ -111,7 +111,7 @@ public class class_76 extends class_74 {
          System.out.println("ERROR: Tab " + var1 + " not available!");
       } else {
          int var4 = 0;
-         int var5 = 0;
+         byte var5 = 0;
          int var6;
          var4 = (var6 = var3 == null ? 0 : var3.length) > 0 ? 1 : 0;
          int var7;

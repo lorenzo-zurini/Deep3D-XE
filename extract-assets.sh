@@ -5,7 +5,8 @@
 # The port runs the Nokia (JSR-184 / M3G) build of Deep, whose data/3d
 # models are only in that JAR. That build was only distributed with Russian
 # text, so the English text and its font are taken from the international
-# (Mascot Capsule) JAR. The two builds use identical text/font formats.
+# (Mascot Capsule) JAR. The two builds use identical text/font formats; the
+# English files are installed where the Nokia build looks for its text.
 #
 #   ./extract-assets.sh [<nokia-m3g.jar> <english.jar>]
 #
@@ -40,6 +41,9 @@ rm -rf assets
 mkdir -p assets
 unzip -q "$M3G_JAR" 'data/*' -x 'data/lang/*' -d assets
 unzip -q -o "$EN_JAR" 'data/lang/en/*' 'data/interface/font_deep_white.png' -d assets
+# The Nokia build reads its (only) language from data/lang/ru/: install the
+# English text there so the game code stays unmodified.
+mv assets/data/lang/en assets/data/lang/ru
 
 if command -v ffmpeg >/dev/null 2>&1; then
     echo "Transcoding AMR sound effects to WAV (kept under their .amr names)..."

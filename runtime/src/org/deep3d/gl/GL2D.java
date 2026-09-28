@@ -243,10 +243,6 @@ public final class GL2D {
                             d.ops[i + 11] != 0);
                     i += 12;
                     break;
-                case Draw2D.OP_BATCH_3D:
-                    // handled by the caller (GLBackend splits on these)
-                    i += 1;
-                    break;
                 default:
                     throw new IllegalStateException("bad 2D opcode " + op);
             }

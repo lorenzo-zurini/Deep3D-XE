@@ -12,7 +12,7 @@ public final class class_58 {
    // $VF: renamed from: a () void
    public static final void method_513() {
       field_706 = null;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 
    // $VF: renamed from: a (javax.microedition.lcdui.Graphics) void

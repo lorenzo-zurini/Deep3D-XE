@@ -332,7 +332,7 @@ public final class class_56 {
    // $VF: renamed from: d () void
    private void method_466() {
       if (this.field_682.field_1161) {
-         int var1;
+         short var1;
          if ((
                var1 = this.field_680 == 0
                   ? field_673[class_21.method_143()][2 * this.field_681]

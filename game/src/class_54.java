@@ -51,7 +51,7 @@ public final class class_54 {
             this.field_597.method_295();
          }
 
-         // System.gc() removed: full GCs stall the desktop JVM
+         System.gc();
       }
    }
 }

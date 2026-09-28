@@ -20,13 +20,14 @@ import javax.swing.filechooser.FileNameExtensionFilter;
  *
  * The port runs the Nokia (JSR-184 / M3G) build, whose 3D models only ship
  * in that JAR; that build was distributed with Russian text only, so the
- * English text and its font come from the international JAR.
+ * English text and its font come from the international JAR (installed
+ * where the Nokia build looks for its text, so its code stays unmodified).
  */
 public final class FirstRun {
 
     /** Present in a complete install (Nokia 3D data + English text). */
     private static final String[] MARKERS = {
-            "data/interface/icon.png", "data/3d/manta.m3g", "data/lang/en/main.lang"};
+            "data/interface/icon.png", "data/3d/manta.m3g", "data/lang/ru/main.lang"};
 
     private FirstRun() {
     }
@@ -151,7 +152,8 @@ public final class FirstRun {
                         || !wanted.test(name)) {
                     continue;
                 }
-                File out = new File(assetsDir, name);
+                // The Nokia build reads its (only) language from data/lang/ru/.
+                File out = new File(assetsDir, name.replace("data/lang/en/", "data/lang/ru/"));
                 if (!out.toPath().normalize().startsWith(assetsDir.toPath().normalize())) {
                     continue;
                 }

@@ -947,6 +947,81 @@ static void m3gBlitFrameBufferPixels(RenderContext *ctx,
 
 /*!
  * \internal
+ * \brief Deep3D-PC: copies the underlay texture (the game window's frame
+ * rendered so far, shared with this context) into the back buffer, like
+ * m3gBlitFrameBufferPixels does for memory. The texture is bottom-up and
+ * its top row lines up with the top row of the target.
+ */
+static void m3gBlitUnderlayTexture(RenderContext *ctx,
+                                   M3Gint xOffset, M3Gint yOffset,
+                                   M3Gint width, M3Gint height)
+{
+    GLfloat pos[8], tc[8];
+    GLfloat texW = (GLfloat) deep3d_underlay_w;
+    GLfloat texH = (GLfloat) deep3d_underlay_h;
+    GLfloat offY = (GLfloat) (deep3d_underlay_h - ctx->target.height);
+    GLfloat x0 = (GLfloat) xOffset, y0 = (GLfloat) yOffset;
+    GLfloat x1 = (GLfloat) (xOffset + width), y1 = (GLfloat) (yOffset + height);
+
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    if (deep3d_underlay_fence) {
+        glWaitSync((GLsync) deep3d_underlay_fence, 0, GL_TIMEOUT_IGNORED);
+        deep3d_underlay_fence = NULL;
+    }
+
+    glScissor(xOffset, yOffset, width, height);
+    glViewport(0, 0, ctx->target.width, ctx->target.height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrthox(0, ctx->target.width << 16,
+             0, ctx->target.height << 16,
+             -1 << 16, 1 << 16);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_FOG);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+    glDisable(GL_LIGHTING);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_ALWAYS);
+    m3gDisableTextures();
+
+    glActiveTexture(GL_TEXTURE0);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, deep3d_underlay_texture);
+    glTexEnvx(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glMatrixMode(GL_TEXTURE);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+
+    pos[0] = x0; pos[1] = y1; pos[2] = x0; pos[3] = y0;
+    pos[4] = x1; pos[5] = y1; pos[6] = x1; pos[7] = y0;
+    tc[0] = x0 / texW; tc[1] = (y1 + offY) / texH;
+    tc[2] = x0 / texW; tc[3] = (y0 + offY) / texH;
+    tc[4] = x1 / texW; tc[5] = (y1 + offY) / texH;
+    tc[6] = x1 / texW; tc[7] = (y0 + offY) / texH;
+
+    glClientActiveTexture(GL_TEXTURE0);
+    glTexCoordPointer(2, GL_FLOAT, 0, tc);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glVertexPointer(2, GL_FLOAT, 0, pos);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
+    M3G_ASSERT_GL;
+}
+
+/*!
+ * \internal
  * \brief Synchronizes the contents of the back buffer with the target
  * buffer
  */
@@ -974,16 +1049,16 @@ static void m3gUpdateBackBuffer(RenderContext *ctx)
                 M3G_ASSERT(M3G_FALSE);
             }
         } else {
-            /* Deep3D-PC: memory targets always start fully transparent
-             * (the runtime composites the result over its own 2D frame),
-             * so clear instead of uploading the buffer tile by tile. */
-            glScissor(ctx->clip.x0, ctx->clip.y0, clipWidth, clipHeight);
-            glEnable(GL_SCISSOR_TEST);
-            glClearColor(0.f, 0.f, 0.f, 0.f);
-            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-            glClear(GL_COLOR_BUFFER_BIT);
-            ctx->backBuffer.contentsValid = M3G_TRUE;
-            return;
+            /* Deep3D-PC: the window's frame so far, as a shared texture */
+            if (deep3d_underlay_texture) {
+                m3gBlitUnderlayTexture(ctx, ctx->clip.x0, ctx->clip.y0,
+                                       clipWidth, clipHeight);
+                ctx->backBuffer.contentsValid = M3G_TRUE;
+                return;
+            }
+            /* Memory target */
+            src = ctx->target.pixels;
+            stride = ctx->target.stride;
         }
 
         srcOffset =

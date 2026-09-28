@@ -31,7 +31,7 @@ public final class class_36 {
       this.field_352 = new class_121(20, class_84.field_1121 / 3, class_84.field_1120 - 40);
       this.field_357 = new class_47();
       this.field_356 = false;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 
    // $VF: renamed from: a () void
@@ -45,7 +45,7 @@ public final class class_36 {
       this.field_350 = null;
       this.field_351 = null;
       this.field_352 = null;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 
    // $VF: renamed from: c () void

@@ -37,6 +37,12 @@ extern "C" int deep3d_target_texture_w = 0;
 extern "C" int deep3d_target_texture_h = 0;
 extern "C" void *deep3d_target_fence = NULL;
 
+/* Underlay of the current pass: the window's frame so far (0 = none) */
+extern "C" unsigned deep3d_underlay_texture = 0;
+extern "C" int deep3d_underlay_w = 0;
+extern "C" int deep3d_underlay_h = 0;
+extern "C" void *deep3d_underlay_fence = NULL;
+
 static bool glxMode() {
     return glxDisplay != NULL && glxShare != NULL;
 }
@@ -566,6 +572,16 @@ Java_javax_microedition_m3g_Platform__1setTargetTexture(JNIEnv *, jclass, jboole
     deep3d_target_texture_w = w;
     deep3d_target_texture_h = h;
     deep3d_target_fence = NULL;
+}
+
+/* texture: fb-sized frame so far (0 = none); fence: signalled when drawn */
+JNIEXPORT void JNICALL
+Java_javax_microedition_m3g_Platform__1setUnderlay(JNIEnv *, jclass, jint texture,
+                                                   jint w, jint h, jlong fence) {
+    deep3d_underlay_texture = (unsigned) texture;
+    deep3d_underlay_w = w;
+    deep3d_underlay_h = h;
+    deep3d_underlay_fence = (void *) (intptr_t) fence;
 }
 
 /* After a pass: {texture, allocated w, allocated h} */

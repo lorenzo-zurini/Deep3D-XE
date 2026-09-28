@@ -23,26 +23,17 @@ official English text from the international release.
   off it runs at well over a thousand FPS at 1080p on a GTX 1070.
 - **Smooth or original texturing** — trilinear + 16x anisotropic
   filtering, or the phones' crisp nearest-neighbour look.
-- **Extended view distance** (up to 8x the original far plane), with the
-  station LOD/impostor distance and the creature spawn radius scaled to
-  match, so detail stops popping in.
 - **Launches fullscreen at your display's native resolution** in true
   widescreen; VSync toggle, FPS limit (Off/30/60/120), FPS counter.
 - **Resolution-independent UI scale** — the interface keeps its classic
   relative size at any resolution (auto, or 1x-6x in Options > Display):
   the game lays out against a virtual screen while 3D renders at full
   native resolution.
-- **Software fallback renderer** (`display.renderer=software` or the
-  Renderer option): the original multithreaded CPU rasterizer, for
-  systems without OpenGL.
+- **Software 2D fallback** (`display.renderer=software` or the Renderer
+  option): Java2D presentation for systems where the OpenGL window fails
+  (3D still runs on the GPU, headless).
 - **Resizable window & fullscreen** (F11 / Alt+Enter), aspect-correct
   scaling, brightness control, FPS limit and FPS counter.
-- **PC-native menus everywhere** — the game's own menus are mouse-driven
-  (hover moves the selection, click confirms, right-click/Esc backs out,
-  wheel scrolls) with their original pixel-identical look; the phone
-  softkey boxes are replaced by an Enter/Esc command bar in the same
-  style, and name entry uses real keyboard typing instead of multi-tap.
-  In-game help texts are rewritten to name your actual key bindings.
 - **Pause menu on Esc (F10 anywhere)** — drawn with the game's own bitmap
   font and palette; mouse, keyboard and controller navigable, with
   Display / Audio / Controls settings; the game freezes cleanly while it
@@ -126,14 +117,12 @@ runtime/src/   Desktop runtime:
                  J2ME Loader), adapted to desktop render targets
                - org.deep3d: launcher, window, input, overlay menu, gamepad,
                  config, first-run setup; org.deep3d.gl: the GPU backend
-               - com.mascotcapsule.micro3d.v3 / ru.woesss.j2me.micro3d:
-                 Mascot Capsule V3 support used by the earlier port of the
-                 international build (kept, currently unused)
 native/m3g/    Nokia's JSR-184 reference engine (C, from J2ME Loader) plus
                the Linux layer: GLES 1.1 -> desktop GL shim, and EGL calls
                served over GLX (window context sharing) or headless EGL
 game/src/      Game logic decompiled from the Nokia JAR (Vineflower,
-               deobfuscated member names), with desktop/PC patches.
+               deobfuscated member names), verified against the original
+               bytecode.
 extract-assets.sh / build.sh / run.sh / package.sh
 ```
 
@@ -142,12 +131,19 @@ extract-assets.sh / build.sh / run.sh / package.sh
 - **Game code**: the 126 obfuscated classes of the Nokia build were
   decompiled with Vineflower (member renaming enabled, since obfuscated
   bytecode contains identifier collisions that are illegal in Java
-  source). Patches are marked `Deep3D-PC`: desktop-safe resource loading,
-  decompiler fixes (byte/short loop counters widened to int), the PC
-  command bar and menu hooks, typed name entry, analogue steering, view
-  distance scaling, a crash-proof main loop and save logging.
-- **Graphics (2D)**: MIDP `Graphics`/`Image`/`GameCanvas` are backed by
-  Java2D `BufferedImage`s presented with aspect-correct scaling.
+  source) and checked against the original bytecode: every class
+  recompiles with the same narrowing conversions (`i2b`/`i2s`/`i2c`) as
+  the original. Vineflower typed some int loop counters as `byte`, which
+  in Java source silently wraps at 127; those were widened back to `int`,
+  and two array locals got their array types back. The only functional
+  change is desktop resource loading (the game looked its files up through
+  `java.lang.Class`, which cannot see the class path on a desktop JVM).
+  Its `System.gc()` calls are neutralised by the launcher
+  (`-XX:+DisableExplicitGC`), and the English text is installed where the
+  Nokia build reads its language, so neither needs a code change.
+- **Graphics (2D)**: MIDP `Graphics` calls are recorded as a command stream
+  and replayed by the GPU at the window's native resolution (or drawn with
+  Java2D in the software fallback).
 - **Graphics (3D)**: the Nokia build uses JSR-184 (M3G). The engine is
   Nokia's reference implementation as open-sourced for Symbian (EPL-1.0)
   and ported to Android by [J2ME Loader](https://github.com/nikita36078/J2ME-Loader);
@@ -156,6 +152,10 @@ extract-assets.sh / build.sh / run.sh / package.sh
   is copied GPU-side into a texture and composited into the frame (fenced,
   no read-back); elsewhere it runs headless on EGL and the pass is read
   back. Passes render at native resolution while the 2D UI is scaled.
+  As on the phone, each pass starts from the 2D drawn beneath it (the game
+  clears only depth, so the water colour painted in 2D shows through the
+  translucent skybox): the frame so far is rendered offscreen and handed
+  to the engine as a shared texture.
 - **Sound**: MIDI music through `javax.sound.midi`; AMR sound effects are
   transcoded to WAV at setup (ffmpeg) and sniffed by container, silently
   stubbed otherwise.
@@ -183,9 +183,6 @@ composed frame. `DEEP3D_DEBUG=1` logs key events.
 
 - The **runtime** (`runtime/src`, excluding the vendored parts) is original
   work, licensed under the MIT license (see `LICENSE`).
-- Files under `com/mascotcapsule/micro3d/v3` and `ru/woesss/j2me/micro3d`
-  are adapted from JL-Mod, © Yury Kharchenko, **Apache License 2.0** —
-  license headers are preserved in each file.
 - `native/m3g` and `runtime/src/javax/microedition/m3g` are Nokia's JSR-184
   implementation, © Nokia Corporation, **Eclipse Public License 1.0**, as
   adapted by J2ME Loader; the Deep3D-PC changes to them are under the same

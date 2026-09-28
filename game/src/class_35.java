@@ -108,8 +108,8 @@ public final class class_35 {
             }
 
             if (var7 != 37 && var7 != 38) {
-               int var10 = var4[var3[var7].field_1482 * 4 + 1];
-               int var11 = var4[var3[var7].field_1482 * 4 + 2];
+               byte var10 = var4[var3[var7].field_1482 * 4 + 1];
+               byte var11 = var4[var3[var7].field_1482 * 4 + 2];
                int var12 = var3[var7].field_1481;
                boolean var13;
                if (var13 = var3[var7].field_1489 != null) {

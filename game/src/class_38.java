@@ -86,12 +86,12 @@ public final class class_38 {
 
          for (int var6 = 1; var6 < var3.length; var6++) {
             if (var3[var6 - 1] < var3[var6]) {
-               int var7 = var3[var6 - 1];
-               int var8 = var4[var6 - 1];
+               byte var7 = var3[var6 - 1];
+               byte var8 = var4[var6 - 1];
                var3[var6 - 1] = var3[var6];
                var4[var6 - 1] = var4[var6];
-               var3[var6] = (byte)var7;
-               var4[var6] = (byte)var8;
+               var3[var6] = var7;
+               var4[var6] = var8;
                var9 = false;
             }
          }

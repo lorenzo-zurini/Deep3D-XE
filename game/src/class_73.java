@@ -49,7 +49,7 @@ public final class class_73 {
          this.field_1018 = null;
       }
 
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 
    // $VF: renamed from: a (int, int, int, int) void

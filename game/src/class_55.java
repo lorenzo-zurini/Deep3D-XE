@@ -170,7 +170,7 @@ public final class class_55 {
       this.field_626 = null;
       this.field_627 = null;
       this.field_628 = null;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 
    // $VF: renamed from: a () boolean
@@ -310,7 +310,7 @@ public final class class_55 {
       this.field_666 = true;
       this.field_670 = false;
       this.field_671 = false;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
       this.field_603 = true;
    }
 

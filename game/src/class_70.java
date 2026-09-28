@@ -37,10 +37,9 @@ public final class class_70 {
    // $VF: renamed from: f int
    private int field_983;
    // $VF: renamed from: g int
-   // Deep3D-PC: float so a controller stick can command partial rates.
-   private float field_984;
+   private int field_984;
    // $VF: renamed from: h int
-   private float field_985;
+   private int field_985;
    // $VF: renamed from: i int
    private int field_986;
    // $VF: renamed from: a int
@@ -490,25 +489,6 @@ public final class class_70 {
       }
    }
 
-   /**
-    * Deep3D-PC: analogue steering. yaw > 0 turns left (like method_673),
-    * pitch uses the same sign as method_675/676. Magnitudes 0..1 scale the
-    * turn rate and the visual bank.
-    */
-   public final void steerAnalog(long var1, float yaw, float pitch) {
-      this.field_985 = yaw;
-      float bankLimit = 384.0F * Math.abs(yaw);
-      if (yaw > 0.0F) {
-         if (this.field_986 < bankLimit) {
-            this.field_986 = (int)(this.field_986 + var1);
-         }
-      } else if (yaw < 0.0F && this.field_986 > -bankLimit) {
-         this.field_986 = (int)(this.field_986 - var1);
-      }
-
-      this.field_984 = pitch;
-   }
-
    // $VF: renamed from: e (long) void
    public final void method_675(long var1) {
       this.field_984 = 1;
@@ -583,7 +563,7 @@ public final class class_70 {
       }
 
       this.field_980 = null;
-      // System.gc() removed: full GCs stall the desktop JVM
+      System.gc();
    }
 
    // $VF: renamed from: b (boolean) void

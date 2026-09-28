@@ -336,7 +336,7 @@ public final class class_1 {
             field_27 = field_27 + "de/";
             break;
          case 1:
-            field_27 = field_27 + "en/";
+            field_27 = field_27 + "ru/";
             break;
          case 2:
             field_27 = field_27 + "es/";
@@ -373,7 +373,7 @@ public final class class_1 {
          DataInputStream var4 = new DataInputStream((InputStream)var3);
 
          for (int var8 = 0; var8 < var1.length; var8++) {
-            var1[var8] = org.deep3d.GameUi.filterText(var4.readUTF());
+            var1[var8] = var4.readUTF();
          }
 
          var4.close();
