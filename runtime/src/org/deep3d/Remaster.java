@@ -25,6 +25,9 @@ public final class Remaster {
     public static final int SIZE = LIGHTS + MAX_LIGHTS * 4;
 
     private static final float[] data = new float[SIZE];
+    /* testing: DEEP3D_RM_DEPTH=<game depth> shows any station depth */
+    private static final int FORCE_DEPTH = Integer.getInteger("deep3d.rmdepth",
+            System.getenv("DEEP3D_RM_DEPTH") != null ? Integer.parseInt(System.getenv("DEEP3D_RM_DEPTH")) : 0);
     private static final long start = System.nanoTime();
     private static boolean pending;
     private static boolean worldPass;
@@ -54,7 +57,7 @@ public final class Remaster {
         data[8] = m[2]; data[9] = m[6]; data[10] = m[10]; data[11] = 0;
         data[12] = m[3]; data[13] = m[7]; data[14] = m[11]; data[15] = 1;
         data[TIME] = (System.nanoTime() - start) / 1e9f;
-        data[SECTOR_DEPTH] = sectorDepth;
+        data[SECTOR_DEPTH] = FORCE_DEPTH > 0 ? FORCE_DEPTH : sectorDepth;
         data[TINT] = tr;
         data[TINT + 1] = tg;
         data[TINT + 2] = tb;

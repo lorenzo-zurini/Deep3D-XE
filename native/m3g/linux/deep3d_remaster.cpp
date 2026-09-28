@@ -75,12 +75,13 @@ static const char *WATER =
 "float depth01(float y) { return clamp((uSector - y / 8.0 - 15000.0) / 15000.0, 0.0, 1.0); }\n"
 "float surfLight(float d) { return mix(1.0, 0.16, pow(d, 1.4)); }\n"
 "uniform float uLong;\n"
+"uniform float uSelf;\n"
 /* how much light survives a path through the water: clear near, then
    falling away towards the phone's old far plane (uSigma = 1 / reach) */
 "vec3 trans(float dist) {\n"
    /* structures: a long gentle falloff, silhouettes far out in the haze;
       creatures, ships, items: gone before they respawn (36000) */
-"  if (uLong > 0.5) return exp(-vec3(dist) * uSigma * 0.305);\n"
+"  if (uLong > 0.5) return exp(-vec3(dist) * uSigma * 0.22);\n"
 "  return exp(-pow(vec3(dist) * uSigma, vec3(2.35)));\n"
 "}\n"
 "float trans1(float dist) { return exp(-pow(dist * uSigma.g, 2.35)); }\n"
@@ -92,9 +93,9 @@ static const char *WATER =
 "const vec3 TEAL = vec3(0.012, 0.529, 0.620);\n"
 "vec3 dome(vec3 dir) {\n"
 "  float v = 0.5 - asin(clamp(dir.y, -1.0, 1.0)) / 3.14159265;\n"
-"  if (v < 0.25) return mix(uTint, ZENITH, smoothstep(0.25, 0.0, v));\n"
+"  if (v < 0.25) return mix(uTint, ZENITH, 1.0 - smoothstep(0.0, 0.25, v));\n"
 "  if (v < 0.5) return mix(uTint, TEAL, smoothstep(0.25, 0.5, v));\n"
-"  return TEAL * (1.0 - smoothstep(0.5, 0.76, v));\n"
+"  return TEAL * clamp(1.0 - (v - 0.5) / 0.27, 0.0, 1.0) + TEAL * 0.035;\n"
 "}\n"
 /* the water's light along dir, seen from height y: the dome, dimmer and
    murkier the deeper the station; what distant things melt into */
@@ -102,7 +103,7 @@ static const char *WATER =
 "  float d = depth01(y);\n"
 "  vec3 c = dome(dir);\n"
 "  c = mix(c, TEAL * 0.35 * (0.6 + 0.4 * smoothstep(-0.8, 0.6, dir.y)), d * d * 0.5);\n"
-"  c *= mix(1.0, 0.45, d * d);\n"
+"  c *= mix(1.0, 0.55, d * d);\n"
 "  return c;\n"
 "}\n"
 "float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n"
@@ -141,7 +142,7 @@ static const char *WATER =
 "    float lam = max(dot(N, -ld), 0.0) * 0.8 + 0.2;\n"
 "    acc += vec3(1.0, 0.96, 0.86) * cone * att * lam * trans1(dl * 0.6) * 2.4;\n"
 "    vec3 ep = uSub - uSubDir * 240.0; float de = length(wp - ep);\n"
-"    acc += vec3(0.25, 0.8, 1.0) * (0.35 + 1.1 * uBoost) / (1.0 + (de / 800.0) * (de / 800.0));\n"
+"    acc += vec3(0.25, 0.8, 1.0) * (0.25 + 0.7 * uBoost) / (1.0 + (de / 900.0) * (de / 900.0));\n"
 "  }\n"
 "  for (int k = 0; k < 8; k++) {\n"
 "    if (k >= uNumLights) break;\n"
@@ -162,6 +163,7 @@ static const char *SCENE_FS =
 "uniform sampler2D uTex1;\n"
 "uniform int uEn0, uEn1, uMode0, uMode1, uFmt0, uFmt1;\n"
 "uniform int uKind;\n"
+"uniform int uSprite;\n"
 "vec4 env(vec4 f, vec4 t, int mode, int fmt, vec4 cc) {\n"
 "  bool hasC = fmt == 1 || fmt == 3; bool hasA = fmt >= 2;\n"
 "  vec4 r = f;\n"
@@ -191,6 +193,13 @@ static const char *SCENE_FS =
 "  float d = depth01(wp.y);\n"
 "  float L = surfLight(d);\n"
 "  vec3 col = base.rgb;\n"
+   /* sprites: the stations' flares and other glows are lights: they pierce
+      the murk and feed the bloom */
+"  if (uSprite != 0 && uKind != 0) {\n"
+"    vec3 T = trans(dist * 0.3);\n"
+"    gl_FragColor = vec4(col * T * 1.15, base.a);\n"
+"    return;\n"
+"  }\n"
 "  if (uKind == 2) {\n"
      /* additive: a light (plumes, glows, station beacons): it cuts through
         the murk far better than lit surfaces and adds no water colour */
@@ -201,7 +210,7 @@ static const char *SCENE_FS =
    /* the models are pre-lit: light from above gives them shape, the depth
       dims them, and a rim of water colour sits them in the water */
 "  float sky = N.y * 0.5 + 0.5;\n"
-"  col *= mix(0.76, 1.1, sky) * mix(1.0, 0.55, d * d);\n"
+"  col *= mix(0.76, 1.1, sky) * mix(1.0, 0.62, d * d);\n"
 "  float rim = pow(1.0 - abs(dot(N, V)), 3.0);\n"
 "  col += water(-N, wp.y) * rim * 0.22;\n"
 "  float up = smoothstep(-0.15, 0.85, N.y);\n"
@@ -212,7 +221,7 @@ static const char *SCENE_FS =
    /* a structure's lamps (bright, saturated texels) keep their own light */
 "  float emis = uKind == 0 && uLong > 0.5 ? smoothstep(0.80, 0.97, mx) * smoothstep(0.30, 0.55, mx - mn) : 0.0;\n"
 "  col = mix(col, alb.rgb * 1.1, emis * 0.8);\n"
-"  col += alb.rgb * lamps(wp, N);\n"
+"  col += alb.rgb * lamps(wp, N) * (1.0 - uSelf);\n"
 "  vec3 T = trans(dist);\n"
 "  T = mix(T, sqrt(T), emis);\n"
 "  col = col * T + water(V, cam.y) * (1.0 - T);\n"
@@ -292,11 +301,12 @@ static const char *BUBBLE_VS =
 "  gl_Position = uProj * eye;\n"
 "  float dist = length(eye.xyz);\n"
 "  float r = (7.0 + aSeed * 16.0) * (1.0 + k * 1.4);\n"
-"  gl_PointSize = clamp(r * 2.0 * uPx / max(dist, 1.0), 1.0, 48.0);\n"
+"  gl_PointSize = clamp(r * 2.0 * uPx / max(dist, 1.0), 1.0, 28.0);\n"
 "  float d = depth01(wp.y);\n"
 "  vec3 c = mix(ZENITH, water(vec3(0.0, 1.0, 0.0), wp.y), 0.5) * (0.35 + 0.65 * surfLight(d));\n"
 "  c += lamps(wp, normalize(uCamToWorld[3].xyz - wp)) * 0.5;\n"
 "  float a = (k < 0.0 || k > 1.0) ? 0.0 : smoothstep(0.0, 0.06, k) * (1.0 - smoothstep(0.7, 1.0, k));\n"
+"  a *= smoothstep(150.0, 450.0, dist);\n"
 "  vCol = vec4(c * trans(dist), a * 0.85);\n"
 "}\n";
 static const char *BUBBLE_FS =
@@ -306,7 +316,7 @@ static const char *BUBBLE_FS =
 "  float r = length(p);\n"
 "  if (r > 1.0) discard;\n"
 "  float rim = smoothstep(0.55, 0.95, r) * (1.0 - smoothstep(0.95, 1.0, r));\n"
-"  float hl = smoothstep(0.35, 0.0, length(p - vec2(-0.35, 0.35)));\n"
+"  float hl = (1.0 - smoothstep(0.0, 0.35, length(p - vec2(-0.35, 0.35))));\n"
 "  gl_FragColor = vec4(vCol.rgb * (0.25 + rim * 1.2 + hl * 1.5), vCol.a * (0.15 + rim * 0.85 + hl));\n"
 "}\n";
 
@@ -362,10 +372,10 @@ static const char *POST_FS =
 "      float t = (float(i) + jit) / 20.0 * tmax;\n"
 "      vec3 p = cam + wrd * t;\n"
 "      vec3 tl = p - lp; float dl = max(length(tl), 1.0);\n"
-"      float cone = smoothstep(0.84, 0.985, dot(tl / dl, uSubDir));\n"
+"      float cone = smoothstep(0.80, 0.975, dot(tl / dl, uSubDir));\n"
 "      acc += cone / (1.0 + (dl / 2600.0) * (dl / 2600.0)) * trans1((dl + t) * 0.5);\n"
 "    }\n"
-"    c += vec3(0.85, 0.93, 1.0) * acc / 20.0 * (tmax / 9000.0) * mix(0.35, 1.0, d) * 0.9;\n"
+"    c += vec3(0.85, 0.93, 1.0) * acc / 20.0 * (tmax / 9000.0) * mix(0.3, 1.6, d);\n"
 "  }\n"
    /* halos of other ships' lamps in the murk */
 "  for (int k = 0; k < 8; k++) {\n"
@@ -390,18 +400,19 @@ static const char *POST_FS =
 "  vec2 v = uv - 0.5; float vig = 1.0 - dot(v, v) * mix(0.55, 1.2, d);\n"
 "  c *= vig;\n"
 "  c += (hash(uv * 1200.0 + fract(uTime)) - 0.5) * 0.012;\n"
+"  if (any(notEqual(c, c))) c = texture2D(uScene, uv).rgb;\n"
 "  gl_FragColor = vec4(c, 1.0);\n"
 "}\n";
 
 struct Prog {
     GLuint id;
     GLint uCamToWorld, uInvProj, uVP, uTime, uSector, uTint, uSunDir, uSunCol, uSigma;
-    GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong;
+    GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf;
 };
 
 static Prog pScene, pBg, pSnow, pBright, pPost, pBub;
 static GLint buWorldToEye, buProj, buPx, buLife, buBub, buSeed;
-static GLint sTex0, sTex1, sEn0, sEn1, sMode0, sMode1, sFmt0, sFmt1, sKind;
+static GLint sTex0, sTex1, sEn0, sEn1, sMode0, sMode1, sFmt0, sFmt1, sKind, sSprite;
 static GLint snWorldToEye, snProj, snBox, snPx, snSeed;
 static GLint brScene, brDepth, brThresh;
 static GLint poScene, poDepth, poBright, poSunUV, poBloom, poRays;
@@ -462,6 +473,7 @@ static int link(Prog *p, const char *vs1, const char *vs2, const char *fs) {
     p->uNumLights = glGetUniformLocation(id, "uNumLights");
     p->uLights = glGetUniformLocation(id, "uLights");
     p->uLong = glGetUniformLocation(id, "uLong");
+    p->uSelf = glGetUniformLocation(id, "uSelf");
     return 1;
 }
 
@@ -489,6 +501,7 @@ static int buildPrograms() {
     sFmt0 = glGetUniformLocation(pScene.id, "uFmt0");
     sFmt1 = glGetUniformLocation(pScene.id, "uFmt1");
     sKind = glGetUniformLocation(pScene.id, "uKind");
+    sSprite = glGetUniformLocation(pScene.id, "uSprite");
     snWorldToEye = glGetUniformLocation(pSnow.id, "uWorldToEye");
     snProj = glGetUniformLocation(pSnow.id, "uProj");
     snBox = glGetUniformLocation(pSnow.id, "uBox");
@@ -558,6 +571,7 @@ static void setCommon(const Prog *p) {
     glUniform1i(p->uNumLights, (int) F[F_NLIGHTS]);
     glUniform4fv(p->uLights, F_MAXLIGHTS, F + F_LIGHTS);
     glUniform1f(p->uLong, rmLayer == 0 ? 1.0f : 0.0f);
+    glUniform1f(p->uSelf, rmLayer >= 3 ? 1.0f : 0.0f);
 }
 
 static int invert4(const float *m, float *out) {
@@ -743,6 +757,43 @@ static int sceneBegin() {
         glGetIntegerv(GL_BLEND_DST_RGB, &dst);
         kind = dst == GL_ONE ? 2 : 1;
     }
+    if (getenv("DEEP3D_RM_DEBUG") && kind == 2 && rmLayer == 0 && ((int) F[F_FRAME]) % 120 == 1) {
+        GLint src = 0, dst = 0, mode0 = 0, colArr = 0, fog = 0, alphaTest = 0, texfn = 0;
+        GLfloat cur[4], envc[4];
+        glGetIntegerv(GL_BLEND_SRC_RGB, &src);
+        glGetIntegerv(GL_BLEND_DST_RGB, &dst);
+        colArr = glIsEnabled(GL_COLOR_ARRAY);
+        fog = glIsEnabled(GL_FOG);
+        alphaTest = glIsEnabled(GL_ALPHA_TEST);
+        glGetFloatv(GL_CURRENT_COLOR, cur);
+        glActiveTexture(GL_TEXTURE0);
+        glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &texfn);
+        glGetTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, envc);
+        glActiveTexture(active);
+        fprintf(stderr, "[remaster] add0 sprite %d en %d/%d mode 0x%x fmt %d blend 0x%x/0x%x colArr %d fog %d atest %d cur %.2f %.2f %.2f %.2f env %.2f %.2f %.2f %.2f\n",
+                rmSprite, en[0], en[1], texfn, fmt[0], src, dst, colArr, fog, alphaTest,
+                cur[0], cur[1], cur[2], cur[3], envc[0], envc[1], envc[2], envc[3]);
+    }
+    if (getenv("DEEP3D_RM_DEBUG") && kind == 1 && ((int) F[F_FRAME]) % 120 == 1) {
+        GLint name = 0, ifmt = 0, a = 0, r = 0, l = 0, texfn = 0, atest = glIsEnabled(GL_ALPHA_TEST);
+        glActiveTexture(GL_TEXTURE0);
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &name);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &ifmt);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_ALPHA_SIZE, &a);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_RED_SIZE, &r);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_LUMINANCE_SIZE, &l);
+        glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &texfn);
+        glActiveTexture(active);
+        GLfloat cur[4];
+        glGetFloatv(GL_CURRENT_COLOR, cur);
+        fprintf(stderr, "[remaster] blend1 layer %d sprite %d tex %d ifmt 0x%x r%d l%d a%d fmt %d mode 0x%x atest %d colArr %d cur %.2f %.2f %.2f %.2f\n",
+                rmLayer, rmSprite, name, ifmt, r, l, a, fmt[0], texfn, atest, glIsEnabled(GL_COLOR_ARRAY), cur[0], cur[1], cur[2], cur[3]);
+    }
+    /* additive glows (plumes, panels) and the stations' translucent parts
+       stay the engine's own: shaded, some flared into solid blocks */
+    if ((kind == 2 && !rmSprite) || (kind == 1 && rmLayer == 0 && !rmSprite)) {
+        return 0;
+    }
     /* debugging: DEEP3D_RM_PLAIN=<kind> leaves those draws to the engine */
     static int plain = getenv("DEEP3D_RM_PLAIN") ? atoi(getenv("DEEP3D_RM_PLAIN")) : -1;
     if (plain == kind || plain == 99 || (plain == 9 && rmSprite)) {
@@ -767,6 +818,7 @@ static int sceneBegin() {
     glUniform1i(sFmt0, fmt[0]);
     glUniform1i(sFmt1, fmt[1]);
     glUniform1i(sKind, kind);
+    glUniform1i(sSprite, rmSprite);
     return 1;
 }
 
@@ -803,10 +855,17 @@ extern "C" void deep3d_rm_pass_begin(void) {
     deriveFrame();
     if (getenv("DEEP3D_RM_DEBUG") && ((int) F[F_FRAME]) % 60 == 0) {
         float cy = F[F_CAM + 13];
-        fprintf(stderr, "[remaster] cam %.0f %.0f %.0f sector %.0f depth01 %.2f tint %.2f %.2f %.2f sub %.0f lights %.0f\n",
-                F[F_CAM + 12], cy, F[F_CAM + 14], F[F_SECTOR],
+        fprintf(stderr, "[remaster] cam %.0f %.0f %.0f fwd %.2f %.2f %.2f sector %.0f depth01 %.2f tint %.2f %.2f %.2f sub %.0f at %.0f %.0f %.0f dir %.2f %.2f %.2f lights %.0f\n",
+                F[F_CAM + 12], cy, F[F_CAM + 14], -F[F_CAM + 8], -F[F_CAM + 9], -F[F_CAM + 10], F[F_SECTOR],
                 (F[F_SECTOR] - cy / 8.0f - 15000.0f) / 15000.0f,
-                F[F_TINT], F[F_TINT + 1], F[F_TINT + 2], F[F_SUBON], F[F_NLIGHTS]);
+                F[F_TINT], F[F_TINT + 1], F[F_TINT + 2], F[F_SUBON],
+                F[F_SUB], F[F_SUB + 1], F[F_SUB + 2], F[F_SUBDIR], F[F_SUBDIR + 1], F[F_SUBDIR + 2], F[F_NLIGHTS]);
+    }
+    if (getenv("DEEP3D_RM_DEBUG") && ((int) F[F_FRAME]) % 60 == 0) {
+        for (int k = 0; k < (int) F[F_NLIGHTS]; k++) {
+            fprintf(stderr, "[remaster]   light %d: %.0f %.0f %.0f kind %.0f\n", k,
+                    F[F_LIGHTS + k * 4], F[F_LIGHTS + k * 4 + 1], F[F_LIGHTS + k * 4 + 2], F[F_LIGHTS + k * 4 + 3]);
+        }
     }
     /* one depth buffer for all the game's layers (it cleared between them) */
     glPushAttrib(GL_DEPTH_BUFFER_BIT | GL_SCISSOR_BIT);
