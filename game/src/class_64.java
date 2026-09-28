@@ -42,6 +42,7 @@ public final class class_64 extends class_61 {
    private int field_797;
    // $VF: renamed from: c int
    private int field_798;
+   private int deep3dFov;
    // $VF: renamed from: a cz
    private class_26 field_799;
    // $VF: renamed from: a ae
@@ -183,7 +184,9 @@ public final class class_64 extends class_61 {
       this.field_787 = this.field_799.field_272;
       this.field_802 = new class_34();
       this.field_802.method_298(this.field_799.field_280);
-      this.field_788 = class_106.method_886(class_84.field_1120, class_84.field_1121, 500, 100, 31768);
+      this.field_788 = class_106.method_886(class_84.field_1120, class_84.field_1121, org.deep3d.Config.flightFov(), 100, 4194304);
+      // Deep3D-PC: Field of view; the far plane reaches every structure
+      this.deep3dFov = org.deep3d.Config.flightFov();
       this.field_789 = new class_104();
       this.field_789.method_879(this.field_788);
       class_84.field_1110.method_24(this.field_788);
@@ -359,9 +362,15 @@ public final class class_64 extends class_61 {
             }
 
             if (this.field_787.field_994) {
-               this.field_798 = 500 + (int)(this.field_787.method_652() * 400.0F);
+               this.field_798 = org.deep3d.Config.flightFov() + (int)(this.field_787.method_652() * 400.0F);
+               this.field_788.method_882(this.field_798);
+            } else if (this.deep3dFov != org.deep3d.Config.flightFov()) {
+               // Deep3D-PC: a changed Field of view applies at once
+               this.field_798 += org.deep3d.Config.flightFov() - this.deep3dFov;
                this.field_788.method_882(this.field_798);
             }
+
+            this.deep3dFov = org.deep3d.Config.flightFov();
 
             if (class_21.method_132().field_1162 || this.field_796 || !this.method_564()) {
                if (!this.field_796) {

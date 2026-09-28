@@ -80,6 +80,14 @@ public final class Config {
         return enhanced && fullColour;
     }
 
+    /** In-flight field of view, vertical degrees (the phone's: 44). */
+    public static int fov = 44;
+
+    /** The flight camera's base field of view in game angle units (4096 = 360 degrees). */
+    public static int flightFov() {
+        return Math.round(fov * 4096f / 360f);
+    }
+
     public static void load() {
         if (FILE.isFile()) {
             try (FileInputStream in = new FileInputStream(FILE)) {
@@ -99,6 +107,7 @@ public final class Config {
         }
         renderer = props.getProperty("display.renderer", renderer);
         vsync = getBool("display.vsync", vsync);
+        fov = Math.max(30, Math.min(110, getInt("display.fov", fov)));
         enhanced = getBool("graphics.enhanced", enhanced);
         originalScreen = props.getProperty("graphics.original_screen", originalScreen);
         originalLines = Math.max(120, Math.min(1080, getInt("graphics.original_lines", originalLines)));
@@ -126,6 +135,7 @@ public final class Config {
         props.setProperty("config.version", "2");
         props.setProperty("display.renderer", renderer);
         props.setProperty("display.vsync", String.valueOf(vsync));
+        props.setProperty("display.fov", String.valueOf(fov));
         props.setProperty("graphics.enhanced", String.valueOf(enhanced));
         props.setProperty("graphics.original_screen", originalScreen);
         props.setProperty("graphics.original_lines", String.valueOf(originalLines));

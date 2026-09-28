@@ -100,6 +100,18 @@ public abstract class class_106 extends class_105 {
       this.field_1352[3].method_10(-var5, 0, -var4);
       this.field_1352[4].method_10(0, -var5, -var4);
       this.field_1352[5].method_10(0, var5, -var4);
+      // Deep3D-PC: the side planes were built from the vertical FOV, which
+      // was safe on the phone's portrait screen but culls objects at the
+      // left / right edges of a wide one. Cull with the real horizontal FOV,
+      // plus a margin on all sides so nothing pops at the screen's edges.
+      double var90 = (var1 >> 1) * Math.PI / 2048.0;
+      double var91 = this.field_1359 > 0 ? (double)this.field_1358 / this.field_1359 : 1.0;
+      int var92 = (int)Math.min(1000.0, (Math.atan(Math.tan(var90) * Math.max(1.0, var91)) + 0.2) * 2048.0 / Math.PI);
+      int var93 = (int)Math.min(1000.0, (var90 + 0.2) * 2048.0 / Math.PI);
+      this.field_1352[2].method_10(class_16.method_92(var92), 0, -class_16.method_91(var92));
+      this.field_1352[3].method_10(-class_16.method_92(var92), 0, -class_16.method_91(var92));
+      this.field_1352[4].method_10(0, -class_16.method_92(var93), -class_16.method_91(var93));
+      this.field_1352[5].method_10(0, class_16.method_92(var93), -class_16.method_91(var93));
       this.field_1360 = (var4 << 12) / var5;
       this.field_1361 = this.field_1360 * ((this.field_1358 << 12) / this.field_1359) >> 12;
    }

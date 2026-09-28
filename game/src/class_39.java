@@ -3,7 +3,8 @@ public final class class_39 {
    // $VF: renamed from: a long
    private long field_387;
    // $VF: renamed from: a an
-   public class_106 field_388 = class_106.method_886(class_84.field_1120, class_84.field_1121, 800, 100, 31768);
+   // Deep3D-PC: far plane reaches every structure (no stand-ins, see class_95)
+   public class_106 field_388 = class_106.method_886(class_84.field_1120, class_84.field_1121, 800, 100, 4194304);
    // $VF: renamed from: a g
    private class_13 field_389;
    // $VF: renamed from: a int[][]

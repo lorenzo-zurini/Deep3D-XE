@@ -127,18 +127,11 @@ public final class class_100 extends class_99 {
          super.field_1232 = class_84.field_1110.field_40.method_849(super.field_1232);
          super.field_1233.method_10(this.field_1308[var3 * 3], this.field_1308[var3 * 3 + 1], this.field_1308[var3 * 3 + 2]);
          super.field_1233.method_16(super.field_1232, class_98.field_1299);
-         int var4;
-         if ((var4 = class_98.field_1299.method_23()) > 30000) {
-            class_98.field_1299.method_22();
-            class_98.field_1299.method_18(30000);
-            class_98.field_1299.method_15(super.field_1232);
-            this.field_1307[var3].method_846(class_98.field_1299);
-            int var5 = (int)(30000.0F / var4 * 4096.0F);
-            this.field_1307[var3].method_869(var5, var5, var5);
-         } else {
-            this.field_1307[var3].method_869(4096, 4096, 4096);
-            this.field_1307[var3].method_845(this.field_1308[var3 * 3], this.field_1308[var3 * 3 + 1], this.field_1308[var3 * 3 + 2]);
-         }
+         // Deep3D-PC: always full detail. The phone swapped distant structures for
+         // scaled-down stand-ins kept inside its short far plane; the far plane now
+         // reaches them (class_64).
+         this.field_1307[var3].method_869(4096, 4096, 4096);
+         this.field_1307[var3].method_845(this.field_1308[var3 * 3], this.field_1308[var3 * 3 + 1], this.field_1308[var3 * 3 + 2]);
       }
    }
 

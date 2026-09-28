@@ -88,21 +88,12 @@ public final class class_95 extends class_91 {
       super.field_1232 = class_84.field_1110.field_40.method_849(super.field_1232);
       super.field_1233.method_10(super.field_1226.method_852(), super.field_1226.method_853(), super.field_1226.method_854());
       super.field_1233.method_16(super.field_1232, this.field_1260);
-      int var6;
-      if ((var6 = this.field_1260.method_23()) > 30000) {
-         this.field_1262.method_870(super.field_1226.field_1341);
-         this.field_1260.method_22();
-         this.field_1260.method_18(30000);
-         this.field_1260.method_15(super.field_1232);
-         this.field_1262.method_846(this.field_1260);
-         int var4 = (int)(30000.0F / var6 * 4096.0F);
-         this.field_1262.method_869(var4, var4, var4);
-         this.field_1263 = true;
-      } else {
-         this.field_1262.method_869(4096, 4096, 4096);
-         this.field_1262.method_845(super.field_1226.method_852(), super.field_1226.method_853(), super.field_1226.method_854());
-         this.field_1263 = false;
-      }
+      // Deep3D-PC: always full detail. The phone swapped distant structures for
+      // scaled-down stand-ins kept inside its short far plane; the far plane now
+      // reaches them (class_64).
+      this.field_1262.method_869(4096, 4096, 4096);
+      this.field_1262.method_845(super.field_1226.method_852(), super.field_1226.method_853(), super.field_1226.method_854());
+      this.field_1263 = false;
 
       if (super.field_1225.field_363 <= 0 && super.field_1224 != 3 && super.field_1224 != 4) {
          super.field_1225.field_375 = false;

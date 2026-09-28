@@ -371,6 +371,10 @@ public final class class_101 extends class_91 {
 
    // $VF: renamed from: c () void
    public final void method_809() {
+      if (deep3dBeyondPhoneFar(super.field_1226)) { // Deep3D-PC: see class_91
+         return;
+      }
+
       if (this.field_1317 != null) {
          class_84.field_1110.method_25(this.field_1317);
       }

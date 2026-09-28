@@ -165,7 +165,9 @@ static EGLBoolean glxChooseConfig(const EGLint *attribs, EGLConfig *configs, EGL
             || ms < samples) {
             continue;
         }
-        int score = (r + g + b + a) * 4 + d + s + ms * 64;
+        /* smallest match, but a 24-bit depth buffer before a 16-bit one:
+           the flight camera's far plane reaches every structure */
+        int score = (r + g + b + a) * 4 + (d < 24 ? 1000 : d) + s + ms * 64;
         if (score < bestScore) {
             bestScore = score;
             best = c;
