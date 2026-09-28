@@ -807,9 +807,17 @@ public final class Runtime {
                 System.out.println("[ui " + parts[1] + "] " + GameUi.describe());
                 break;
             case "mm":
+                if (Overlay.isOpen()) {
+                    Overlay.mouseMoved(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+                    break;
+                }
                 GameUi.mouseMoved(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
                 break;
             case "mc":
+                if (Overlay.isOpen()) {
+                    Overlay.mouseClicked(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+                    break;
+                }
                 GameUi.mouseClicked(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]),
                         parts.length > 3 && parts[3].equals("r"));
                 break;

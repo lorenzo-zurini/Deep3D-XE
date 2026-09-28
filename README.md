@@ -35,6 +35,11 @@ official English text from the international release.
   - full texture colours,
   - smooth textures (trilinear + 16x anisotropic filtering),
   - 4x MSAA antialiasing.
+- **Adjustable field of view** (Options > Display; 44 is the original)
+  and full-detail structures: stations and wrecks never swap to the
+  phone's low-detail stand-ins, and the view is culled with a margin
+  well past the screen edge, so nothing pops in at the sides of a wide
+  screen.
 - **One control scheme for every screen** — the game's own screens keep
   their original look but are fully drivable by mouse, keyboard or
   controller with the same logic everywhere (A / Enter confirm, B / Esc
@@ -50,10 +55,11 @@ official English text from the international release.
   (3D still runs on the GPU, headless).
 - **Resizable window & fullscreen** (F11 / Alt+Enter), aspect-correct
   scaling, brightness control, FPS limit and FPS counter.
-- **Pause menu on Esc (F10 anywhere)** — drawn with the game's own bitmap
-  font and palette; mouse, keyboard and controller navigable, with
-  Display / Audio / Controls settings; the game freezes cleanly while it
-  is open. Settings persist in `deep3d.cfg` next to the game.
+- **Settings menu** (Options in the game's menus, F10 anywhere) — drawn by
+  the game's own UI code, so its Display / Audio / Controls pages look
+  exactly like the game's menus ("Label    Value" rows, the same panel,
+  font and command bar); mouse, keyboard and controller navigable.
+  Settings persist in `deep3d.cfg` next to the game.
 - **Controller support** (Linux, zero dependencies) — standard gamepads via
   `/dev/input/js*`, hot-plugged. In flight: left stick / d-pad steer
   (analogue), A fires, Y docks, LB weapon, RB boost, LT auto-fire,

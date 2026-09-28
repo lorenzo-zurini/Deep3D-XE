@@ -189,6 +189,13 @@ public final class GLBackend {
      * renders the same frame at the next integer multiple of the window's
      * scale (downscaled when presented), and a resized window letterboxes.
      */
+    private static boolean sessionPhoneScreen;
+
+    /** The screen this session started with (the setting applies on restart). */
+    public static boolean sessionPhoneScreen() {
+        return sessionPhoneScreen;
+    }
+
     public static void updateVirtualSize() {
         int fw = fbWidth;
         int fh = fbHeight;
@@ -201,6 +208,7 @@ public final class GLBackend {
                 virtWidth = Math.max(160, Math.round(Config.originalLines * (float) fw / fh));
             }
             virtualLocked = true;
+            sessionPhoneScreen = "phone".equals(Config.originalScreen);
         }
         float fit = Math.min((float) fw / virtWidth, (float) fh / virtHeight);
         dstW = Math.min(fw, Math.round(virtWidth * fit));
@@ -261,7 +269,7 @@ public final class GLBackend {
             int px = (int) (x * mouseScaleX);
             int py = (int) (y * mouseScaleY);
             if (Overlay.isOpen()) {
-                Overlay.mouseMoved(px, py);
+                Overlay.mouseMoved(gameX(px), gameY(py));
             } else {
                 GameUi.mouseMoved(gameX(px), gameY(py));
             }
@@ -277,7 +285,9 @@ public final class GLBackend {
             int py = (int) (cy[0] * mouseScaleY);
             if (Overlay.isOpen()) {
                 if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                    Overlay.mouseClicked(px, py);
+                    Overlay.mouseClicked(gameX(px), gameY(py));
+                } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                    Overlay.handleKey(java.awt.event.KeyEvent.VK_ESCAPE);
                 }
             } else {
                 GameUi.mouseClicked(gameX(px), gameY(py),
@@ -489,7 +499,7 @@ public final class GLBackend {
         }
 
         Draw2D frame = recorders.get();
-        renderFrame(frame);
+        renderFrame(frame, null);
         if (screenshotRequested) {
             screenshotRequested = false;
             captureScreenshot();
@@ -511,9 +521,22 @@ public final class GLBackend {
         Runtime.screenWidth = virtWidth;
         Runtime.screenHeight = virtHeight;
 
-        // Pause: keep redrawing the last frame + overlay until resumed.
+        // Pause: keep redrawing the last frame + overlay until resumed. The
+        // settings menu is drawn by the game's own toolkit (on this, the game
+        // thread) over the frame, at the game's resolution.
+        boolean pausedHere = false;
         while (Runtime.isGamePaused() && running) {
-            renderFrame(lastFrame);
+            pausedHere = true;
+            Draw2D menu = null;
+            if (Overlay.isOpen() && screenGraphics != null) {
+                menu = recorders.get();
+                menu.reset();
+                screenGraphics.beginFrame(virtWidth, virtHeight);
+                if (!Overlay.drawMenu(screenGraphics)) {
+                    menu = null;
+                }
+            }
+            renderFrame(lastFrame, menu);
             if (screenshotRequested) {
                 screenshotRequested = false;
                 captureScreenshot();
@@ -527,10 +550,16 @@ public final class GLBackend {
                 break;
             }
         }
+        if (pausedHere) {
+            recorders.get().reset();
+            if (screenGraphics != null) {
+                screenGraphics.beginFrame(virtWidth, virtHeight);
+            }
+        }
 
     }
 
-    private static void renderFrame(Draw2D frame) {
+    private static void renderFrame(Draw2D frame, Draw2D menu) {
         int rw = renderW;
         int rh = renderH;
         ensureFrameTarget(rw, rh);
@@ -541,6 +570,9 @@ public final class GLBackend {
         glClear(GL_COLOR_BUFFER_BIT);
         gl2d.beginFrame(virtWidth, virtHeight, rw, rh);
         gl2d.replay(frame, 0, frame.opLen);
+        if (menu != null) {
+            gl2d.replay(menu, 0, menu.opLen);
+        }
         org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, 0);
 
         int w = fbWidth;

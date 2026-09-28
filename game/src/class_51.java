@@ -866,6 +866,10 @@ public final class class_51 {
          org.deep3d.GameUi.pauseMenuShown();
       }
       class_84.field_1117.drawImage(this.field_556, class_84.field_1120 / 2, 10, 17);
+      // Deep3D-PC: the settings menu opened from here shows in place of this menu
+      if (org.deep3d.Overlay.drawInGameMenu(class_84.field_1117, field_553)) {
+         return;
+      }
       switch (this.field_560) {
          case 0:
             this.field_558 = class_21.method_212() > 0L ? this.field_557 : 0;

@@ -333,6 +333,22 @@ public final class class_67 {
       }
    }
 
+   // Deep3D-PC: the command bar with chips named by the caller (the settings
+   // menu); returns {y, height, left width, right width}.
+   public static int[] deep3dBar(String lk, String ll, String rk, String rl) {
+      javax.microedition.lcdui.Graphics g = class_84.field_1117;
+      int h = field_852;
+      int y = class_84.field_1121 - 3 - h;
+      int w = class_84.field_1120;
+      g.setColor(field_847);
+      g.fillRect(0, y - 2, w, h + 5);
+      g.setColor(field_844);
+      g.drawLine(0, y - 2, w, y - 2);
+      int lw = drawCommand(ll, lk, 2, y, h, false, false);
+      int rw = drawCommand(rl, rk, w - 2, y, h, true, false);
+      return new int[]{y, h, lw, rw};
+   }
+
    // Deep3D-PC: one "[key] label" chip of the command bar; returns its width.
    private static int drawCommand(String label, String key, int x, int y, int h, boolean alignRight, boolean lit) {
       if (label == null || label.equals("")) {
@@ -351,5 +367,10 @@ public final class class_67 {
       }
       class_58.method_518(label, cx + 4 + kw, y, 0);
       return cw;
+   }
+
+   // Deep3D-PC: the settings menu draws with this toolkit
+   static {
+      org.deep3d.MenuToolkit.install(new Deep3dMenu());
    }
 }

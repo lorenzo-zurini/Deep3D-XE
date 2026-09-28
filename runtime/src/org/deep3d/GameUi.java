@@ -180,8 +180,18 @@ public final class GameUi {
         }
     }
 
+    /* The settings menu draws with the game's toolkit; its rows are its own. */
+    private static boolean suspended;
+
+    public static void suspend(boolean on) {
+        suspended = on;
+    }
+
     private static void add(Kind kind, String text, int x, int y, int w, int h,
                             boolean selected, boolean selectable, int code) {
+        if (suspended) {
+            return;
+        }
         synchronized (building) {
             building.add(new Item(kind, text, x, y, w, h, selected, selectable, buildLayer, code));
         }
