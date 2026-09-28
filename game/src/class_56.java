@@ -398,6 +398,12 @@ public final class class_56 {
 
    // $VF: renamed from: b () void
    public final void method_467() {
+      // Deep3D-PC: Confirm = next page, Back = previous page, Secondary =
+      // "Skip the dialogue?"; a click on the text also turns the page
+      org.deep3d.GameUi.layer(org.deep3d.GameUi.POPUP);
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.POPUP, org.deep3d.GameUi.LSK, this.method_462() ? org.deep3d.GameUi.NONE : org.deep3d.GameUi.RSK,
+         !this.method_463() || !this.method_462() ? org.deep3d.GameUi.FIRE : org.deep3d.GameUi.NONE);
+      org.deep3d.GameUi.zone(10, 10, class_84.field_1120 - 20, class_84.field_1121 - 40, org.deep3d.GameUi.ACT_CONFIRM);
       class_67.method_582(10, 10, class_84.field_1120 - 20, class_84.field_1121 - 40);
       class_67.method_592("", 10, 10, class_84.field_1120 - 20, class_84.field_1121 - 40, false);
       this.field_679.method_231();
@@ -420,6 +426,9 @@ public final class class_56 {
 
    // $VF: renamed from: c () void
    public final void method_468() {
+      // Deep3D-PC: closed by Confirm or Back (the game takes FIRE only)
+      org.deep3d.GameUi.layer(org.deep3d.GameUi.POPUP);
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.POPUP, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.NONE);
       class_67.method_583();
       if (class_84.field_1120 < 176) {
          class_67.method_592("", 10, 10, class_84.field_1120 - 20, class_84.field_1121 - 20, true);

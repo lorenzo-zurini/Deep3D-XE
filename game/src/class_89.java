@@ -322,6 +322,9 @@ public final class class_89 {
 
    // $VF: renamed from: c () void
    private void method_779() {
+      // Deep3D-PC: Confirm = the command bar's action (Info; on the info page
+      // and the ship preview Buy / Sell / View)
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.LSK, org.deep3d.GameUi.RSK, org.deep3d.GameUi.NONE);
       if (this.field_1198 != 6) {
          class_67.method_587();
       }

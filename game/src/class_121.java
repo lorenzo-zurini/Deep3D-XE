@@ -64,6 +64,8 @@ public final class class_121 {
 
    // $VF: renamed from: c () void
    public final void method_944() {
+      // Deep3D-PC: modal box; Confirm = FIRE, Back = No (or closes an OK box)
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.DIALOG, org.deep3d.GameUi.FIRE, this.field_1500 ? org.deep3d.GameUi.DIALOG_NO : org.deep3d.GameUi.FIRE, org.deep3d.GameUi.NONE);
       class_67.method_583();
       class_67.method_592("", this.field_1493, this.field_1494, this.field_1495, this.field_1496, true);
       class_58.method_521(this.field_1497, this.field_1493 + 5, this.field_1494 + 10, 0);
@@ -73,6 +75,10 @@ public final class class_121 {
          class_58.method_516(
             class_84.field_1116.method_4(46), this.field_1493 + this.field_1495 - this.field_1495 / 3, this.field_1498, this.field_1499 ? 1 : 0, 24
          );
+         int var90 = class_58.method_523(class_84.field_1116.method_4(45)) + 12;
+         int var91 = class_58.method_523(class_84.field_1116.method_4(46)) + 12;
+         org.deep3d.GameUi.button(this.field_1493 + this.field_1495 / 3 - var90 / 2, this.field_1498 - 2, var90, 14, this.field_1499);
+         org.deep3d.GameUi.button(this.field_1493 + this.field_1495 - this.field_1495 / 3 - var91 / 2, this.field_1498 - 2, var91, 14, !this.field_1499);
          if (this.field_1499) {
             class_84.field_1117
                .drawRect(
@@ -91,6 +97,7 @@ public final class class_121 {
                );
          }
       } else {
+         org.deep3d.GameUi.button(this.field_1493 + this.field_1495 / 2 - 12, this.field_1498 - 2, 24, 14, true);
          class_58.method_518("OK", this.field_1493 + this.field_1495 / 2 - class_58.method_523("OK") / 2, this.field_1498, 0);
          class_84.field_1117
             .drawRect(this.field_1493 + this.field_1495 / 2 - 2 - class_58.method_523("OK") / 2, this.field_1498, class_58.method_523("OK") + 4, 10);

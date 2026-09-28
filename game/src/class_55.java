@@ -627,6 +627,14 @@ public final class class_55 {
 
          this.field_672 = var1;
          if (this.field_623 == 0 && !this.field_666 && this.field_670) {
+            // Deep3D-PC: the cursor follows the mouse over the map
+            int[] var90 = org.deep3d.GameUi.pointer();
+            if (var90 != null
+               && var90[0] >= this.field_606 && var90[0] < this.field_606 + this.field_604
+               && var90[1] >= this.field_607 && var90[1] < this.field_607 + this.field_605) {
+               this.method_452(var90[0] - (this.field_608 + this.field_610 / 2.0F), var90[1] - (this.field_609 + this.field_611 / 2.0F));
+            }
+
             if (!this.field_654) {
                if ((var1 & 4) != 0) {
                   this.method_452(-var2 / 20.0F, 0.0F);
@@ -662,6 +670,30 @@ public final class class_55 {
 
    // $VF: renamed from: d () void
    private void method_451() {
+      // Deep3D-PC: overview: Confirm zooms in at the cursor (FIRE; the left
+      // softkey in route planning), Secondary toggles the Navigate / Species
+      // menu; the cursor follows the mouse and a click zooms. Depth view:
+      // the wheel picks a station.
+      if (this.field_623 == 0) {
+         if (this.field_654) {
+            org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.LSK, org.deep3d.GameUi.RSK, org.deep3d.GameUi.NONE);
+         } else {
+            org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.RSK, org.deep3d.GameUi.LSK);
+         }
+         if (!this.field_666) {
+            org.deep3d.GameUi.zone(this.field_606, this.field_607, this.field_604, this.field_605, org.deep3d.GameUi.ACT_CONFIRM);
+         }
+      } else if (this.field_623 == 2) {
+         org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, this.field_654 ? org.deep3d.GameUi.NONE : org.deep3d.GameUi.LSK, org.deep3d.GameUi.RSK, org.deep3d.GameUi.NONE);
+         org.deep3d.GameUi.scrollArea(this.field_606, this.field_607, this.field_604, this.field_605, true);
+         if (!this.field_654) {
+            org.deep3d.GameUi.zone(this.field_606, this.field_607, this.field_604, this.field_605, org.deep3d.GameUi.ACT_CONFIRM);
+         }
+      } else if (this.field_623 == 5) {
+         org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.LSK, org.deep3d.GameUi.RSK, org.deep3d.GameUi.NONE);
+      } else {
+         org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.NONE, org.deep3d.GameUi.NONE, org.deep3d.GameUi.NONE);
+      }
       if (this.field_623 != 5) {
          class_67.method_587();
       }

@@ -116,6 +116,7 @@ public final class class_50 {
 
    // $VF: renamed from: a (int, int) void
    public final void method_413(int var1, int var2) {
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.LSK, org.deep3d.GameUi.RSK, org.deep3d.GameUi.NONE); // Deep3D-PC
       if ((var1 & 2) != 0 && this.field_549.field_1038 == 0) {
          this.field_550.method_230(var2 / 2);
          this.field_551.method_230(var2 / 2);

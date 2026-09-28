@@ -314,6 +314,8 @@ public final class class_36 {
 
    // $VF: renamed from: d () void
    public final void method_320() {
+      // Deep3D-PC: the action menu has no Back key, only a "Back" row
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, this.field_355 == 3 ? org.deep3d.GameUi.FIRE : org.deep3d.GameUi.LSK, this.field_355 == 3 ? org.deep3d.GameUi.BACK_ROW : org.deep3d.GameUi.RSK, org.deep3d.GameUi.NONE);
       class_67.method_587();
       if (this.field_355 == 0) {
          this.field_349.method_718();

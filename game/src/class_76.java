@@ -259,7 +259,22 @@ public class class_76 extends class_74 {
    }
 
    // $VF: renamed from: a () void
+   // Deep3D-PC: the visible rows for the mouse (headers are not selectable)
+   public final void registerRows() {
+      Object[] var1 = super.field_1032[super.field_1038];
+      for (int var2 = super.field_1040;
+         var1 != null && var2 < var1.length && var1[var2] != null && var2 < super.field_1040 + super.field_1041 + 1;
+         var2++
+      ) {
+         org.deep3d.GameUi.row(
+            super.field_1027 + 4, super.field_1043 + (var2 - super.field_1040) * super.field_1044, super.field_1029 - 8, super.field_1044,
+            var2 == super.field_1039, ((class_59)var1[var2]).field_713
+         );
+      }
+   }
+
    public void method_718() {
+      this.registerRows();
       this.method_710();
       class_67.method_591(super.field_1050, super.field_1027, super.field_1028, super.field_1029, super.field_1030);
       class_84.field_1117.drawImage(this.field_1056, class_84.field_1120 - 20, class_84.field_1121 - 30 - class_67.method_577(), 40);

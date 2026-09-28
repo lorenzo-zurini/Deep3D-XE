@@ -56,6 +56,12 @@ public final class class_52 {
 
    // $VF: renamed from: c () void
    public final void method_435() {
+      // Deep3D-PC: "<" / ">" and OK clickable, the wheel changes the amount
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.DIALOG, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.NONE, org.deep3d.GameUi.NONE);
+      org.deep3d.GameUi.zone(this.field_583 + this.field_585 / 2 - 20, this.field_584 + 8, 14, 14, org.deep3d.GameUi.LEFT);
+      org.deep3d.GameUi.zone(this.field_583 + this.field_585 / 2 + 6, this.field_584 + 8, 14, 14, org.deep3d.GameUi.RIGHT);
+      org.deep3d.GameUi.scrollArea(this.field_583, this.field_584, this.field_585, this.field_586, true);
+      org.deep3d.GameUi.button(this.field_583 + this.field_585 / 2 - 14, this.field_587 - 2, 28, 14, true);
       class_67.method_583();
       class_84.field_1117.setColor(class_67.field_845);
       class_84.field_1117.fillRect(this.field_583, this.field_584, this.field_585, this.field_586);

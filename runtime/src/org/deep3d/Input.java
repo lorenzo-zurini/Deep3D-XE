@@ -70,7 +70,9 @@ public final class Input {
         DEFAULTS.put(Action.HASH, new int[]{KeyEvent.VK_H});
     }
 
-    private static boolean escSentBack;
+    /* Keys whose press went to a universal menu action: the release goes
+       there too, even if the screen changed in between. */
+    private static final Map<Integer, GameUi.Action> uiHeld = new HashMap<>();
 
     private Input() {
     }
@@ -204,27 +206,25 @@ public final class Input {
                 Overlay.showToast("Diagnostics saved: logs/" + f.getName());
                 return;
             }
-            if (code == KeyEvent.VK_ESCAPE) {
-                // PC semantics: Esc backs out of game menus; otherwise it
-                // opens the pause overlay (F10 always opens it).
-                if (!Overlay.isOpen()
-                        && (GameUi.menuVisible() || GameUi.textEntryActive())) {
-                    escSentBack = true;
-                    sendMidpKey(-7, true);
+            if (code == KeyEvent.VK_ESCAPE && !Overlay.isOpen()) {
+                // Esc is Back on every screen; in flight it pauses (the
+                // game's own pause menu). F10 opens the PC settings.
+                GameUi.keyboardUsed();
+                if (GameUi.profile() != null) {
+                    uiHeld.put(code, GameUi.Action.BACK);
+                    GameUi.action(GameUi.Action.BACK, true, false);
                 } else {
-                    Overlay.toggle();
+                    GameUi.pausePressed();
                 }
                 return;
             }
         } else {
-            if (code == KeyEvent.VK_ESCAPE) {
-                if (escSentBack) {
-                    escSentBack = false;
-                    sendMidpKey(-7, false);
-                }
+            GameUi.Action ui = uiHeld.remove(code);
+            if (ui != null) {
+                GameUi.action(ui, false, false);
                 return;
             }
-            if (code == KeyEvent.VK_F9 || code == KeyEvent.VK_F10
+            if (code == KeyEvent.VK_ESCAPE || code == KeyEvent.VK_F9 || code == KeyEvent.VK_F10
                     || code == KeyEvent.VK_F11 || code == KeyEvent.VK_F12) {
                 return;
             }
@@ -236,6 +236,9 @@ public final class Input {
             }
             return;
         }
+        if (pressed) {
+            GameUi.keyboardUsed();
+        }
 
         if (GameUi.textEntryActive()) {
             if (!pressed) {
@@ -246,8 +249,8 @@ public final class Input {
                 return;
             }
             if (code == KeyEvent.VK_ENTER) {
-                sendMidpKey(-6, true);
-                sendMidpKey(-6, false);
+                uiHeld.put(code, GameUi.Action.CONFIRM);
+                GameUi.action(GameUi.Action.CONFIRM, true, false);
                 return;
             }
             if (!charSeparate && keyChar >= ' ' && keyChar < 127) {
@@ -257,6 +260,23 @@ public final class Input {
         }
 
         Action a = keyToAction.get(code);
+        GameUi.Profile menu = GameUi.profile();
+        if (pressed && menu != null) {
+            // Menus: the universal actions
+            GameUi.Action ui = null;
+            if (a == Action.OK || a == Action.FIRE) {
+                ui = GameUi.Action.CONFIRM;
+            } else if (a == Action.BACK) {
+                ui = GameUi.Action.BACK;
+            } else if (code == KeyEvent.VK_TAB && menu.secondary != GameUi.NONE) {
+                ui = GameUi.Action.SECONDARY;
+            }
+            if (ui != null) {
+                uiHeld.put(code, ui);
+                GameUi.action(ui, true, false);
+                return;
+            }
+        }
         if (a != null) {
             sendMidpKey(a.midpCode, pressed);
             return;
@@ -275,6 +295,13 @@ public final class Input {
         if (Overlay.isOpen()) {
             if (pressed) {
                 Overlay.handleAction(a);
+            }
+            return;
+        }
+        if (GameUi.textEntryActive()) {
+            // no keyboard: the d-pad spells the name (see GameUi)
+            if (pressed) {
+                GameUi.padTextDirection(a.midpCode);
             }
             return;
         }

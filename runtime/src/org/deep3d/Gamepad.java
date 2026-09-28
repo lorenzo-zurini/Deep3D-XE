@@ -189,47 +189,102 @@ public final class Gamepad {
         return held;
     }
 
-    /* A confirms in menus/dialogs (like Enter) and fires in flight; the
-       action chosen at press time is reused for the release. */
-    private static volatile Input.Action aHeld;
+    /*
+     * Universal scheme: on every screen A confirms, B goes back and X is the
+     * command bar's other action (see GameUi); LB / RB switch tabs. In
+     * flight the buttons fly: A fires, Y docks / interacts, LB weapon,
+     * RB boost, triggers auto-fire / autopilot. Start pauses (the game's
+     * own pause menu, Start again resumes); Select opens the PC settings.
+     */
+    private static final boolean[] flightHeld = new boolean[16];
 
     private static void handleButton(int number, boolean pressed) {
+        GameUi.padUsed();
+        if (!pressed) {
+            // Releases always reach the game, whatever opened in between
+            // (e.g. A opened the settings): a key left down swallows the
+            // next press.
+            GameUi.Action ui = number == BTN_A ? GameUi.Action.CONFIRM
+                    : number == BTN_B ? GameUi.Action.BACK
+                    : number == BTN_X ? GameUi.Action.SECONDARY : null;
+            if (ui != null) {
+                GameUi.action(ui, false, true);
+            }
+            if (flightHeld[number]) {
+                flightHeld[number] = false;
+                Input.Action a = number == BTN_A ? Input.Action.FIRE
+                        : number == BTN_LB ? Input.Action.KEY1 : Input.Action.BOOST;
+                Input.sendMidpKey(a.midpCode, false);
+            }
+            if (number == BTN_Y) {
+                Input.handleAction(Input.Action.DOCK, false);
+            }
+            return;
+        }
+        if (Overlay.isOpen()) {
+            switch (number) {
+                case BTN_A: Overlay.handleAction(Input.Action.OK); break;
+                case BTN_B: Overlay.handleAction(Input.Action.BACK); break;
+                case BTN_START:
+                case BTN_SELECT: Overlay.toggle(); break;
+                default: break;
+            }
+            return;
+        }
         switch (number) {
-            case BTN_A:
-                if (pressed) {
-                    aHeld = !Overlay.isOpen() && GameUi.confirmAvailable()
-                            ? Input.Action.OK : Input.Action.FIRE;
-                    Input.handleAction(aHeld, true);
-                } else if (aHeld != null) {
-                    Input.handleAction(aHeld, false);
-                    aHeld = null;
-                }
-                break;
-            case BTN_B:
-                Input.handleAction(Input.Action.BACK, pressed);
-                break;
-            case BTN_X:
-                Input.handleAction(Input.Action.OK, pressed);
-                break;
-            case BTN_Y:
-                Input.handleAction(Input.Action.DOCK, pressed);
-                break;
-            case BTN_LB:
-                Input.handleAction(Input.Action.KEY1, pressed);
-                break;
-            case BTN_RB:
-                Input.handleAction(Input.Action.BOOST, pressed);
-                break;
             case BTN_SELECT:
-                Input.handleAction(Input.Action.CLEAR, pressed);
-                break;
+                Overlay.toggle();
+                return;
             case BTN_START:
-                if (pressed) {
-                    Overlay.toggle();
-                }
-                break;
+                GameUi.pausePressed();
+                return;
+            case BTN_Y:
+                Input.handleAction(Input.Action.DOCK, true);
+                return;
             default:
                 break;
+        }
+        if (GameUi.profile() != null) {
+            // Menus: the universal actions
+            switch (number) {
+                case BTN_A: GameUi.action(GameUi.Action.CONFIRM, true, true); break;
+                case BTN_B: GameUi.action(GameUi.Action.BACK, true, true); break;
+                case BTN_X: GameUi.action(GameUi.Action.SECONDARY, true, true); break;
+                case BTN_LB: GameUi.tapTab(false); break;
+                case BTN_RB: GameUi.tapTab(true); break;
+                default: break;
+            }
+            return;
+        }
+        // Flight
+        Input.Action a;
+        switch (number) {
+            case BTN_A: a = Input.Action.FIRE; break;
+            case BTN_LB: a = Input.Action.KEY1; break;
+            case BTN_RB: a = Input.Action.BOOST; break;
+            default: a = null; break;
+        }
+        if (a != null) {
+            flightHeld[number] = true;
+            Input.handleAction(a, true);
+        }
+    }
+
+    /** Test pipe: a button event as if it came from a controller. */
+    static void testButton(int number, boolean pressed) {
+        handleButton(number, pressed);
+    }
+
+    /** The button bound to a gameplay action, for on-screen hints. */
+    public static String buttonFor(Input.Action a) {
+        switch (a) {
+            case FIRE: return "A";
+            case DOCK: return "Y";
+            case KEY1: return "LB";
+            case BOOST: return "RB";
+            case KEY7: return "LT";
+            case AUTOPILOT: return "RT";
+            default: return null;
         }
     }
 }

@@ -133,6 +133,7 @@ public final class class_23 {
 
    // $VF: renamed from: b () void
    public final void method_231() {
+      org.deep3d.GameUi.scrollArea(this.field_228, this.field_229, this.field_230, this.field_231, false); // Deep3D-PC: wheel
       class_84.field_1117.setColor(class_67.field_844);
       class_84.field_1117.setClip(this.field_228, this.field_229, this.field_230, this.field_231);
       if (this.field_239 != null) {

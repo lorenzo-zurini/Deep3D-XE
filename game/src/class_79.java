@@ -135,6 +135,7 @@ public class class_79 extends class_76 {
 
    // $VF: renamed from: a () void
    public final void method_718() {
+      this.registerRows(); // Deep3D-PC
       this.method_710();
       class_67.method_591(super.field_1050, super.field_1027, super.field_1028, super.field_1029, super.field_1030);
       this.method_720();

@@ -41,6 +41,9 @@ public final class class_12 {
 
    // $VF: renamed from: a () void
    public final void method_61() {
+      // Deep3D-PC: closed by Confirm or Back
+      org.deep3d.GameUi.layer(org.deep3d.GameUi.POPUP);
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.POPUP, org.deep3d.GameUi.LSK, org.deep3d.GameUi.RSK, org.deep3d.GameUi.NONE);
       class_67.method_587();
       class_67.method_588(class_84.field_1116.method_4(4));
       this.field_118.method_231();

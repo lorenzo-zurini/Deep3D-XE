@@ -323,6 +323,7 @@ public final class class_63 extends class_61 {
          }
 
          if (this.field_736 < 2300L) {
+            org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.NONE, org.deep3d.GameUi.NONE); // Deep3D-PC: skip the banner
             class_58.method_518(
                class_84.field_1116.method_4(this.field_768 ? 36 : 32), 5, class_84.field_1121 - class_67.method_577() - class_58.method_527(), 1
             );
@@ -501,6 +502,14 @@ public final class class_63 extends class_61 {
 
    // $VF: renamed from: f () void
    private void method_558() {
+      // Deep3D-PC: Confirm opens the highlighted entry (FIRE); the left
+      // softkey hides the menu (Secondary) or brings it back (Confirm);
+      // Back = Depart
+      if (this.field_742) {
+         org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.RSK, org.deep3d.GameUi.LSK);
+      } else {
+         org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.LSK, org.deep3d.GameUi.RSK, org.deep3d.GameUi.NONE);
+      }
       class_84.field_1117.drawImage(this.field_739, 3, 3, 0);
       class_58.method_516(class_21.method_180().field_1133, this.field_739.getWidth() + 6, 3, 0, 17);
       class_58.method_516(

@@ -34,11 +34,12 @@ official English text from the international release.
   - 4x MSAA antialiasing,
   - extended view distance (up to 8x the original far plane, with the
     station impostor distance and creature radius scaled to match).
-- **PC-native menus everywhere** — the game's own menus are mouse-driven
-  (hover moves the selection, click confirms, right-click/Esc backs out,
-  wheel scrolls) with their original look; the phone softkey boxes are
-  replaced by an Enter/Esc command bar in the same style, name entry uses
-  real keyboard typing, and help texts name your actual key bindings.
+- **One control scheme for every screen** — the game's own screens keep
+  their original look but are fully drivable by mouse, keyboard or
+  controller with the same logic everywhere (A / Enter confirm, B / Esc
+  back; see Controls). The phone softkey boxes are replaced by a command
+  bar in the same style naming your actual keys or buttons, name entry
+  uses real typing, and help texts name your bindings.
 - **Analogue steering** with a controller stick; no music on/off prompt
   (volume is in the options).
 - **Launches fullscreen at your display's resolution**; VSync toggle, FPS
@@ -103,24 +104,41 @@ Save games go to `saves/` next to the game (override with
 `DEEP3D_SAVE_DIR`), settings to `deep3d.cfg` (override with
 `DEEP3D_CONFIG`), both anchored to the jar's folder when packaged.
 
-## Controls (defaults — rebindable in the pause menu)
+## Controls
 
-| Action                   | Keyboard             | Controller       |
+Every screen of the game — menus, lists, tabs, dialogs, popups, the map,
+trading, the hangar — uses one scheme, whatever the phone version did:
+
+| Menus and dialogs        | Keyboard                | Controller   | Mouse                         |
+|--------------------------|-------------------------|--------------|-------------------------------|
+| Move / change value      | Arrows / WASD           | D-pad / stick| Hover (the selection follows) |
+| Confirm / accept / next  | Enter / Space           | A            | Click                         |
+| Back / cancel / No       | Esc / Backspace         | B            | Right-click                   |
+| The bar's other action (Buy, Info, Menu, skip dialogue) | Tab | X | Click its button on the bar |
+| Previous / next tab      | Arrows                  | LB / RB      | Click the tab                 |
+| Scroll text / lists      | Arrows                  | D-pad        | Wheel                         |
+
+The command bar at the bottom always names the key or button for each
+action, following the device you used last. In Yes/No dialogs Back
+means No. Names are typed on the keyboard; with a controller the d-pad
+spells them (up/down change the letter, right adds one, left deletes).
+On the map the cursor follows the mouse and a click zooms in; the wheel
+picks a station in the depth view and sets amounts in the trade screens.
+
+| In flight (defaults — rebindable in Settings > Controls) | Keyboard | Controller |
 |--------------------------|----------------------|------------------|
 | Steer                    | WASD / Arrows        | Left stick / d-pad |
-| Fire harpoon / Select    | Space / Ctrl         | A                |
-| OK / Menu                | Enter                | X                |
-| Back                     | Backspace / X        | B                |
+| Fire harpoon             | Space / Ctrl         | A                |
 | Dock / interact (0)      | E / 0                | Y                |
 | Booster (3)              | Shift / 3            | RB               |
-| Autopilot (9)            | Tab / 9              | RT               |
+| Autopilot / targets (9)  | Tab / 9              | RT               |
 | Key 1 / Key 7            | 1 / 7                | LB / LT          |
-| Pause menu (PC overlay)  | Esc                  | Start            |
-| In-game pause            | P                    | —                |
+| Pause (the game's menu)  | Esc                  | Start            |
+| Settings                 | F10                  | Select           |
 | Fullscreen / Screenshot  | F11 / F12            | —                |
 
-Unbound keys fall through as phone characters, so the game's built-in
-QWERTY phone map and name entry keep working.
+"Options" in the game's menus (title, station, pause) opens the settings:
+display and graphics, audio, controls and the game's inverted pitch.
 
 ## Project layout
 

@@ -234,6 +234,9 @@ public class class_74 {
    // $VF: renamed from: j () void
    public final void method_708() {
       if (this.field_1037) {
+         // Deep3D-PC: tab headers take clicks
+         org.deep3d.GameUi.tab(this.field_1027 + 2, this.field_1028 + 11, this.field_1029 / 2 - 2, 14, this.field_1038 == 0);
+         org.deep3d.GameUi.tab(this.field_1027 + this.field_1029 / 2, this.field_1028 + 11, this.field_1029 / 2 - 2, 14, this.field_1038 == 1);
          class_84.field_1117.setColor(class_67.field_844);
          if (this.field_1038 == 0) {
             class_84.field_1117.drawLine(this.field_1027 + 2, this.field_1028 + 11, this.field_1027 + this.field_1029 / 2 - 2, this.field_1028 + 11);

@@ -107,7 +107,26 @@ public final class Overlay {
         Runtime.repaintWindow();
     }
 
+    /* Opened from one of the game's Options entries: backing out of the
+       options page returns to the game menu. */
+    private static boolean fromGameMenu;
+
+    /** Opens straight at the options page (the game's "Options" entry). */
+    public static synchronized void openSettings() {
+        if (!open) {
+            open = true;
+            capturing = null;
+            Runtime.setGamePaused(true);
+        }
+        fromGameMenu = true;
+        page = Page.OPTIONS;
+        selected = 0;
+        scroll = 0;
+        Runtime.repaintWindow();
+    }
+
     private static void close() {
+        fromGameMenu = false;
         open = false;
         capturing = null;
         Config.save();
@@ -216,6 +235,12 @@ public final class Overlay {
                 items.add(Item.button("Back", Overlay::back));
                 break;
             case CONTROLS:
+                GameSettings.Toggle inv = GameSettings.invertPitch();
+                if (inv != null) {
+                    items.add(Item.choice("Invert pitch",
+                            () -> inv.get() ? "On" : "Off",
+                            d -> inv.set(!inv.get())));
+                }
                 for (Input.Action a : Input.Action.values()) {
                     items.add(Item.bind(a));
                 }
@@ -408,7 +433,11 @@ public final class Overlay {
                 enter(Page.OPTIONS);
                 break;
             case OPTIONS:
-                enter(Page.ROOT);
+                if (fromGameMenu) {
+                    toggle();
+                } else {
+                    enter(Page.ROOT);
+                }
                 break;
             case ROOT:
             default:
@@ -439,15 +468,19 @@ public final class Overlay {
     public static synchronized void handleKey(int keyCode) {
         switch (keyCode) {
             case KeyEvent.VK_UP:
+            case KeyEvent.VK_W:
                 move(-1);
                 break;
             case KeyEvent.VK_DOWN:
+            case KeyEvent.VK_S:
                 move(1);
                 break;
             case KeyEvent.VK_LEFT:
+            case KeyEvent.VK_A:
                 adjust(-1);
                 break;
             case KeyEvent.VK_RIGHT:
+            case KeyEvent.VK_D:
                 adjust(1);
                 break;
             case KeyEvent.VK_ENTER:
@@ -455,6 +488,7 @@ public final class Overlay {
                 activate();
                 break;
             case KeyEvent.VK_BACK_SPACE:
+            case KeyEvent.VK_ESCAPE:
                 back();
                 break;
             default:
@@ -734,11 +768,13 @@ public final class Overlay {
         int fy = py + panelH - footH + S;
         g.setColor(DEEP_ACCENT);
         g.drawLine(px, fy - S, px + panelW, fy - S);
+        boolean pad = GameUi.padLastUsed();
         drawChip(g, fw, fg, S, px + 2 * S, fy + S,
-                "Enter", page == Page.CONTROLS ? "Rebind" : "Select");
+                pad ? "A" : "Enter", page == Page.CONTROLS ? "Rebind" : "Select");
         String backLbl = page == Page.ROOT ? "Resume" : "Back";
-        int chipW = chipWidth(fw, fg, S, "Esc", backLbl);
-        drawChip(g, fw, fg, S, px + panelW - chipW - 2 * S, fy + S, "Esc", backLbl);
+        String backKey = pad ? "B" : "Esc";
+        int chipW = chipWidth(fw, fg, S, backKey, backLbl);
+        drawChip(g, fw, fg, S, px + panelW - chipW - 2 * S, fy + S, backKey, backLbl);
 
         renderGameToast(g, w, h, S);
     }

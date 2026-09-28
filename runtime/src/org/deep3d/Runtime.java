@@ -741,6 +741,71 @@ public final class Runtime {
                 }
                 break;
             }
+            case "key": {
+                // test hook: a keyboard key (AWT code), pressed for ~120 ms
+                int code = Integer.parseInt(parts[1]);
+                char ch = parts.length > 2 ? parts[2].charAt(0) : (char) 0;
+                Input.handleKey(code, ch, true, false, true);
+                try {
+                    Thread.sleep(120);
+                } catch (InterruptedException ignored) {
+                }
+                Input.handleKey(code, ch, false, false, true);
+                break;
+            }
+            case "pad": {
+                // test hook: a controller button (A=0 B=1 X=2 Y=3 LB=4 RB=5 Select=6 Start=7)
+                Input.Action dir = null;
+                switch (parts[1]) {
+                    case "up": dir = Input.Action.UP; break;
+                    case "down": dir = Input.Action.DOWN; break;
+                    case "left": dir = Input.Action.LEFT; break;
+                    case "right": dir = Input.Action.RIGHT; break;
+                    default: break;
+                }
+                if (dir != null) {
+                    GameUi.padUsed();
+                    Input.handleAction(dir, true);
+                } else {
+                    Gamepad.testButton(Integer.parseInt(parts[1]), true);
+                }
+                try {
+                    Thread.sleep(120);
+                } catch (InterruptedException ignored) {
+                }
+                if (dir != null) {
+                    Input.handleAction(dir, false);
+                } else {
+                    Gamepad.testButton(Integer.parseInt(parts[1]), false);
+                }
+                break;
+            }
+            case "setf": {
+                // test hook: "setf <game class> <static int field> <value>"
+                java.lang.reflect.Field f = Class.forName(parts[1], true, GameClassLoader.get())
+                        .getDeclaredField(parts[2]);
+                f.setAccessible(true);
+                f.setInt(null, Integer.parseInt(parts[3]));
+                System.out.println("[setf] " + parts[1] + "." + parts[2] + " = " + parts[3]);
+                break;
+            }
+            case "scene": {
+                // test hook: switch the game to scene N (0 title, 1 station,
+                // 2 flight) through its scene manager, as its loader does
+                ClassLoader gl = GameClassLoader.get();
+                Class<?> globals = Class.forName("class_84", true, gl);
+                Object manager = globals.getField("field_1126").get(null);
+                Object target = ((Object[]) globals.getField("field_1127").get(null))[Integer.parseInt(parts[1])];
+                for (java.lang.reflect.Method m : manager.getClass().getMethods()) {
+                    if (m.getName().equals("method_439")) {
+                        m.invoke(manager, target);
+                    }
+                }
+                break;
+            }
+            case "ui":
+                System.out.println("[ui " + parts[1] + "] " + GameUi.describe());
+                break;
             case "mm":
                 GameUi.mouseMoved(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
                 break;

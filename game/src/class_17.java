@@ -161,6 +161,14 @@ public final class class_17 {
 
    // $VF: renamed from: c () void
    public final void method_105() {
+      // Deep3D-PC: list: Confirm = trade / produce (FIRE), Secondary = Info;
+      // in trade mode the wheel buys / sells and Back (FIRE) finishes
+      if (this.field_159 == 0 && this.field_155.method_723()) {
+         org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.NONE);
+         org.deep3d.GameUi.scrollArea(this.field_155.field_1027, this.field_155.field_1028, this.field_155.field_1029, this.field_155.field_1030, true);
+      } else {
+         org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.RSK, this.field_159 == 0 ? org.deep3d.GameUi.LSK : org.deep3d.GameUi.NONE);
+      }
       class_67.method_587();
       if (this.field_159 == 0) {
          this.field_155.method_718();

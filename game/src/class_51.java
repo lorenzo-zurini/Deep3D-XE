@@ -315,8 +315,18 @@ public final class class_51 {
                   this.field_559 = 0;
                   return false;
                case 3:
-                  this.field_560 = 3;
-                  this.field_559 = 0;
+                  // Deep3D-PC: one settings menu (display, audio, controls
+                  // and the game's inverted pitch) instead of the phone's
+                  org.deep3d.GameSettings.open(new org.deep3d.GameSettings.Toggle() {
+                        public boolean get() {
+                           return class_84.field_1082;
+                        }
+
+                        public void set(boolean var1) {
+                           class_84.field_1082 = var1;
+                           class_27.method_275();
+                        }
+                     });
                   return false;
                case 4:
                   this.field_560 = 4;
@@ -449,8 +459,17 @@ public final class class_51 {
             } else {
                switch (this.field_559) {
                   case 0:
-                     this.field_560 = 3;
-                     this.field_559 = 0;
+                     // Deep3D-PC: the settings menu (see the main menu)
+                     org.deep3d.GameSettings.open(new org.deep3d.GameSettings.Toggle() {
+                        public boolean get() {
+                           return class_84.field_1082;
+                        }
+
+                        public void set(boolean var1) {
+                           class_84.field_1082 = var1;
+                           class_27.method_275();
+                        }
+                     });
                      return false;
                   case 1:
                      this.field_560 = 4;
@@ -840,6 +859,12 @@ public final class class_51 {
 
    // $VF: renamed from: e () void
    public final void method_429() {
+      // Deep3D-PC: Confirm = left softkey (it confirms everywhere here and
+      // commits the name field, where FIRE types letters), Back = right softkey
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.SCREEN, org.deep3d.GameUi.LSK, org.deep3d.GameUi.RSK, org.deep3d.GameUi.NONE);
+      if (this.field_560 == 5) {
+         org.deep3d.GameUi.pauseMenuShown();
+      }
       class_84.field_1117.drawImage(this.field_556, class_84.field_1120 / 2, 10, 17);
       switch (this.field_560) {
          case 0:
@@ -943,19 +968,19 @@ public final class class_51 {
          case 7:
             class_67.method_591(class_84.field_1116.method_4(19), field_552, field_553, field_554, 8 * this.field_557 + 3);
             class_58.method_518(class_84.field_1116.method_4(21), field_552 + 10, field_553 + 12, 0);
-            class_58.method_516("5", field_552 + field_554 - 10, field_553 + 12, 1, 2);
+            class_58.method_516(org.deep3d.GameUi.phoneKeysName("5"), field_552 + field_554 - 10, field_553 + 12, 1, 2);
             class_58.method_518(class_84.field_1116.method_4(12), field_552 + 10, field_553 + 12 + this.field_557, 0);
-            class_58.method_516("7", field_552 + field_554 - 10, field_553 + 12 + this.field_557, 1, 2);
+            class_58.method_516(org.deep3d.GameUi.phoneKeysName("7"), field_552 + field_554 - 10, field_553 + 12 + this.field_557, 1, 2);
             class_58.method_518(class_84.field_1116.method_4(22), field_552 + 10, field_553 + 12 + 2 * this.field_557, 0);
-            class_58.method_516("1", field_552 + field_554 - 10, field_553 + 12 + 2 * this.field_557, 1, 2);
+            class_58.method_516(org.deep3d.GameUi.phoneKeysName("1"), field_552 + field_554 - 10, field_553 + 12 + 2 * this.field_557, 1, 2);
             class_58.method_518(class_84.field_1116.method_4(323), field_552 + 10, field_553 + 12 + 3 * this.field_557, 0);
-            class_58.method_516("9", field_552 + field_554 - 10, field_553 + 12 + 3 * this.field_557, 1, 2);
+            class_58.method_516(org.deep3d.GameUi.phoneKeysName("9"), field_552 + field_554 - 10, field_553 + 12 + 3 * this.field_557, 1, 2);
             class_58.method_518(class_84.field_1116.method_4(137), field_552 + 10, field_553 + 12 + 4 * this.field_557, 0);
-            class_58.method_516("3", field_552 + field_554 - 10, field_553 + 12 + 4 * this.field_557, 1, 2);
+            class_58.method_516(org.deep3d.GameUi.phoneKeysName("3"), field_552 + field_554 - 10, field_553 + 12 + 4 * this.field_557, 1, 2);
             class_58.method_518(class_84.field_1116.method_4(23), field_552 + 10, field_553 + 12 + 5 * this.field_557, 0);
-            class_58.method_516("*,0,#", field_552 + field_554 - 10, field_553 + 12 + 5 * this.field_557, 1, 2);
+            class_58.method_516(org.deep3d.GameUi.phoneKeysName("*,0,#"), field_552 + field_554 - 10, field_553 + 12 + 5 * this.field_557, 1, 2);
             class_58.method_518(class_84.field_1116.method_4(24), field_552 + 10, field_553 + 12 + 6 * this.field_557, 0);
-            class_58.method_516("0", field_552 + field_554 - 10, field_553 + 12 + 6 * this.field_557, 1, 2);
+            class_58.method_516(org.deep3d.GameUi.phoneKeysName("0"), field_552 + field_554 - 10, field_553 + 12 + 6 * this.field_557, 1, 2);
             break;
          case 8:
             class_67.method_591(class_84.field_1116.method_4(20), field_552, field_553, field_554, class_84.field_1121 - field_553 - class_67.method_577() - 10);

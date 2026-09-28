@@ -60,6 +60,9 @@ public final class class_2 {
 
    // $VF: renamed from: c () void
    public final void method_8() {
+      // Deep3D-PC: Back closes it (the game's key 9)
+      org.deep3d.GameUi.layer(org.deep3d.GameUi.POPUP);
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.POPUP, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.K9, org.deep3d.GameUi.NONE);
       class_67.method_591(class_84.field_1116.method_4(325), this.field_32, this.field_33, this.field_34, 12 + (this.field_36 + 1) * 10 - 5);
 
       for (int var1 = 0; var1 < this.field_35.length; var1++) {

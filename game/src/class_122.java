@@ -44,6 +44,9 @@ public final class class_122 {
 
    // $VF: renamed from: a () void
    public final void method_946() {
+      // Deep3D-PC: modal box, closed by Confirm or Back
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.DIALOG, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.NONE);
+      org.deep3d.GameUi.button(this.field_1501 + this.field_1503 / 2 - 12, this.field_1507 - 2, 24, 14, true);
       class_67.method_583();
       class_67.method_592(class_84.field_1116.method_4(163), this.field_1501, this.field_1502, this.field_1503, this.field_1504, true);
       class_84.field_1117.drawImage(this.field_1508, this.field_1501 + 5, this.field_1502 + 10 + 2, 0);

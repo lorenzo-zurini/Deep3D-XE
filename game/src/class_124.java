@@ -166,6 +166,7 @@ public final class class_124 extends GameCanvas {
 
    // $VF: renamed from: e () void
    public final void method_951() {
+      org.deep3d.GameUi.controls(org.deep3d.GameUi.DIALOG, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.FIRE, org.deep3d.GameUi.NONE); // Deep3D-PC: any of them resumes
       class_84.field_1117.setColor(class_67.field_845);
       class_84.field_1117.fillRect(0, 0, class_84.field_1120, class_84.field_1121);
       class_58.method_519(
