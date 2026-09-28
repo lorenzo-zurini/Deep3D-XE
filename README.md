@@ -24,11 +24,14 @@ official English text from the international release.
 - **Original or Enhanced graphics** (Options > Display). By default the
   game looks as it did on the phone: the whole frame is rendered at the
   phone's resolution (its 320 lines, widened to your screen's aspect
-  ratio so pixels stay square, or the 240x320 phone screen itself), scaled
+  ratio so pixels stay square, or the 240x320 phone screen itself — the
+  Screen option, applied on restart, as the game lays out its interface
+  once), scaled
   up sharply, with the phones' 16-bit textures (the banding in
   real-hardware footage) and crisp texture filtering.
   **Enhanced graphics** turns on, each with its own toggle:
-  - native resolution (with the UI scale option),
+  - native resolution (the same layout rendered at the next integer
+    multiple of the window's scale and downsampled),
   - full texture colours,
   - smooth textures (trilinear + 16x anisotropic filtering),
   - 4x MSAA antialiasing.

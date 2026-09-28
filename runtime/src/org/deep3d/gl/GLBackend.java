@@ -41,9 +41,6 @@ public final class GLBackend {
     /* Framebuffer size, updated by callbacks on the main thread. */
     public static volatile int fbWidth = 1280;
     public static volatile int fbHeight = 720;
-    /* UI scale: the game sees a virtual screen of fb/scale so its interface
-       keeps classic proportions at any resolution. */
-    public static volatile int uiScale = 1;
     public static volatile int virtWidth = 1280;
     public static volatile int virtHeight = 720;
     /* The frame is rendered at renderW x renderH (3D passes at the virtual
@@ -177,49 +174,42 @@ public final class GLBackend {
         }
     }
 
+    /* The game lays out its UI (and sets its camera aspect) for the screen
+       size it sees at startup, so that size is fixed for the session. */
+    private static boolean virtualLocked;
+
     /**
-     * Recomputes the game's virtual screen, the render size and where the
-     * frame goes in the window, for the current graphics settings:
-     * - enhanced + native resolution: rendered at the window's resolution,
-     *   the game's UI scaled by the UI scale;
-     * - otherwise the phone's resolution, with square pixels: the phone's
-     *   320 lines widened to the window's aspect ratio, or the 240x320
-     *   phone screen itself, pillarboxed.
+     * Sizes the frame for the current window and graphics settings.
+     *
+     * The game's virtual screen is the phone's: its 320 lines widened to
+     * the window's aspect ratio (square pixels), or the 240x320 phone screen
+     * itself. It is chosen once, at startup; changing the screen setting
+     * applies on restart. Afterwards only the rendering changes: the
+     * original look renders at the virtual size, Enhanced native resolution
+     * renders the same frame at the next integer multiple of the window's
+     * scale (downscaled when presented), and a resized window letterboxes.
      */
     public static void updateVirtualSize() {
         int fw = fbWidth;
         int fh = fbHeight;
-        if (Config.nativeResolutionOn()) {
-            int s = Config.uiScale > 0 ? Config.uiScale : Math.max(1, Math.round(fh / 360f));
-            uiScale = s;
-            renderScale = s;
-            virtWidth = Math.max(160, fw / s);
-            virtHeight = Math.max(160, fh / s);
-            renderW = fw;
-            renderH = fh;
-            dstX = 0;
-            dstY = 0;
-            dstW = fw;
-            dstH = fh;
-        } else if ("phone".equals(Config.originalScreen)) {
-            uiScale = 1;
-            renderScale = 1;
-            virtWidth = renderW = 240;
-            virtHeight = renderH = 320;
-            dstH = fh;
-            dstW = Math.min(fw, Math.round(fh * 240f / 320f));
-            dstX = (fw - dstW) / 2;
-            dstY = 0;
-        } else {
-            uiScale = 1;
-            renderScale = 1;
-            virtHeight = renderH = Config.originalLines;
-            virtWidth = renderW = Math.max(160, Math.round(Config.originalLines * (float) fw / fh));
-            dstX = 0;
-            dstY = 0;
-            dstW = fw;
-            dstH = fh;
+        if (!virtualLocked) {
+            if ("phone".equals(Config.originalScreen)) {
+                virtWidth = 240;
+                virtHeight = 320;
+            } else {
+                virtHeight = Config.originalLines;
+                virtWidth = Math.max(160, Math.round(Config.originalLines * (float) fw / fh));
+            }
+            virtualLocked = true;
         }
+        float fit = Math.min((float) fw / virtWidth, (float) fh / virtHeight);
+        dstW = Math.min(fw, Math.round(virtWidth * fit));
+        dstH = Math.min(fh, Math.round(virtHeight * fit));
+        dstX = (fw - dstW) / 2;
+        dstY = (fh - dstH) / 2;
+        renderScale = Config.nativeResolutionOn() ? Math.max(1, (int) Math.ceil(fit - 0.01f)) : 1;
+        renderW = virtWidth * renderScale;
+        renderH = virtHeight * renderScale;
         Runtime.screenWidth = virtWidth;
         Runtime.screenHeight = virtHeight;
         markOverlayDirty();

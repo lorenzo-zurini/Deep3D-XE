@@ -41,8 +41,6 @@ public final class Config {
     public static boolean antialiasing = true;
     /** Enhanced: full texture colour instead of the phones' 16-bit texels. */
     public static boolean fullColour = true;
-    /** Enhanced + native resolution UI scale: 0 = auto, else 1..6. */
-    public static int uiScale = 0;
     /** Software renderer only: "auto", "half" or "fixed" presets. */
     public static String resolutionMode = "auto";
     public static int internalWidth = 480;
@@ -107,7 +105,6 @@ public final class Config {
         nativeResolution = getBool("graphics.native_resolution", nativeResolution);
         antialiasing = getBool("graphics.antialiasing", antialiasing);
         fullColour = getBool("graphics.full_colour", fullColour);
-        uiScale = Math.max(0, Math.min(6, getInt("display.ui_scale", uiScale)));
         resolutionMode = props.getProperty("display.resolution_mode", resolutionMode);
         internalWidth = getInt("display.internal_width", internalWidth);
         internalHeight = getInt("display.internal_height", internalHeight);
@@ -135,7 +132,6 @@ public final class Config {
         props.setProperty("graphics.native_resolution", String.valueOf(nativeResolution));
         props.setProperty("graphics.antialiasing", String.valueOf(antialiasing));
         props.setProperty("graphics.full_colour", String.valueOf(fullColour));
-        props.setProperty("display.ui_scale", String.valueOf(uiScale));
         props.setProperty("display.resolution_mode", resolutionMode);
         props.setProperty("display.texture_filter", String.valueOf(textureFilter));
         props.setProperty("display.show_fps", String.valueOf(showFps));

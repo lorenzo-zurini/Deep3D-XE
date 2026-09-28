@@ -344,6 +344,19 @@ public final class Overlay {
      */
     private static void addGraphicsItems(List<Item> items) {
         boolean gl = org.deep3d.gl.GLBackend.isActive();
+        if (gl) {
+            // The game lays its UI out for the screen size it starts with
+            Item screen = Item.choice("Screen",
+                    () -> "phone".equals(Config.originalScreen)
+                            ? "Phone (240x320)" : "Widescreen",
+                    d -> {
+                        Config.originalScreen = "phone".equals(Config.originalScreen)
+                                ? "widescreen" : "phone";
+                        showToast("Screen applies on restart");
+                    });
+            screen.note = "applies on restart";
+            items.add(screen);
+        }
         Item enh = Item.choice("Enhanced graphics",
                 () -> Config.enhanced ? "On" : "Off (original)",
                 d -> {
@@ -353,16 +366,6 @@ public final class Overlay {
         enh.note = Config.enhanced ? null : "as on the phone: its resolution and 16-bit textures";
         items.add(enh);
         if (!Config.enhanced) {
-            if (gl) {
-                items.add(Item.choice("  Screen",
-                        () -> "phone".equals(Config.originalScreen)
-                                ? "Phone (240x320)" : "Widescreen (" + Config.originalLines + " lines)",
-                        d -> {
-                            Config.originalScreen = "phone".equals(Config.originalScreen)
-                                    ? "widescreen" : "phone";
-                            applyGraphics();
-                        }));
-            }
             return;
         }
         if (gl) {
@@ -372,16 +375,6 @@ public final class Overlay {
                         Config.nativeResolution = !Config.nativeResolution;
                         applyGraphics();
                     }));
-            if (Config.nativeResolution) {
-                items.add(Item.choice("  UI scale",
-                        () -> Config.uiScale == 0
-                                ? "Auto (" + org.deep3d.gl.GLBackend.uiScale + "x)"
-                                : Config.uiScale + "x",
-                        d -> {
-                            Config.uiScale = ((Config.uiScale + d) % 7 + 7) % 7;
-                            applyGraphics();
-                        }));
-            }
         }
         items.add(Item.choice("  Texture colours",
                 () -> Config.fullColour ? "Full" : "16-bit (phone)",
