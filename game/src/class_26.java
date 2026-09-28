@@ -1634,7 +1634,9 @@ public final class class_26 {
    public final void method_265(long var1) {
       class_84.field_1117.setColor(this.field_298, this.field_299, this.field_300);
       class_84.field_1117.fillRect(0, 0, class_84.field_1120, class_84.field_1121);
-      class_84.field_1110.method_25(this.field_265);
+      if (!org.deep3d.Remaster.on()) { // Deep3D-PC: Remastered draws its own water
+         class_84.field_1110.method_25(this.field_265);
+      }
       if (this.field_269 != null) {
          for (int var3 = 0; var3 < this.field_269.length; var3++) {
             this.field_269[var3].method_887();
@@ -1682,13 +1684,16 @@ public final class class_26 {
             }
          }
       }
+      this.deep3dRemaster(); // Deep3D-PC
    }
 
    // $VF: renamed from: b (long) void
    public final void method_266(long var1) {
       class_84.field_1117.setColor(this.field_298, this.field_299, this.field_300);
       class_84.field_1117.fillRect(0, 0, class_84.field_1120, class_84.field_1121);
-      class_84.field_1110.method_25(this.field_265);
+      if (!org.deep3d.Remaster.on()) { // Deep3D-PC: Remastered draws its own water
+         class_84.field_1110.method_25(this.field_265);
+      }
       if (this.field_269 != null) {
          for (int var3 = 0; var3 < this.field_269.length; var3++) {
             this.field_269[var3].method_887();
@@ -1732,6 +1737,7 @@ public final class class_26 {
             }
          }
       }
+      this.deep3dRemaster(); // Deep3D-PC
    }
 
    // $VF: renamed from: c (long) void
@@ -1861,5 +1867,42 @@ public final class class_26 {
       this.field_290 = null;
       this.field_292 = 0;
       System.gc();
+   }
+
+   // Deep3D-PC: the frame's world for the Remastered renderer (org.deep3d.Remaster)
+   private final float[] deep3dCam = new float[16];
+   private final class_3 deep3dPos = new class_3();
+
+   private void deep3dRemaster() {
+      if (!org.deep3d.Remaster.on() || class_84.field_1110 == null || class_84.field_1110.field_40 == null) {
+         return;
+      }
+      class_84.field_1110.field_40.field_1342.method_505(this.deep3dCam);
+      // the background fill the skydome shows through: tint x depth light
+      org.deep3d.Remaster.world(
+         this.deep3dCam, class_21.method_180() != null ? class_21.method_180().field_1140 : 21000,
+         this.field_298 / 255.0F, this.field_299 / 255.0F, this.field_300 / 255.0F
+      );
+      if (this.field_272 != null && this.field_272.field_970 != null) {
+         this.field_272.field_970.method_849(this.deep3dPos);
+         class_3 var2 = this.field_272.field_970.method_855(new class_3());
+         org.deep3d.Remaster.sub(
+            this.deep3dPos.field_37, this.deep3dPos.field_38, this.deep3dPos.field_39,
+            var2.field_37 / 4096.0F, var2.field_38 / 4096.0F, var2.field_39 / 4096.0F,
+            this.field_272.field_994 ? 1.0F : 0.0F
+         );
+      }
+      class_91[][] var3 = new class_91[][]{this.field_273, this.field_274};
+      for (int var4 = 0; var4 < var3.length; var4++) {
+         if (var3[var4] != null) {
+            for (int var5 = 0; var5 < var3[var4].length; var5++) {
+               class_91 var6 = var3[var4][var5];
+               if (var6 instanceof class_96 && var6.field_1226 != null && var6.field_1224 != 3 && var6.field_1224 != 4) {
+                  var6.field_1226.method_849(this.deep3dPos);
+                  org.deep3d.Remaster.light(this.deep3dPos.field_37, this.deep3dPos.field_38, this.deep3dPos.field_39, 1);
+               }
+            }
+         }
+      }
    }
 }

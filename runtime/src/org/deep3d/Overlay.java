@@ -318,10 +318,15 @@ public final class Overlay {
      * below it each add one improvement.
      */
     private static void addGraphicsItems(List<Item> items, boolean gl) {
-        items.add(Item.toggle("Enhanced graphics", () -> Config.enhanced, () -> {
-            Config.enhanced = !Config.enhanced;
-            applyGraphics();
-        }));
+        String[] modes = {"original", "enhanced", "remastered"};
+        String[] names = {"Original", "Enhanced", "Remastered"};
+        items.add(Item.choice("Graphics",
+                () -> names[java.util.Arrays.asList(modes).indexOf(Config.graphicsMode())],
+                d -> {
+                    int i = java.util.Arrays.asList(modes).indexOf(Config.graphicsMode());
+                    Config.setGraphicsMode(modes[((i + d) % 3 + 3) % 3]);
+                    applyGraphics();
+                }));
         if (!Config.enhanced) {
             return;
         }

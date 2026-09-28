@@ -29,6 +29,14 @@ public final class class_72 extends class_71 {
 
    // $VF: renamed from: a () void
    public final void method_685() {
+      if (org.deep3d.Remaster.worldPass()) {
+         // Deep3D-PC: Remastered layers share one depth buffer; the next
+         // layer (creatures, ships, the sub) gets its own water reach
+         org.deep3d.Remaster.nextLayer();
+         if (org.deep3d.Remaster.sharedDepth()) {
+            return;
+         }
+      }
       try {
          field_1016.clear(field_1017);
       } catch (Exception var2) {

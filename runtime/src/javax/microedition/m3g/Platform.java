@@ -76,6 +76,27 @@ public class Platform {
 
 	static native void _setUnderlay(int texture, int w, int h, long fence);
 
+	private static native void _remaster(float[] frame);
+
+	private static native void _remasterLayer();
+
+	/** Deep3D-PC: the game's next render layer (Remastered pass). */
+	public static void remasterLayer() {
+		if (libraryLoaded) {
+			_remasterLayer();
+		}
+	}
+
+	/**
+	 * Deep3D-PC: the next pass renders the Remastered world frame
+	 * (org.deep3d.Remaster), or plainly (null).
+	 */
+	public static void remaster(float[] frame) {
+		if (libraryLoaded) {
+			_remaster(frame);
+		}
+	}
+
 	private static long shareDisplay;
 	private static long shareContext;
 

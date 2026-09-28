@@ -82,6 +82,11 @@ extern unsigned deep3d_underlay_texture;
 extern int deep3d_underlay_w;
 extern int deep3d_underlay_h;
 extern void *deep3d_underlay_fence;
+/* Remastered renderer (deep3d_remaster.cpp) */
+void deep3d_rm_draw_elements(GLenum mode, GLsizei count, GLenum type, const void *indices);
+void deep3d_rm_draw_arrays(GLenum mode, GLint first, GLsizei count);
+void deep3d_rm_pass_begin(void);
+void deep3d_rm_pass_end(int w, int h);
 #ifdef __cplusplus
 }
 #endif

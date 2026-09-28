@@ -72,7 +72,8 @@ static void m3gSendIndexBuffer(const IndexBuffer *buf)
     M3G_ASSERT(buf->glPrimitive == GL_TRIANGLE_STRIP);
     
     M3G_BEGIN_PROFILE(M3G_INTERFACE(buf), M3G_PROFILE_NGL_DRAW);
-    glDrawElements(buf->glPrimitive, buf->indexCount, buf->glType, buf->indices);
+    /* Deep3D-PC: through the Remastered renderer (plain when it is off) */
+    deep3d_rm_draw_elements(buf->glPrimitive, buf->indexCount, buf->glType, buf->indices);
     M3G_END_PROFILE(M3G_INTERFACE(buf), M3G_PROFILE_NGL_DRAW);
 
     M3G_ASSERT_GL;

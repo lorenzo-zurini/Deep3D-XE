@@ -200,6 +200,7 @@ public class Graphics3D {
 				}
 			}
 
+			org.deep3d.Remaster.bind();
 			final int nClipX = clipGX * sc, nClipY = clipGY * sc;
 			final int nClipW = clipGW * sc, nClipH = clipGH * sc;
 			Platform.executeInUIThread(
@@ -273,6 +274,7 @@ public class Graphics3D {
 				texSlot = null;
 			}
 			long end = System.nanoTime();
+			org.deep3d.Remaster.release();
 			org.deep3d.gl.M3GTargets.recordPass(end - bindStartNanos, end - releaseStart);
 			if (slot != null) {
 				org.deep3d.gl.M3GTargets.compositeTexture((Graphics) currentTarget, slot, targetScale,

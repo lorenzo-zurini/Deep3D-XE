@@ -21,7 +21,7 @@ official English text from the international release.
   engine shares the window's GL context, so each 3D pass reaches the
   screen as a texture with no CPU read-back; with VSync and the FPS limit
   off it runs at well over a thousand FPS at 1080p on a GTX 1070.
-- **Original or Enhanced graphics** (Options > Display). By default the
+- **Original, Enhanced or Remastered graphics** (Options > Display > Graphics). By default the
   game looks as it did on the phone: the whole frame is rendered at the
   phone's resolution (its 320 lines, widened to your screen's aspect
   ratio so pixels stay square, or the 240x320 phone screen itself — the
@@ -35,6 +35,18 @@ official English text from the international release.
   - full texture colours,
   - smooth textures (trilinear + 16x anisotropic filtering),
   - 4x MSAA antialiasing.
+- **Remastered**: Enhanced plus a new underwater renderer, keeping the
+  original's art direction. The game's own skydome palette (pale zenith,
+  the station's tint band, teal horizon, black below) becomes the water
+  itself: things melt into it with distance, structures stay as hazy
+  silhouettes far out while creatures, ships and items fade in before
+  they spawn, so nothing pops in. Light follows each station's depth
+  (from sunlit shallows to the abyss), with caustics, god rays blocked
+  by the stations, sky light and a rim of water colour giving the pre-lit
+  models shape, the sub's headlight as a beam in the water, other ships'
+  lamps lighting their surroundings, station lights shining through the
+  murk with bloom, marine snow and glowing plankton, bubble trails from
+  the engines and a subtle refraction wobble.
 - **Adjustable field of view** (Options > Display; 44 is the original),
   as a dolly zoom: the chase camera moves in as the view widens, so the
   sub keeps its size and place on screen and you just see more around it.

@@ -30,6 +30,8 @@ public final class Config {
      * texture filtering. On, each sub-option below applies.
      */
     public static boolean enhanced = false;
+    /** Enhanced as the Remastered mode: the underwater renderer on top. */
+    public static boolean remastered = false;
     /** Original look: "widescreen" (320 lines) or "phone" (240x320). */
     public static String originalScreen = "widescreen";
     public static int originalLines = 320;
@@ -62,6 +64,20 @@ public final class Config {
     public static boolean gamepadEnabled = true;
 
     private Config() {
+    }
+
+    public static boolean remasteredOn() {
+        return enhanced && remastered;
+    }
+
+    /** "original", "enhanced" or "remastered" */
+    public static String graphicsMode() {
+        return !enhanced ? "original" : remastered ? "remastered" : "enhanced";
+    }
+
+    public static void setGraphicsMode(String mode) {
+        enhanced = !"original".equals(mode);
+        remastered = "remastered".equals(mode);
     }
 
     public static boolean nativeResolutionOn() {
@@ -109,6 +125,7 @@ public final class Config {
         vsync = getBool("display.vsync", vsync);
         fov = Math.max(30, Math.min(110, getInt("display.fov", fov)));
         enhanced = getBool("graphics.enhanced", enhanced);
+        remastered = getBool("graphics.remastered", remastered);
         originalScreen = props.getProperty("graphics.original_screen", originalScreen);
         originalLines = Math.max(120, Math.min(1080, getInt("graphics.original_lines", originalLines)));
         nativeResolution = getBool("graphics.native_resolution", nativeResolution);
@@ -137,6 +154,7 @@ public final class Config {
         props.setProperty("display.vsync", String.valueOf(vsync));
         props.setProperty("display.fov", String.valueOf(fov));
         props.setProperty("graphics.enhanced", String.valueOf(enhanced));
+        props.setProperty("graphics.remastered", String.valueOf(remastered));
         props.setProperty("graphics.original_screen", originalScreen);
         props.setProperty("graphics.original_lines", String.valueOf(originalLines));
         props.setProperty("graphics.native_resolution", String.valueOf(nativeResolution));

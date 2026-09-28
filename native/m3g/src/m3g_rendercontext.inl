@@ -1054,6 +1054,7 @@ static void m3gUpdateBackBuffer(RenderContext *ctx)
                 m3gBlitUnderlayTexture(ctx, ctx->clip.x0, ctx->clip.y0,
                                        clipWidth, clipHeight);
                 ctx->backBuffer.contentsValid = M3G_TRUE;
+                deep3d_rm_pass_begin();
                 return;
             }
             /* Memory target */
@@ -1076,6 +1077,7 @@ static void m3gUpdateBackBuffer(RenderContext *ctx)
         if (ctx->target.type == SURFACE_BITMAP) {
             m3gglReleaseNativeBitmap((M3GNativeBitmap) ctx->target.handle);
         }
+        deep3d_rm_pass_begin(); /* Deep3D-PC */
     }
     else {
         /* Buffered rendering is not supported for window and pbuffer
@@ -1098,6 +1100,7 @@ static void m3gUpdateTargetBuffer(RenderContext *ctx)
     else if (ctx->target.type == SURFACE_BITMAP || ctx->target.type == SURFACE_MEMORY) {
         
         M3GPixelFormat format = ctx->target.format;
+        deep3d_rm_pass_end(ctx->target.width, ctx->target.height); /* Deep3D-PC */
         M3Gint width = ctx->clip.x1 - ctx->clip.x0;
         M3Gint height = ctx->clip.y1 - ctx->clip.y0;
         M3Gint xOffset = ctx->clip.x0;

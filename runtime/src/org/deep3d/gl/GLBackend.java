@@ -149,11 +149,50 @@ public final class GLBackend {
         fbWidth = fw[0];
         fbHeight = fh[0];
         updateMouseScale();
-        updateVirtualSize();
 
         installCallbacks();
         glfwShowWindow(window);
+        settleWindowSize();
+        sizeSettled = true;
+        updateVirtualSize();
         active = true;
+    }
+
+    /* The game's screen is fixed at startup, so it has to be the window's
+       final size: window managers resize or maximise a new window (and
+       fullscreen switches the mode) only after it is shown. Waits (up to a
+       second) until the framebuffer size has held still. */
+    private static volatile boolean sizeSettled;
+
+    private static void settleWindowSize() {
+        long start = System.currentTimeMillis();
+        long stableSince = start;
+        int[] fw = new int[1];
+        int[] fh = new int[1];
+        int lastW = -1;
+        int lastH = -1;
+        while (System.currentTimeMillis() - start < 1000) {
+            glfwPollEvents();
+            glfwGetFramebufferSize(window, fw, fh);
+            long now = System.currentTimeMillis();
+            if (fw[0] != lastW || fh[0] != lastH) {
+                lastW = fw[0];
+                lastH = fh[0];
+                stableSince = now;
+            } else if (now - stableSince >= 200 && now - start >= 300) {
+                break;
+            }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
+        if (lastW > 0 && lastH > 0) {
+            fbWidth = lastW;
+            fbHeight = lastH;
+            updateMouseScale();
+        }
     }
 
     private static long createWindow() {
@@ -197,6 +236,9 @@ public final class GLBackend {
     }
 
     public static void updateVirtualSize() {
+        if (!sizeSettled) {
+            return;
+        }
         int fw = fbWidth;
         int fh = fbHeight;
         if (!virtualLocked) {

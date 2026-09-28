@@ -18,7 +18,7 @@ CFLAGS="-O2 -fPIC -w -fvisibility=default \
   -Ilinux/include -Iinc $JNI"
 
 gcc $CFLAGS -std=gnu11 -c src/m3g_core.c -o "$OUT/obj/m3g_core.o"
-for f in linux/m3g_linux.cpp linux/deep3d_egl.cpp src/m3g_android_gl.cpp CSynchronization.cpp m3g_android_java_api.cpp; do
+for f in linux/m3g_linux.cpp linux/deep3d_egl.cpp linux/deep3d_remaster.cpp src/m3g_android_gl.cpp CSynchronization.cpp m3g_android_java_api.cpp; do
     g++ $CFLAGS -fpermissive -c "$f" -o "$OUT/obj/$(basename "${f%.*}").o"
 done
 
