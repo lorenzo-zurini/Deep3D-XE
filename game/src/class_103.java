@@ -32,7 +32,7 @@ public class class_103 extends class_102 {
    // $VF: renamed from: a (an, t) void
    public final void method_837(class_106 var1, class_4 var2) {
       if (super.field_1338) {
-         switch (super.deep3dNoCull ? 2 : var1.method_884(super.field_1343)) { // Deep3D-PC
+         switch (2) { // Deep3D-PC: no culling (class_108)
             case 1:
                for (class_102 var5 = this.field_1345; var5 != null; var5 = var5.field_1337) {
                   var5.method_837(var1, var2);

@@ -18,9 +18,6 @@ public final class class_100 extends class_99 {
       this.field_1307 = var2.method_40(this.field_1307);
       this.field_1310 = 0;
       super.field_1303 = new class_29[this.field_1307.length];
-      for (int var6 = 0; var6 < this.field_1307.length; var6++) {
-         this.field_1307[var6].deep3dNoCull = true; // Deep3D-PC: never culled
-      }
 
       for (int var3 = 0; var3 < this.field_1307.length; var3++) {
          super.field_1232 = this.field_1307[var3].method_848(super.field_1232);

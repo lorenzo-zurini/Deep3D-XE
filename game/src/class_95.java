@@ -30,7 +30,6 @@ public final class class_95 extends class_91 {
       super.field_1225.field_377 = var5.field_1341;
       this.field_1256.method_10(var6, var7, var8);
       this.field_1255 = false;
-      var5.deep3dNoCull = true; // Deep3D-PC: structures are never culled
       this.field_1262 = (class_108)var5.method_840();
       int[] var9;
       if ((var9 = class_90.method_789(var5.field_1344, var2)) != null) {

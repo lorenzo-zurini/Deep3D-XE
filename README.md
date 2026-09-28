@@ -35,11 +35,13 @@ official English text from the international release.
   - full texture colours,
   - smooth textures (trilinear + 16x anisotropic filtering),
   - 4x MSAA antialiasing.
-- **Adjustable field of view** (Options > Display; 44 is the original)
-  and full-detail structures: stations and wrecks never swap to the
-  phone's low-detail stand-ins, and the view is culled with a margin
-  well past the screen edge, so nothing pops in at the sides of a wide
-  screen.
+- **Adjustable field of view** (Options > Display; 44 is the original),
+  as a dolly zoom: the chase camera moves in as the view widens, so the
+  sub keeps its size and place on screen and you just see more around it.
+- **Nothing is culled or swapped for low detail**: stations and wrecks
+  never switch to the phone's stand-ins, and ships, creatures and items
+  are drawn at any distance and direction (the phone hid everything past
+  its short far plane).
 - **One control scheme for every screen** — the game's own screens keep
   their original look but are fully drivable by mouse, keyboard or
   controller with the same logic everywhere (A / Enter confirm, B / Esc

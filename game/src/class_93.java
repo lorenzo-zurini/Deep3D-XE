@@ -147,8 +147,7 @@ public final class class_93 extends class_91 {
    // $VF: renamed from: c () void
    public final void method_809() {
       if (super.field_1224 != 4) {
-         if (deep3dBeyondPhoneFar(super.field_1226)) { // Deep3D-PC
-         } else if (super.field_1224 == 5) {
+         if (super.field_1224 == 5) {
             class_84.field_1110.method_25(super.field_1226);
          } else if (super.field_1224 != 3 && super.field_1224 != 4) {
             class_84.field_1110.method_25(super.field_1226);

@@ -192,6 +192,7 @@ public final class class_64 extends class_61 {
       this.field_789.method_879(this.field_788);
       class_84.field_1110.method_24(this.field_788);
       this.field_790 = new class_42(this.field_787.field_970, this.field_788);
+      this.field_790.deep3dDolly = deep3dDolly(); // Deep3D-PC
       this.field_791 = new class_5(this.field_787.field_970, this.field_788);
       this.field_791.field_53 = false;
       this.field_789.method_880(this.field_791);
@@ -369,6 +370,10 @@ public final class class_64 extends class_61 {
                // Deep3D-PC: a changed Field of view applies at once
                this.field_798 += org.deep3d.Config.flightFov() - this.deep3dFov;
                this.field_788.method_882(this.field_798);
+            }
+
+            if (this.field_790 != null) {
+               this.field_790.deep3dDolly = deep3dDolly();
             }
 
             this.deep3dFov = org.deep3d.Config.flightFov();
@@ -1121,5 +1126,12 @@ public final class class_64 extends class_61 {
             }
          }
       }
+   }
+
+   // Deep3D-PC: how far in the chase camera moves for the Field of view
+   // (1 at the phone's 44 degrees, 500 units): tan(phone / 2) / tan(fov / 2)
+   private static float deep3dDolly() {
+      int var0 = org.deep3d.Config.flightFov();
+      return var0 == 500 ? 1.0F : (float)(Math.tan(500 * Math.PI / 4096.0) / Math.tan(var0 * Math.PI / 4096.0));
    }
 }

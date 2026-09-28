@@ -144,30 +144,6 @@ public abstract class class_91 {
 
    // $VF: renamed from: c () void
    public void method_809() {
-      if (!deep3dBeyondPhoneFar(this.field_1226)) { // Deep3D-PC
-         class_84.field_1110.method_25(this.field_1226);
-      }
-   }
-
-   // Deep3D-PC: the flight camera's far plane reaches every structure now
-   // (class_64), but moving objects - creatures, items - are still
-   // drawn only within the phone's far plane, so they appear and vanish
-   // (spawn / despawn) exactly where they did
-   private static final class_3 deep3dCam = new class_3();
-   private static final class_3 deep3dPos = new class_3();
-
-   public static final boolean deep3dBeyondPhoneFar(class_102 var0) {
-      if (var0 == null) {
-         return false;
-      }
-      // the world matrix is only refreshed when drawn: refresh it here, or
-      // an object hidden once would stay where it was hidden
-      var0.method_839(false);
-      class_84.field_1110.field_40.method_849(deep3dCam);
-      var0.method_849(deep3dPos);
-      long var1 = deep3dCam.field_37 - deep3dPos.field_37;
-      long var3 = deep3dCam.field_38 - deep3dPos.field_38;
-      long var5 = deep3dCam.field_39 - deep3dPos.field_39;
-      return var1 * var1 + var3 * var3 + var5 * var5 > 31768L * 31768L;
+      class_84.field_1110.method_25(this.field_1226);
    }
 }

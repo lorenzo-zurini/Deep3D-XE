@@ -17,7 +17,9 @@ public abstract class class_108 extends class_105 {
 
    // $VF: renamed from: a (an, t) void
    public void method_837(class_106 var1, class_4 var2) {
-      if (super.field_1338 && (super.deep3dNoCull || var1.method_884(super.field_1343) != 0)) { // Deep3D-PC
+      // Deep3D-PC: no culling: everything in the world is drawn at any
+      // distance and direction (M3G still skips what is off screen)
+      if (super.field_1338) {
          this.field_1368 = var1.field_1342.method_503(this.field_1368);
          if (this.field_1364 != 0) {
             field_1365.method_469();

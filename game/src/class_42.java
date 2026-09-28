@@ -28,6 +28,12 @@ public final class class_42 implements class_0 {
    private boolean field_464 = false;
    // $VF: renamed from: c boolean
    private boolean field_465;
+   // Deep3D-PC: the flight camera's field of view as a dolly zoom: the
+   // sub's depth from the camera scales by this factor, so a wider view
+   // keeps the sub's size and place on screen (class_64)
+   public float deep3dDolly = 1.0F;
+   private final class_3 deep3dOff = new class_3();
+   private class_3 deep3dAim = new class_3();
 
    public class_42(class_102 var1, class_102 var2) {
       this(var1, var2, null);
@@ -154,7 +160,23 @@ public final class class_42 implements class_0 {
             this.field_455 = this.field_456.method_13(this.field_458, this.field_455);
             this.field_458.method_22();
             this.field_454.method_872(this.field_458, this.field_455, this.field_456);
-            this.field_454.method_846(this.field_457);
+            if (this.deep3dDolly != 1.0F && this.field_465) {
+               // Deep3D-PC: slide along the view axis only, by the sub's depth
+               // times (1 - dolly): its size and place on screen stay put
+               this.deep3dAim = this.field_452.method_849(this.deep3dAim);
+               long var1 = (long)(this.deep3dAim.field_37 - this.field_457.field_37) * -this.field_456.field_37
+                  + (long)(this.deep3dAim.field_38 - this.field_457.field_38) * -this.field_456.field_38
+                  + (long)(this.deep3dAim.field_39 - this.field_457.field_39) * -this.field_456.field_39;
+               float var2 = var1 / 4096.0F * (1.0F - this.deep3dDolly) / 4096.0F;
+               this.deep3dOff.method_10(
+                  this.field_457.field_37 - (int)(this.field_456.field_37 * var2),
+                  this.field_457.field_38 - (int)(this.field_456.field_38 * var2),
+                  this.field_457.field_39 - (int)(this.field_456.field_39 * var2)
+               );
+               this.field_454.method_846(this.deep3dOff);
+            } else {
+               this.field_454.method_846(this.field_457);
+            }
          }
       }
    }
