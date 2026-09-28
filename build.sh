@@ -19,15 +19,17 @@ for a in lwjgl lwjgl-glfw lwjgl-opengl; do
 done
 
 rm -rf build
-mkdir -p build/classes
+mkdir -p build/classes build/game
 
 echo "Compiling runtime..."
 javac -nowarn -cp "lib/*" -d build/classes $(find runtime/src -name '*.java')
 
+# The game classes stay off the runtime's class path: they are loaded by
+# org.deep3d.GameClassLoader, which serves their data from the original JARs.
 echo "Compiling game..."
-javac -nowarn -cp build/classes -d build/classes game/src/*.java
+javac -nowarn -cp build/classes -d build/game game/src/*.java
 
 echo "Building native M3G (JSR-184) engine..."
 native/build-m3g.sh
 
-echo "Build OK -> build/classes, build/native"
+echo "Build OK -> build/classes, build/game, build/native"

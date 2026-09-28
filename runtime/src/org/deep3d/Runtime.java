@@ -193,7 +193,7 @@ public final class Runtime {
 
     private static void loadIcon() {
         try {
-            java.io.InputStream in = Runtime.class.getResourceAsStream("/data/interface/icon.png");
+            java.io.InputStream in = Assets.open("/data/interface/icon.png");
             if (in != null) {
                 BufferedImage raw = ImageIO.read(in);
                 in.close();
@@ -758,7 +758,8 @@ public final class Runtime {
                 final int arg = Integer.parseInt(parts[3]);
                 postEvent(() -> {
                     try {
-                        Object r = Class.forName(cls).getMethod(m, int.class).invoke(null, arg);
+                        Object r = Class.forName(cls, true, GameClassLoader.get())
+                                .getMethod(m, int.class).invoke(null, arg);
                         System.out.println("[call] " + cls + "." + m + "(" + arg + ") -> " + r);
                     } catch (java.lang.reflect.InvocationTargetException e) {
                         System.out.println("[call] threw:");

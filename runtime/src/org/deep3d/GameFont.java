@@ -160,7 +160,7 @@ public final class GameFont {
     }
 
     private static byte[] readResource(String path) throws Exception {
-        try (InputStream in = GameFont.class.getResourceAsStream(path)) {
+        try (InputStream in = Assets.open(path)) {
             if (in == null) {
                 return null;
             }

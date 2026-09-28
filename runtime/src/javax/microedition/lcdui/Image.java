@@ -35,7 +35,7 @@ public class Image {
     }
 
     public static Image createImage(String name) throws IOException {
-        InputStream in = Image.class.getResourceAsStream(name);
+        InputStream in = org.deep3d.Assets.open(name);
         if (in == null) {
             throw new IOException("resource not found: " + name);
         }

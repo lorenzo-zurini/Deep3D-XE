@@ -822,13 +822,13 @@ public class Loader {
 
 		if (name.charAt(0) == '/' || iParentResourceName == null)   // absolute file reference
 		{
-			return (Loader.class.getResourceAsStream(name.startsWith("/") ? name : "/" + name));
+			return org.deep3d.Assets.open(name);
 		}
 
 		String uri = iParentResourceName.substring(0, iParentResourceName.lastIndexOf('/') + 1) + name;
 
 		if (uri.charAt(0) == '/') {
-			return (Loader.class.getResourceAsStream(uri.startsWith("/") ? uri : "/" + uri));
+			return org.deep3d.Assets.open(uri);
 		} else {
 			return getHttpInputStream(uri);
 		}

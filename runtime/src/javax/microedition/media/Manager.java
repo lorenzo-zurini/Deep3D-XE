@@ -22,7 +22,7 @@ public final class Manager {
         byte[] data = readAll(stream);
         Player p;
         if (data.length >= 4 && data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F') {
-            // WAV data (pre-converted SFX keep their .amr name, see extract-assets.sh)
+            // WAV data (AMR sound effects arrive converted, see org.deep3d.Assets)
             p = new WavPlayer(data);
         } else if ("audio/midi".equalsIgnoreCase(type) || "audio/mid".equalsIgnoreCase(type)
                 || (data.length >= 4 && data[0] == 'M' && data[1] == 'T' && data[2] == 'h' && data[3] == 'd')) {

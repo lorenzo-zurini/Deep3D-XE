@@ -72,7 +72,7 @@ public final class Main {
             Runtime.init();
         }
 
-        MIDlet midlet = (MIDlet) Class.forName("DeepMIDlet")
+        MIDlet midlet = (MIDlet) Class.forName("DeepMIDlet", true, GameClassLoader.get())
                 .getDeclaredConstructor().newInstance();
         Runtime.setMidlet(midlet);
         midlet.invokeStartApp();
