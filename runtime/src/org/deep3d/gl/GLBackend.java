@@ -46,6 +46,19 @@ public final class GLBackend {
     public static volatile int uiScale = 1;
     public static volatile int virtWidth = 1280;
     public static volatile int virtHeight = 720;
+    /* The frame is rendered at renderW x renderH (3D passes at the virtual
+       screen x renderScale), then presented into the window rectangle dst*. */
+    public static volatile int renderScale = 1;
+    private static volatile int renderW = 1280;
+    private static volatile int renderH = 720;
+    private static volatile int dstX, dstY;
+    private static volatile int dstW = 1280;
+    private static volatile int dstH = 720;
+    private static int frameFbo;
+    private static int frameTex;
+    private static int frameTexW;
+    private static int frameTexH;
+    private static Present present;
     private static volatile float mouseScaleX = 1;
     private static volatile float mouseScaleY = 1;
 
@@ -164,16 +177,61 @@ public final class GLBackend {
         }
     }
 
-    /** Recomputes UI scale + virtual screen from the framebuffer size. */
+    /**
+     * Recomputes the game's virtual screen, the render size and where the
+     * frame goes in the window, for the current graphics settings:
+     * - enhanced + native resolution: rendered at the window's resolution,
+     *   the game's UI scaled by the UI scale;
+     * - otherwise the phone's resolution, with square pixels: the phone's
+     *   320 lines widened to the window's aspect ratio, or the 240x320
+     *   phone screen itself, pillarboxed.
+     */
     public static void updateVirtualSize() {
-        int s = Config.uiScale > 0 ? Config.uiScale
-                : Math.max(1, Math.round(fbHeight / 360f));
-        uiScale = s;
-        virtWidth = Math.max(160, fbWidth / s);
-        virtHeight = Math.max(160, fbHeight / s);
+        int fw = fbWidth;
+        int fh = fbHeight;
+        if (Config.nativeResolutionOn()) {
+            int s = Config.uiScale > 0 ? Config.uiScale : Math.max(1, Math.round(fh / 360f));
+            uiScale = s;
+            renderScale = s;
+            virtWidth = Math.max(160, fw / s);
+            virtHeight = Math.max(160, fh / s);
+            renderW = fw;
+            renderH = fh;
+            dstX = 0;
+            dstY = 0;
+            dstW = fw;
+            dstH = fh;
+        } else if ("phone".equals(Config.originalScreen)) {
+            uiScale = 1;
+            renderScale = 1;
+            virtWidth = renderW = 240;
+            virtHeight = renderH = 320;
+            dstH = fh;
+            dstW = Math.min(fw, Math.round(fh * 240f / 320f));
+            dstX = (fw - dstW) / 2;
+            dstY = 0;
+        } else {
+            uiScale = 1;
+            renderScale = 1;
+            virtHeight = renderH = Config.originalLines;
+            virtWidth = renderW = Math.max(160, Math.round(Config.originalLines * (float) fw / fh));
+            dstX = 0;
+            dstY = 0;
+            dstW = fw;
+            dstH = fh;
+        }
         Runtime.screenWidth = virtWidth;
         Runtime.screenHeight = virtHeight;
         markOverlayDirty();
+    }
+
+    /* Window pixel -> game (virtual screen) coordinates */
+    private static int gameX(int px) {
+        return (px - dstX) * virtWidth / Math.max(1, dstW);
+    }
+
+    private static int gameY(int py) {
+        return (py - dstY) * virtHeight / Math.max(1, dstH);
     }
 
     private static void updateMouseScale() {
@@ -215,7 +273,7 @@ public final class GLBackend {
             if (Overlay.isOpen()) {
                 Overlay.mouseMoved(px, py);
             } else {
-                GameUi.mouseMoved(px / uiScale, py / uiScale);
+                GameUi.mouseMoved(gameX(px), gameY(py));
             }
         });
         glfwSetMouseButtonCallback(window, (win, button, action, mods) -> {
@@ -232,7 +290,7 @@ public final class GLBackend {
                     Overlay.mouseClicked(px, py);
                 }
             } else {
-                GameUi.mouseClicked(px / uiScale, py / uiScale,
+                GameUi.mouseClicked(gameX(px), gameY(py),
                         button == GLFW_MOUSE_BUTTON_RIGHT);
             }
         });
@@ -293,6 +351,8 @@ public final class GLBackend {
         if (!contextClaimed) {
             gl2d = new GL2D();
             gl2d.init();
+            present = new Present();
+            present.init();
             contextClaimed = true;
             System.out.println("[gl] renderer: " + glGetString(GL_RENDERER)
                     + " / " + glGetString(GL_VERSION));
@@ -481,17 +541,46 @@ public final class GLBackend {
     }
 
     private static void renderFrame(Draw2D frame) {
+        int rw = renderW;
+        int rh = renderH;
+        ensureFrameTarget(rw, rh);
+        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, frameFbo);
+        glViewport(0, 0, rw, rh);
+        glDisable(GL_SCISSOR_TEST);
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        gl2d.beginFrame(virtWidth, virtHeight, rw, rh);
+        gl2d.replay(frame, 0, frame.opLen);
+        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, 0);
+
         int w = fbWidth;
         int h = fbHeight;
         glViewport(0, 0, w, h);
         glDisable(GL_SCISSOR_TEST);
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        gl2d.beginFrame(virtWidth, virtHeight, w, h);
-
-        gl2d.replay(frame, 0, frame.opLen);
+        present.draw(frameTex, rw, rh, dstX, dstY, dstW, dstH, w, h, !Config.fullColourOn());
 
         renderOverlayLayer(w, h);
+    }
+
+    private static void ensureFrameTarget(int w, int h) {
+        if (frameFbo == 0) {
+            frameFbo = org.lwjgl.opengl.GL30.glGenFramebuffers();
+            frameTex = glGenTextures();
+        }
+        if (frameTexW != w || frameTexH != h) {
+            glBindTexture(GL_TEXTURE_2D, frameTex);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                    (ByteBuffer) null);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, frameFbo);
+            org.lwjgl.opengl.GL30.glFramebufferTexture2D(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER,
+                    org.lwjgl.opengl.GL30.GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameTex, 0);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, 0);
+            frameTexW = w;
+            frameTexH = h;
+        }
     }
 
     private static int opLength(int op) {

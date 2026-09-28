@@ -45,7 +45,7 @@ public final class Main {
         Runtime.setAppProperty("MIDlet-Vendor", "www.fishlabs.net");
         Runtime.setAppProperty("MIDlet-Version", "1.0.8");
 
-        javax.microedition.m3g.Platform.setTextureFilter(Config.textureFilter);
+        javax.microedition.m3g.Platform.setTextureFilter(Config.smoothTexturesOn());
 
         AudioSettings.master = Config.masterVolume;
         AudioSettings.music = Config.musicVolume;

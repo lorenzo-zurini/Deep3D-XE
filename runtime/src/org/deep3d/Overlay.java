@@ -149,24 +149,7 @@ public final class Overlay {
                             Config.renderer = "gl".equals(Config.renderer) ? "software" : "gl";
                             showToast("Applies on next launch");
                         }));
-                if (org.deep3d.gl.GLBackend.isActive()) {
-                    items.add(Item.choice("UI scale",
-                            () -> Config.uiScale == 0
-                                    ? "Auto (" + org.deep3d.gl.GLBackend.uiScale + "x)"
-                                    : Config.uiScale + "x",
-                            d -> {
-                                Config.uiScale = ((Config.uiScale + d) % 7 + 7) % 7;
-                                org.deep3d.gl.GLBackend.updateVirtualSize();
-                            }));
-                }
-                Item vd = Item.choice("View distance",
-                        () -> Config.viewDistance == 1 ? "Original"
-                                : Config.viewDistance == 8 ? "Max (8x)"
-                                : Config.viewDistance + "x",
-                        d -> Config.viewDistance = Math.max(1, Math.min(8,
-                                Config.viewDistance + (d == 0 ? 1 : d))));
-                vd.note = "applies on next area load";
-                items.add(vd);
+                addGraphicsItems(items);
                 items.add(Item.choice("VSync",
                         () -> Config.vsync ? "On" : "Off",
                         d -> {
@@ -189,12 +172,6 @@ public final class Overlay {
                             Overlay::resolutionLabel,
                             Overlay::cycleResolution));
                 }
-                items.add(Item.choice("Texture filtering",
-                        () -> Config.textureFilter ? "Smooth" : "Crisp (original)",
-                        d -> {
-                            Config.textureFilter = !Config.textureFilter;
-                            javax.microedition.m3g.Platform.setTextureFilter(Config.textureFilter);
-                        }));
                 items.add(Item.choice("FPS counter",
                         () -> Config.showFps ? "On" : "Off",
                         d -> {
@@ -334,6 +311,82 @@ public final class Overlay {
             }
         }
         Config.fpsCap = caps[((cur + d) % caps.length + caps.length) % caps.length];
+    }
+
+    /**
+     * Graphics: "Enhanced" off keeps the phone's look; on, its sub-options
+     * (indented) each add one improvement.
+     */
+    private static void addGraphicsItems(List<Item> items) {
+        boolean gl = org.deep3d.gl.GLBackend.isActive();
+        Item enh = Item.choice("Enhanced graphics",
+                () -> Config.enhanced ? "On" : "Off (original)",
+                d -> {
+                    Config.enhanced = !Config.enhanced;
+                    applyGraphics();
+                });
+        enh.note = Config.enhanced ? null : "as on the phone: 4096 colours, phone resolution";
+        items.add(enh);
+        if (!Config.enhanced) {
+            if (gl) {
+                items.add(Item.choice("  Screen",
+                        () -> "phone".equals(Config.originalScreen)
+                                ? "Phone (240x320)" : "Widescreen (" + Config.originalLines + " lines)",
+                        d -> {
+                            Config.originalScreen = "phone".equals(Config.originalScreen)
+                                    ? "widescreen" : "phone";
+                            applyGraphics();
+                        }));
+            }
+            return;
+        }
+        if (gl) {
+            items.add(Item.choice("  Resolution",
+                    () -> Config.nativeResolution ? "Native" : "Phone (" + Config.originalLines + " lines)",
+                    d -> {
+                        Config.nativeResolution = !Config.nativeResolution;
+                        applyGraphics();
+                    }));
+            if (Config.nativeResolution) {
+                items.add(Item.choice("  UI scale",
+                        () -> Config.uiScale == 0
+                                ? "Auto (" + org.deep3d.gl.GLBackend.uiScale + "x)"
+                                : Config.uiScale + "x",
+                        d -> {
+                            Config.uiScale = ((Config.uiScale + d) % 7 + 7) % 7;
+                            applyGraphics();
+                        }));
+            }
+            items.add(Item.choice("  Colour depth",
+                    () -> Config.fullColour ? "Full" : "4096 colours (phone)",
+                    d -> Config.fullColour = !Config.fullColour));
+        }
+        items.add(Item.choice("  Textures",
+                () -> Config.textureFilter ? "Smooth" : "Crisp (original)",
+                d -> {
+                    Config.textureFilter = !Config.textureFilter;
+                    applyGraphics();
+                }));
+        Item aa = Item.choice("  Antialiasing",
+                () -> Config.antialiasing ? "4x MSAA" : "Off",
+                d -> Config.antialiasing = !Config.antialiasing);
+        items.add(aa);
+        Item vd = Item.choice("  View distance",
+                () -> Config.viewDistance == 1 ? "Original"
+                        : Config.viewDistance == 8 ? "Max (8x)"
+                        : Config.viewDistance + "x",
+                d -> Config.viewDistance = Math.max(1, Math.min(8,
+                        Config.viewDistance + (d == 0 ? 1 : d))));
+        vd.note = "applies on next area load";
+        items.add(vd);
+    }
+
+    /** Pushes graphics settings that are not read every frame. */
+    static void applyGraphics() {
+        javax.microedition.m3g.Platform.setTextureFilter(Config.smoothTexturesOn());
+        if (org.deep3d.gl.GLBackend.isActive()) {
+            org.deep3d.gl.GLBackend.updateVirtualSize();
+        }
     }
 
     private static void enter(Page p) {

@@ -21,10 +21,19 @@ official English text from the international release.
   engine shares the window's GL context, so each 3D pass reaches the
   screen as a texture with no CPU read-back; with VSync and the FPS limit
   off it runs at well over a thousand FPS at 1080p on a GTX 1070.
-- **Smooth or original texturing** — trilinear + 16x anisotropic
-  filtering, or the phones' crisp nearest-neighbour look.
-- **Extended view distance** (up to 8x the original far plane), with the
-  station impostor distance and the creature radius scaled to match.
+- **Original or Enhanced graphics** (Options > Display). By default the
+  game looks as it did on the phone: the whole frame is rendered at the
+  phone's resolution (its 320 lines, widened to your screen's aspect
+  ratio so pixels stay square, or the 240x320 phone screen itself), scaled
+  up sharply, in the phones' 4096 colours (the banding in real-hardware
+  footage), with crisp textures and the original view distance.
+  **Enhanced graphics** turns on, each with its own toggle:
+  - native resolution (with the UI scale option),
+  - full colour depth,
+  - smooth textures (trilinear + 16x anisotropic filtering),
+  - 4x MSAA antialiasing,
+  - extended view distance (up to 8x the original far plane, with the
+    station impostor distance and creature radius scaled to match).
 - **PC-native menus everywhere** — the game's own menus are mouse-driven
   (hover moves the selection, click confirms, right-click/Esc backs out,
   wheel scrolls) with their original look; the phone softkey boxes are
@@ -32,12 +41,8 @@ official English text from the international release.
   real keyboard typing, and help texts name your actual key bindings.
 - **Analogue steering** with a controller stick; no music on/off prompt
   (volume is in the options).
-- **Launches fullscreen at your display's native resolution** in true
-  widescreen; VSync toggle, FPS limit (Off/30/60/120), FPS counter.
-- **Resolution-independent UI scale** — the interface keeps its classic
-  relative size at any resolution (auto, or 1x-6x in Options > Display):
-  the game lays out against a virtual screen while 3D renders at full
-  native resolution.
+- **Launches fullscreen at your display's resolution**; VSync toggle, FPS
+  limit (Off/30/60/120), FPS counter.
 - **Software 2D fallback** (`display.renderer=software` or the Renderer
   option): Java2D presentation for systems where the OpenGL window fails
   (3D still runs on the GPU, headless).
@@ -57,8 +62,11 @@ official English text from the international release.
 - **SoundFont support** — drop a `.sf2` next to the game and the MIDI
   soundtrack uses it automatically.
 - **F12 screenshots** to `screenshots/`.
-- **First-run setup** — when launched without game data, a dialog asks for
-  the original JAR and installs its data automatically.
+- **Plays straight from the original JARs** — nothing is extracted: game
+  data, the English text and sounds are read from the two JARs in place
+  (sound effects are converted to WAV in memory). If the JARs are not next
+  to the game or in its `jars/` folder, a first-launch dialog asks for them
+  once and remembers where they are.
 - **One-command packaging** — a portable folder or a self-contained app
   image with a bundled Java runtime (`./package.sh`).
 
@@ -72,20 +80,18 @@ zlib development headers (for the native 3D engine), and two original
 - the **international build** (contains `data/lang/en/`), for the English
   text; the Nokia build only shipped with Russian text.
 
+Put both JARs next to the game (any file names; they are recognised by
+their contents), then:
+
 ```sh
 ./build.sh
-./run.sh                 # first run asks for the two JARs
-```
-
-or set the data up explicitly (also transcodes sound effects with ffmpeg):
-
-```sh
-./extract-assets.sh "Deep (…)(v1.0.8)(a1).jar" "Deep (…)(v1.0.8).jar"
 ./run.sh [--fullscreen] [--res 480x640]
 ```
 
-With no arguments `extract-assets.sh` identifies suitable JARs next to it
-by their contents.
+If the JARs are elsewhere, the first launch asks for them and remembers
+their paths in `deep3d.cfg`. Sound effects need `ffmpeg` on the PATH (the
+phones' AMR format has no Java decoder); without it they are silent and
+the music still plays.
 
 To make a distributable build:
 
@@ -120,19 +126,20 @@ QWERTY phone map and name entry keep working.
 
 ```
 runtime/src/   Desktop runtime:
-               - javax.microedition.{midlet,lcdui,lcdui.game,rms,media,shell}
+               - javax.microedition.{midlet,lcdui,lcdui.game,rms,media}
                  reimplemented on Java2D / javax.sound
                - javax.microedition.m3g: JSR-184 API bindings (Nokia, via
                  J2ME Loader), adapted to desktop render targets
                - org.deep3d: launcher, window, input, overlay menu, gamepad,
-                 config, first-run setup; org.deep3d.gl: the GPU backend
+                 config, first-run setup, Assets (data from the original
+                 JARs), GameClassLoader; org.deep3d.gl: the GPU backend
 native/m3g/    Nokia's JSR-184 reference engine (C, from J2ME Loader) plus
                the Linux layer: GLES 1.1 -> desktop GL shim, and EGL calls
                served over GLX (window context sharing) or headless EGL
 game/src/      Game logic decompiled from the Nokia JAR (Vineflower,
                deobfuscated member names), verified against the original
                bytecode.
-extract-assets.sh / build.sh / run.sh / package.sh
+build.sh / run.sh / package.sh
 ```
 
 ## How the port works
@@ -148,8 +155,8 @@ extract-assets.sh / build.sh / run.sh / package.sh
   change is desktop resource loading (the game looked its files up through
   `java.lang.Class`, which cannot see the class path on a desktop JVM).
   Its `System.gc()` calls are neutralised by the launcher
-  (`-XX:+DisableExplicitGC`), and the English text is installed where the
-  Nokia build reads its language, so neither needs a code change.
+  (`-XX:+DisableExplicitGC`), and its reads of its (Russian) language
+  folder are served with the English text, so neither needs a code change.
   On top of that clean baseline, the PC features are small hooks marked
   `Deep3D-PC` (grep for it): command bar and menu/mouse registration
   (class_67), keyboard typing (class_32), key names in texts (class_1),
@@ -171,10 +178,14 @@ extract-assets.sh / build.sh / run.sh / package.sh
   translucent skybox): the frame so far is rendered offscreen and handed
   to the engine as a shared texture.
 - **Sound**: MIDI music through `javax.sound.midi`; AMR sound effects are
-  transcoded to WAV at setup (ffmpeg) and sniffed by container, silently
+  converted to WAV in memory by ffmpeg and sniffed by container, silently
   stubbed otherwise.
-- **Assets**: all game data files are stored head/tail byte-swapped in the
-  JAR; the game's own loader unscrambles them.
+- **Assets**: the game classes are loaded by `GameClassLoader`, which
+  answers their resource lookups from the two original JARs (the runtime
+  reads through the same `Assets` class). Data comes from the Nokia JAR;
+  reads of `data/lang/ru/` and the font are served from the international
+  JAR's English files. All data files are stored head/tail byte-swapped;
+  the game's own loader unscrambles them.
 - **Saves**: MIDP RecordStores are plain files under `saves/`.
 
 ### Headless testing

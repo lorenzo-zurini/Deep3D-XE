@@ -22,9 +22,28 @@ public final class Config {
     /** "gl" = OpenGL (GPU), "software" = CPU rasterizer fallback. */
     public static String renderer = "gl";
     public static boolean vsync = true;
-    /** View distance: multiple of the original 31768 far plane (1..8). */
+
+    /*
+     * Graphics. Off, "Enhanced" keeps the phone's look: the whole frame at
+     * the phone's resolution (square pixels, widened to the display's
+     * aspect ratio or as the 240x320 phone screen), 12-bit colour, crisp
+     * textures, original view distance. On, each sub-option below applies.
+     */
+    public static boolean enhanced = false;
+    /** Original look: "widescreen" (320 lines) or "phone" (240x320). */
+    public static String originalScreen = "widescreen";
+    public static int originalLines = 320;
+    /** Enhanced: render at the display's resolution (UI scaled). */
+    public static boolean nativeResolution = true;
+    /** Enhanced: trilinear + anisotropic texture filtering. */
+    public static boolean textureFilter = true;
+    /** Enhanced: multisampled 3D. */
+    public static boolean antialiasing = true;
+    /** Enhanced: 24-bit colour instead of the phones' 4096 colours. */
+    public static boolean fullColour = true;
+    /** Enhanced: multiple of the original 31768 far plane (1..8). */
     public static int viewDistance = 8;
-    /** GL mode UI scale: 0 = auto (match classic proportions), else 1..6. */
+    /** Enhanced + native resolution UI scale: 0 = auto, else 1..6. */
     public static int uiScale = 0;
     /** Software renderer only: "auto", "half" or "fixed" presets. */
     public static String resolutionMode = "auto";
@@ -36,7 +55,6 @@ public final class Config {
     public static int windowHeight = 0;
     public static int fpsCap = 60;        // 0 = uncapped
     public static int brightness = 100;   // 50..150 percent
-    public static boolean textureFilter = true;
     public static boolean showFps = false;
 
     /* Audio (0..100) */
@@ -50,9 +68,29 @@ public final class Config {
     private Config() {
     }
 
-    /** Camera far plane in world units. */
+    public static boolean nativeResolutionOn() {
+        return enhanced && nativeResolution;
+    }
+
+    public static boolean smoothTexturesOn() {
+        return enhanced && textureFilter;
+    }
+
+    public static boolean antialiasingOn() {
+        return enhanced && antialiasing;
+    }
+
+    public static boolean fullColourOn() {
+        return enhanced && fullColour;
+    }
+
+    public static int viewDistanceOn() {
+        return enhanced ? viewDistance : 1;
+    }
+
+    /** Camera far plane in world units (31768 on the phone). */
     public static int farPlane() {
-        return 31768 * viewDistance;
+        return 31768 * viewDistanceOn();
     }
 
     /**
@@ -65,7 +103,7 @@ public final class Config {
 
     /** Creature spawn / despawn radius multiplier (larger thins them out). */
     public static int creatureRange() {
-        return Math.min(viewDistance, 2);
+        return Math.min(viewDistanceOn(), 2);
     }
 
     public static void load() {
@@ -87,6 +125,12 @@ public final class Config {
         }
         renderer = props.getProperty("display.renderer", renderer);
         vsync = getBool("display.vsync", vsync);
+        enhanced = getBool("graphics.enhanced", enhanced);
+        originalScreen = props.getProperty("graphics.original_screen", originalScreen);
+        originalLines = Math.max(120, Math.min(1080, getInt("graphics.original_lines", originalLines)));
+        nativeResolution = getBool("graphics.native_resolution", nativeResolution);
+        antialiasing = getBool("graphics.antialiasing", antialiasing);
+        fullColour = getBool("graphics.full_colour", fullColour);
         viewDistance = Math.max(1, Math.min(8, getInt("display.view_distance", viewDistance)));
         uiScale = Math.max(0, Math.min(6, getInt("display.ui_scale", uiScale)));
         resolutionMode = props.getProperty("display.resolution_mode", resolutionMode);
@@ -110,6 +154,12 @@ public final class Config {
         props.setProperty("config.version", "2");
         props.setProperty("display.renderer", renderer);
         props.setProperty("display.vsync", String.valueOf(vsync));
+        props.setProperty("graphics.enhanced", String.valueOf(enhanced));
+        props.setProperty("graphics.original_screen", originalScreen);
+        props.setProperty("graphics.original_lines", String.valueOf(originalLines));
+        props.setProperty("graphics.native_resolution", String.valueOf(nativeResolution));
+        props.setProperty("graphics.antialiasing", String.valueOf(antialiasing));
+        props.setProperty("graphics.full_colour", String.valueOf(fullColour));
         props.setProperty("display.view_distance", String.valueOf(viewDistance));
         props.setProperty("display.ui_scale", String.valueOf(uiScale));
         props.setProperty("display.resolution_mode", resolutionMode);

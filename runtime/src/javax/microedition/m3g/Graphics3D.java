@@ -153,6 +153,10 @@ public class Graphics3D {
 			throw new NullPointerException();
 		}
 
+		// Deep3D-PC: Enhanced graphics > Antialiasing requests multisampling
+		if (org.deep3d.Config.antialiasingOn() && target instanceof Graphics) {
+			flags |= ANTIALIAS;
+		}
 		final int finalFlags = flags;
 		final boolean finalDepth = depth;
 
@@ -162,7 +166,7 @@ public class Graphics3D {
 			java.awt.image.BufferedImage img = finalG.getTargetImage();
 			targetW = gl ? org.deep3d.Runtime.screenWidth : (img != null ? img.getWidth() : org.deep3d.Runtime.screenWidth);
 			targetH = gl ? org.deep3d.Runtime.screenHeight : (img != null ? img.getHeight() : org.deep3d.Runtime.screenHeight);
-			targetScale = gl ? Math.max(1, org.deep3d.gl.GLBackend.uiScale) : 1;
+			targetScale = gl ? Math.max(1, org.deep3d.gl.GLBackend.renderScale) : 1;
 
 			clipGX = finalG.getClipX() + finalG.getTranslateX();
 			clipGY = finalG.getClipY() + finalG.getTranslateY();
