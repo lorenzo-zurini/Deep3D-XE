@@ -33,7 +33,10 @@ official English text from the international release.
   - smooth textures (trilinear + 16x anisotropic filtering),
   - 4x MSAA antialiasing,
   - extended view distance (up to 8x the original far plane, with the
-    station impostor distance and creature radius scaled to match).
+    station impostor distance moved out to match; creatures keep the
+    original spawn radius and density but respawn behind the camera, and
+    one in view is not removed before twice that radius, so they neither
+    pop in nor out).
 - **One control scheme for every screen** — the game's own screens keep
   their original look but are fully drivable by mouse, keyboard or
   controller with the same logic everywhere (A / Enter confirm, B / Esc
@@ -54,9 +57,9 @@ official English text from the international release.
   Display / Audio / Controls settings; the game freezes cleanly while it
   is open. Settings persist in `deep3d.cfg` next to the game.
 - **Controller support** (Linux, zero dependencies) — standard gamepads via
-  `/dev/input/js*`, hot-plugged. Left stick / d-pad steer, A fires,
-  B backs out, X confirms, Y docks, RB boosts, triggers switch key 7 /
-  autopilot, Start opens the pause menu.
+  `/dev/input/js*`, hot-plugged. In flight: left stick / d-pad steer
+  (analogue), A fires, Y docks, LB weapon, RB boost, LT auto-fire,
+  Back or RT autopilot, Start the pause menu. In menus A / B / X as below.
 - **Rebindable keyboard controls** with sensible PC defaults (WASD +
   arrows, Space fire, Enter confirm, E dock, Shift boost, Tab autopilot).
 - **Volume mixer** — master / music / effects sliders applied live.
@@ -131,10 +134,10 @@ picks a station in the depth view and sets amounts in the trade screens.
 | Fire harpoon             | Space / Ctrl         | A                |
 | Dock / interact (0)      | E / 0                | Y                |
 | Booster (3)              | Shift / 3            | RB               |
-| Autopilot / targets (9)  | Tab / 9              | RT               |
+| Autopilot / targets (9)  | Tab / 9              | Back (Select) / RT |
 | Key 1 / Key 7            | 1 / 7                | LB / LT          |
-| Pause (the game's menu)  | Esc                  | Start            |
-| Settings                 | F10                  | Select           |
+| Pause / menu             | Esc                  | Start            |
+| Settings                 | F10 (or Options in the pause menu) | Start on the title / station |
 | Fullscreen / Screenshot  | F11 / F12            | —                |
 
 "Options" in the game's menus (title, station, pause) opens the settings:

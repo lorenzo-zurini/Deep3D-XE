@@ -70,9 +70,7 @@ public final class class_101 extends class_91 {
          field_1321.method_22();
          super.field_1226.field_1341.method_512(field_1321);
          field_1320.method_10(
-            (-30000 + class_84.field_1123.nextInt(59000)) * org.deep3d.Config.creatureRange(),
-            (-30000 + class_84.field_1123.nextInt(59000)) * org.deep3d.Config.creatureRange(),
-            (-30000 + class_84.field_1123.nextInt(59000)) * org.deep3d.Config.creatureRange()
+            -30000 + class_84.field_1123.nextInt(59000), -30000 + class_84.field_1123.nextInt(59000), -30000 + class_84.field_1123.nextInt(59000)
          );
       } else {
          field_1320.method_10(
@@ -343,8 +341,25 @@ public final class class_101 extends class_91 {
    private boolean method_835() {
       super.field_1232 = class_84.field_1110.field_40.method_849(super.field_1232);
       super.field_1233 = super.field_1232.method_16(super.field_1226.method_848(field_1311), super.field_1233);
-      return super.field_1233.method_23() > 40000 * org.deep3d.Config.creatureRange();
+      // Deep3D-PC: with the extended view distance a creature in view is
+      // kept until twice the radius, so it does not vanish before your eyes
+      int var1 = super.field_1233.method_23();
+      if (var1 > 40000 && var1 < 80000 && org.deep3d.Config.viewDistanceOn() > 1
+         && deep3dInView(-super.field_1233.field_37, -super.field_1233.field_38, -super.field_1233.field_39)) {
+         return false;
+      }
+
+      return var1 > 40000;
    }
+
+   // Deep3D-PC: true if the direction (from the camera) is in front of it;
+   // the camera looks along its -Z axis (third column of its world transform)
+   private static boolean deep3dInView(int var0, int var1, int var2) {
+      class_84.field_1110.field_40.field_1342.method_481(field_1332_deep3d);
+      return (long)var0 * field_1332_deep3d.field_37 + (long)var1 * field_1332_deep3d.field_38 + (long)var2 * field_1332_deep3d.field_39 < 0L;
+   }
+
+   private static final class_3 field_1332_deep3d = new class_3(0, 0, 0);
 
    // $VF: renamed from: g () void
    private void method_836() {
@@ -357,12 +372,18 @@ public final class class_101 extends class_91 {
       field_1318[0] = field_1320.field_37;
       field_1318[1] = field_1320.field_38;
       field_1318[2] = field_1320.field_39;
-      field_1320.method_18(30000 * org.deep3d.Config.creatureRange());
+      field_1320.method_18(30000);
+      // Deep3D-PC: with the extended view distance the respawn radius (and
+      // so the creature density) stays the phone's, but creatures respawn
+      // behind the camera so they do not pop into view
+      if (org.deep3d.Config.viewDistanceOn() > 1 && deep3dInView(field_1320.field_37, field_1320.field_38, field_1320.field_39)) {
+         field_1320.method_10(-field_1320.field_37, -field_1320.field_38, -field_1320.field_39);
+      }
       field_1320.method_15(class_84.field_1110.field_40.method_848(super.field_1233));
       super.field_1226.method_846(field_1320);
 
       for (int var2 = 0; var2 < field_1319.length; var2++) {
-         field_1319[var2] = (-15000 + class_84.field_1123.nextInt(30000)) * org.deep3d.Config.creatureRange();
+         field_1319[var2] = -15000 + class_84.field_1123.nextInt(30000);
          field_1319[var2] = field_1319[var2] - field_1318[var2];
       }
 

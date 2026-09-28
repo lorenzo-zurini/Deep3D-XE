@@ -90,15 +90,28 @@ extern void *deep3d_underlay_fence;
 #endif
 
 /*
- * Phone texture colour depth: the phones' M3G implementations stored
- * textures in 16 bits per texel - RGBA4444 with alpha, RGB565 without -
- * which is where the banding of the skybox gradient (colour and alpha) in
- * real-hardware footage comes from. Returns a malloc'd quantised copy of
- * count texels, or NULL for formats left alone.
+ * Phone texture colour depth. Real-hardware footage shows the skybox
+ * gradient in bands that keep their hue (teal at 16 brightness levels),
+ * with a 4-bit alpha ramp; quantising the channels separately instead
+ * (RGBA4444) makes green and blue step at different rows. So each texel's
+ * brightness (its largest channel) is quantised - to 16 levels with alpha,
+ * 32 without - and the other channels scaled with it; alpha gets 4 bits.
+ * Returns a malloc'd quantised copy of count texels, or NULL for formats
+ * left alone.
  */
-static inline unsigned char deep3d_q4(unsigned char c) { return (unsigned char) ((c >> 4) * 17); }
-static inline unsigned char deep3d_q5(unsigned char c) { unsigned q = c >> 3; return (unsigned char) ((q << 3) | (q >> 2)); }
-static inline unsigned char deep3d_q6(unsigned char c) { unsigned q = c >> 2; return (unsigned char) ((q << 2) | (q >> 4)); }
+static inline void deep3d_quantize_rgb(unsigned char *c, int levels) {
+    unsigned m = c[0];
+    if (c[1] > m) m = c[1];
+    if (c[2] > m) m = c[2];
+    if (m == 0) {
+        return;
+    }
+    unsigned step = 255 / (levels - 1);
+    unsigned q = (m / step) * step;
+    for (int k = 0; k < 3; k++) {
+        c[k] = (unsigned char) ((c[k] * q + m / 2) / m);
+    }
+}
 
 static inline unsigned char *deep3d_quantize_texels(GLenum fmt, const void *src, size_t count) {
     int comps = fmt == GL_RGBA ? 4 : fmt == GL_RGB ? 3 : fmt == GL_LUMINANCE_ALPHA ? 2 : 0;
@@ -106,16 +119,17 @@ static inline unsigned char *deep3d_quantize_texels(GLenum fmt, const void *src,
         return NULL;
     }
     unsigned char *out = (unsigned char *) malloc(count * comps);
-    const unsigned char *in = (const unsigned char *) src;
+    memcpy(out, src, count * comps);
     for (size_t i = 0; i < count * comps; i += comps) {
-        if (comps == 4 || comps == 2) {
-            for (int k = 0; k < comps; k++) {
-                out[i + k] = deep3d_q4(in[i + k]);
-            }
-        } else {
-            out[i] = deep3d_q5(in[i]);
-            out[i + 1] = deep3d_q6(in[i + 1]);
-            out[i + 2] = deep3d_q5(in[i + 2]);
+        unsigned char *t = out + i;
+        if (comps == 2) {
+            t[0] = (unsigned char) ((t[0] >> 4) * 17);
+            t[1] = (unsigned char) ((t[1] >> 4) * 17);
+            continue;
+        }
+        deep3d_quantize_rgb(t, comps == 4 ? 16 : 32);
+        if (comps == 4) {
+            t[3] = (unsigned char) ((t[3] >> 4) * 17);
         }
     }
     return out;

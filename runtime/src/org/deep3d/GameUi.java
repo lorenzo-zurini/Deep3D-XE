@@ -344,14 +344,19 @@ public final class GameUi {
 
     /**
      * Start / Esc in flight: the game's own pause menu (its left softkey);
-     * again while that menu is on show: resume.
+     * again while that menu is on show: resume. False on screens without a
+     * game pause menu (title, station).
      */
-    public static void pausePressed() {
+    public static boolean pausePressed() {
         if (profile == null) {
             Sequencer.pulse(LSK, 3, 8);
-        } else if (pauseMenu) {
-            Sequencer.pulse(RSK, 3, 8);
+            return true;
         }
+        if (pauseMenu) {
+            Sequencer.pulse(RSK, 3, 8);
+            return true;
+        }
+        return false;
     }
 
     /** LB / RB: previous / next tab. */

@@ -102,10 +102,6 @@ public final class Config {
         return Math.max(30000, farPlane() - 1768);
     }
 
-    /** Creature spawn / despawn radius multiplier (larger thins them out). */
-    public static int creatureRange() {
-        return Math.min(viewDistanceOn(), 2);
-    }
 
     public static void load() {
         if (FILE.isFile()) {

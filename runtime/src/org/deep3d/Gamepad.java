@@ -193,8 +193,9 @@ public final class Gamepad {
      * Universal scheme: on every screen A confirms, B goes back and X is the
      * command bar's other action (see GameUi); LB / RB switch tabs. In
      * flight the buttons fly: A fires, Y docks / interacts, LB weapon,
-     * RB boost, triggers auto-fire / autopilot. Start pauses (the game's
-     * own pause menu, Start again resumes); Select opens the PC settings.
+     * RB boost, Back (Select) and RT autopilot, LT auto-fire. Start is the
+     * one menu button: in flight the game's own pause menu (whose Options
+     * opens the settings; Start again resumes), elsewhere the settings.
      */
     private static final boolean[] flightHeld = new boolean[16];
 
@@ -213,7 +214,8 @@ public final class Gamepad {
             if (flightHeld[number]) {
                 flightHeld[number] = false;
                 Input.Action a = number == BTN_A ? Input.Action.FIRE
-                        : number == BTN_LB ? Input.Action.KEY1 : Input.Action.BOOST;
+                        : number == BTN_LB ? Input.Action.KEY1
+                        : number == BTN_SELECT ? Input.Action.AUTOPILOT : Input.Action.BOOST;
                 Input.sendMidpKey(a.midpCode, false);
             }
             if (number == BTN_Y) {
@@ -225,18 +227,16 @@ public final class Gamepad {
             switch (number) {
                 case BTN_A: Overlay.handleAction(Input.Action.OK); break;
                 case BTN_B: Overlay.handleAction(Input.Action.BACK); break;
-                case BTN_START:
-                case BTN_SELECT: Overlay.toggle(); break;
+                case BTN_START: Overlay.toggle(); break;
                 default: break;
             }
             return;
         }
         switch (number) {
-            case BTN_SELECT:
-                Overlay.toggle();
-                return;
             case BTN_START:
-                GameUi.pausePressed();
+                if (!GameUi.pausePressed()) {
+                    Overlay.toggle();       // no game pause menu here: settings
+                }
                 return;
             case BTN_Y:
                 Input.handleAction(Input.Action.DOCK, true);
@@ -262,6 +262,7 @@ public final class Gamepad {
             case BTN_A: a = Input.Action.FIRE; break;
             case BTN_LB: a = Input.Action.KEY1; break;
             case BTN_RB: a = Input.Action.BOOST; break;
+            case BTN_SELECT: a = Input.Action.AUTOPILOT; break;
             default: a = null; break;
         }
         if (a != null) {
@@ -283,7 +284,7 @@ public final class Gamepad {
             case KEY1: return "LB";
             case BOOST: return "RB";
             case KEY7: return "LT";
-            case AUTOPILOT: return "RT";
+            case AUTOPILOT: return "Back";
             default: return null;
         }
     }
