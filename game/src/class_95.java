@@ -169,7 +169,9 @@ public final class class_95 extends class_91 {
    // $VF: renamed from: c () void
    public final void method_809() {
       if (super.field_1224 != 4) {
+         class_4.deep3dStructure = true; // Deep3D-PC
          class_84.field_1110.method_25(this.field_1263 ? this.field_1262 : super.field_1226);
+         class_4.deep3dStructure = false; // Deep3D-PC
          boolean var1 = false;
          if (super.field_1224 == 3 && super.field_1231 != null) {
             super.field_1231.method_742(this.field_1254);

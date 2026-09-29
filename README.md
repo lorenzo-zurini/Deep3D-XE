@@ -39,14 +39,23 @@ official English text from the international release.
   original's art direction. The game's own skydome palette (pale zenith,
   the station's tint band, teal horizon, black below) becomes the water
   itself: things melt into it with distance, structures stay as hazy
-  silhouettes far out while creatures, ships and items fade in before
-  they spawn, so nothing pops in. Light follows each station's depth
+  silhouettes far out while everything that moves (creatures, ships,
+  items, and their lights and engine plumes) is gone into the murk
+  before the distance where it comes and goes, so nothing pops in.
+  Light follows each station's depth
   (from sunlit shallows to the abyss), with caustics, god rays blocked
-  by the stations, sky light and a rim of water colour giving the pre-lit
+  by the stations, the bright window of the surface overhead in the
+  shallows, sky light and a rim of water colour giving the pre-lit
   models shape, the sub's headlight as a beam in the water, other ships'
   lamps lighting their surroundings, station lights shining through the
-  murk with bloom, marine snow and glowing plankton, bubble trails from
-  the engines and a subtle refraction wobble.
+  murk with bloom, marine snow, shoals of small fish, bubble trails from
+  the engines and a subtle refraction wobble. In the deep, creatures and
+  ships glow faintly at their edges and the sub's hull stirs up
+  plankton that sparks and hangs in its wake. Boosting streaks the
+  view; outside the hull's rated depth the screen shows it: radiation in
+  the shallows fogs it green with sparks and slipping rows, pressure in
+  the deep squeezes it in on a heartbeat, jolting, its edges splitting
+  into colours.
 - **Adjustable field of view** (Options > Display; 44 is the original),
   as a dolly zoom: the chase camera moves in as the view widens, so the
   sub keeps its size and place on screen and you just see more around it.
@@ -187,6 +196,7 @@ native/m3g/    Nokia's JSR-184 reference engine (C, from J2ME Loader) plus
 game/src/      Game logic decompiled from the Nokia JAR (Vineflower,
                deobfuscated member names), verified against the original
                bytecode.
+tools/scenarios/ Scripted test play-throughs and their report
 build.sh / run.sh / package.sh
 ```
 
@@ -234,6 +244,20 @@ build.sh / run.sh / package.sh
   JAR's English files. All data files are stored head/tail byte-swapped;
   the game's own loader unscrambles them.
 - **Saves**: MIDP RecordStores are plain files under `saves/`.
+
+### Scenario tests
+
+`tools/scenarios/` plays the game through scripted situations (new game,
+every station tint and depth, flight manoeuvres, creatures and ships up
+close and far off, menus, each graphics mode and setting variants),
+photographs them and writes a report that flags crashes, freezes,
+shader failures, black / blown-out frames and differences between
+Remastered and Enhanced at the same moment (lost textures, NaNs,
+missing structure). The game runs with its own config and saves.
+
+    tools/scenarios/suite.sh tools/scenarios/full.suite out/suite
+
+See `tools/scenarios/README.md`.
 
 ### Headless testing
 

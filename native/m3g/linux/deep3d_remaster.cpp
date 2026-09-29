@@ -32,8 +32,8 @@
 /* Frame block (org.deep3d.Remaster) */
 enum {
     F_CAM = 0, F_TIME = 16, F_SECTOR = 17, F_TINT = 18, F_SUB = 21, F_SUBDIR = 24,
-    F_SUBON = 27, F_FRAME = 28, F_BOOST = 29, F_NLIGHTS = 30, F_LIGHTS = 32,
-    F_MAXLIGHTS = 8, F_SIZE = F_LIGHTS + F_MAXLIGHTS * 4
+    F_SUBON = 27, F_FRAME = 28, F_BOOST = 29, F_NLIGHTS = 30, F_CLEAN = 31, F_LIGHTS = 32,
+    F_MAXLIGHTS = 8, F_HAZARD = F_LIGHTS + F_MAXLIGHTS * 4, F_SIZE = F_HAZARD + 2
 };
 
 static float F[F_SIZE];
@@ -41,7 +41,8 @@ static int rmNext = 0;          /* set from Java for the next pass */
 static int rmPass = 0;          /* this pass is a Remastered world pass */
 static int rmBroken = 0;        /* shaders failed: stay off */
 static int rmDrawn = 0;         /* draws in this pass */
-static int rmLayer = 0;         /* the game's render layer (0 structures, 2 creatures & ships, 3 the sub) */
+static int rmLayer = 0;         /* the game's render layer (0 structures and ships, 2 creatures, 3 the sub) */
+static int rmStructure = 0;     /* the draws belong to a structure (long reach) */
 static int rmSprite = 0;        /* the current draw is a sprite */
 static int bgFrame = -1;
 static int postFrame = -1;
@@ -85,6 +86,11 @@ static const char *WATER =
 "  return exp(-pow(vec3(dist) * uSigma, vec3(2.35)));\n"
 "}\n"
 "float trans1(float dist) { return exp(-pow(dist * uSigma.g, 2.35)); }\n"
+/* Creatures respawn 36000 away (class_101) and ships come and go: all that
+   moves (and its lights, which otherwise pierce the murk) is gone into the
+   water before that, so nothing pops in. Structures stay, and keep their
+   long reach. */
+"float spawnFade(float dist) { return 1.0 - smoothstep(24000.0, 32000.0, dist); }\n"
 /* The original skydome (data/textures/skybox.png) by elevation: a pale
    zenith fading out, the sector's own colour showing through below it
    (uTint: the game's background fill, its tint times the light of the
@@ -122,8 +128,8 @@ static const char *WATER =
 "    i = p + vec2(cos(tt - i.x) + sin(tt + i.y), sin(tt - i.y) + cos(tt + i.x));\n"
 "    c += 1.0 / length(vec2(p.x / (sin(i.x + tt) / inten), p.y / (cos(i.y + tt) / inten)));\n"
 "  }\n"
-"  c /= 4.0; c = 1.17 - pow(c, 1.4);\n"
-"  return pow(abs(c), 8.0);\n"
+"  c /= 4.0; c = clamp(1.17 - pow(max(c, 0.0), 1.4), 0.0, 1.0);\n"   /* NaN / huge otherwise: black and white faces */
+"  return pow(c, 8.0);\n"
 "}\n"
 /* shafts of light radiating from the sun's direction */
 "float shafts(vec3 dir) {\n"
@@ -198,19 +204,20 @@ static const char *SCENE_FS =
 "  vec3 col = base.rgb;\n"
    /* sprites: the stations' flares and other glows are lights: they pierce
       the murk and feed the bloom */
+"  float env = uLong > 0.5 || uSelf > 0.5 ? 1.0 : spawnFade(dist);\n"
 "  if (uSprite != 0 && uKind != 0) {\n"
-"    vec3 T = trans(dist * 0.3);\n"
+"    vec3 T = trans(dist * 0.3) * env;\n"
      /* red flares burn deep red, like the warning lights on buildings */
 "    float lum = max(col.r, max(col.g, col.b));\n"
 "    float red = smoothstep(1.05, 1.5, col.r / (max(col.g, col.b) + 0.02));\n"
 "    col = mix(col, vec3(lum, lum * 0.1, lum * 0.06), red * 0.85);\n"
-"    gl_FragColor = vec4(col * T * 1.1, base.a);\n"
+"    gl_FragColor = vec4(col * T * 1.1, base.a * env);\n"
 "    return;\n"
 "  }\n"
 "  if (uKind == 2) {\n"
      /* additive: a light (plumes, glows, station beacons): it cuts through
         the murk far better than lit surfaces and adds no water colour */
-"    vec3 T = trans(dist * 0.45);\n"
+"    vec3 T = trans(dist * 0.45) * env;\n"
 "    gl_FragColor = vec4(col * T, base.a);\n"
 "    return;\n"
 "  }\n"
@@ -229,10 +236,17 @@ static const char *SCENE_FS =
 "  float emis = uKind == 0 && uLong > 0.5 ? smoothstep(0.80, 0.97, mx) * smoothstep(0.30, 0.55, mx - mn) : 0.0;\n"
 "  col = mix(col, alb.rgb * 1.1, emis * 0.8);\n"
 "  col += alb.rgb * lamps(wp, N) * (1.0 - uSelf);\n"
+   /* the deep's creatures and ships carry a faint glow on their edges */
+"  if (uLong < 0.5 && uSelf < 0.5) {\n"
+"    float bio = smoothstep(0.45, 0.9, d) * (0.6 + 0.4 * sin(uTime * 2.1 + wp.x * 0.003 + wp.z * 0.002));\n"
+"    col += vec3(0.1, 0.75, 1.0) * rim * bio * 0.9;\n"
+"  }\n"
 "  vec3 T = trans(dist);\n"
-"  T = mix(T, sqrt(T), emis);\n"
+"  T = mix(T, sqrt(T), emis) * env;\n"
 "  if (uVis == 1) { gl_FragColor = vec4(fract(dist / 25000.0), float(uKind) * 0.5, emis, 1.0); return; }\n"
 "  if (uVis == 2) { gl_FragColor = vec4(alb.rgb, 1.0); return; }\n"
+"  if (uVis == 3) { gl_FragColor = vec4(col, 1.0); return; }\n"
+"  if (uVis == 4) { gl_FragColor = vec4(base.rgb, 1.0); return; }\n"
 "  col = col * T + water(V, cam.y) * (1.0 - T);\n"
 "  gl_FragColor = vec4(col, base.a);\n"
 "}\n";
@@ -253,24 +267,49 @@ static const char *BG_FS =
 "  c += uSunCol * shafts(dir) * 0.16 * L * L;\n"
    /* the surface far above, rippling, for the shallows */
 "  float up = dir.y;\n"
+"  if (up > 0.0) {\n"
+     /* the surface: a bright rippling window straight above, dimmer beyond */
+"    float win = smoothstep(0.62, 0.74, up);\n"
+"    vec2 wp2 = dir.xz / max(up, 0.05);\n"
+"    float wv = caustic(wp2 * 0.32 + uTime * 0.015, uTime * 0.55);\n"
+"    c += uSunCol * (0.2 + 0.7 * wv) * win * pow(L, 2.5) * 0.55;\n"
+"    c *= 1.0 - (1.0 - win) * smoothstep(0.3, 0.62, up) * pow(L, 2.0) * 0.25;\n"
+"  }\n"
 "  if (up > 0.2) {\n"
 "    vec2 sp = dir.xz / up * 2.2;\n"
 "    float rip = noise(sp * 3.0 + uTime * 0.25) * noise(sp * 5.0 - uTime * 0.18);\n"
 "    c += uSunCol * rip * smoothstep(0.2, 0.9, up) * pow(L, 3.0) * 0.35;\n"
 "  }\n"
+
 "  gl_FragColor = vec4(c, 1.0);\n"
 "}\n";
 
 /* Marine snow and plankton */
 static const char *SNOW_VS =
 "uniform mat4 uWorldToEye; uniform mat4 uProj; uniform float uBox; uniform float uPx;\n"
+"uniform vec3 uWake[8];\n"
 "varying vec4 vCol;\n"
+/* how much the sub stirred the water at wp: along its path (uWake: where
+   it is, then where it was), fading and widening with age */
+"float stirAt(vec3 wp) {\n"
+"  float s = 0.0;\n"
+"  for (int k = 0; k < 7; k++) {\n"
+"    vec3 a = uWake[k], ab = uWake[k + 1] - a;\n"
+"    float h = clamp(dot(wp - a, ab) / max(dot(ab, ab), 1.0), 0.0, 1.0);\n"
+"    float dl = length(wp - a - ab * h);\n"
+"    float age = (float(k) + h) / 7.0;\n"
+"    float wr = 190.0 + 420.0 * age;\n"
+"    s = max(s, exp(-(dl * dl) / (wr * wr)) * (1.0 - age));\n"
+"  }\n"
+"  return s;\n"
+"}\n"
 "void main() {\n"
 "  vec4 aSeed = gl_Vertex;\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
+"  vec3 centre = cam;\n"
 "  vec3 p = aSeed.xyz * uBox + vec3(uTime * 14.0, -uTime * 22.0, uTime * 9.0)\n"
 "         + vec3(sin(uTime * 0.31 + aSeed.w * 40.0), sin(uTime * 0.23 + aSeed.x * 30.0), cos(uTime * 0.27 + aSeed.y * 50.0)) * 45.0;\n"
-"  vec3 wp = cam + mod(p - cam, uBox) - uBox * 0.5;\n"
+"  vec3 wp = centre + mod(p - centre, uBox) - uBox * 0.5;\n"
 "  vec4 eye = uWorldToEye * vec4(wp, 1.0);\n"
 "  gl_Position = uProj * eye;\n"
 "  float dist = length(eye.xyz);\n"
@@ -283,6 +322,14 @@ static const char *SNOW_VS =
 "  if (fract(aSeed.w * 97.0) < 0.10) {\n"
 "    glow = smoothstep(0.35, 0.8, d) * (0.5 + 0.5 * sin(uTime * (1.3 + aSeed.x * 2.0) + aSeed.y * 40.0));\n"
 "    c += vec3(0.15, 0.85, 1.0) * glow * 1.4;\n"
+"  }\n"
+   /* in the deep, plankton the sub brushes past lights up, and stays lit
+      along its path for a while */
+"  if (uSubOn > 0.5) {\n"
+"    float stir = stirAt(wp) * smoothstep(0.3, 0.7, d);\n"
+"    stir *= 0.5 + 0.5 * sin(uTime * (6.0 + aSeed.z * 8.0) + aSeed.x * 60.0);\n"
+"    c += vec3(0.1, 1.0, 0.75) * stir * 1.8;\n"
+"    glow = max(glow, stir);\n"
 "  }\n"
 "  float fade = (1.0 - smoothstep(uBox * 0.32, uBox * 0.5, dist)) * smoothstep(40.0, 220.0, dist);\n"
 "  vec3 T = trans(dist);\n"
@@ -330,6 +377,87 @@ static const char *BUBBLE_FS =
 "  gl_FragColor = vec4(vCol.rgb * (0.25 + rim * 1.2 + hl * 1.5), vCol.a * (0.15 + rim * 0.85 + hl));\n"
 "}\n";
 
+/* Sparks of plankton the sub's hull stirs up in the deep: shed where it
+   passes, they hang in the water, flicker and die, tracing its wake */
+static const char *SPARK_VS =
+"uniform mat4 uWorldToEye; uniform mat4 uProj; uniform float uPx; uniform float uLife;\n"
+"varying vec4 vCol;\n"
+"void main() {\n"
+"  vec4 aS = gl_Vertex;\n"                     /* xyz: where it was shed, w: when */
+"  float seed = gl_MultiTexCoord0.x;\n"
+"  float age = uTime - aS.w;\n"
+"  float k = age / uLife;\n"
+"  vec3 wp = aS.xyz + vec3(sin(age * 1.7 + seed * 40.0), sin(age * 1.3 + seed * 23.0) * 0.6,\n"
+"                          cos(age * 1.5 + seed * 31.0)) * 35.0 * age;\n"
+"  vec4 eye = uWorldToEye * vec4(wp, 1.0);\n"
+"  gl_Position = uProj * eye;\n"
+"  float dist = length(eye.xyz);\n"
+"  gl_PointSize = clamp((40.0 + 60.0 * seed) * uPx / max(dist, 1.0), 2.0, 14.0);\n"
+"  float flick = 0.55 + 0.45 * sin(uTime * (7.0 + seed * 9.0) + seed * 50.0);\n"
+"  float a = (k < 0.0 || k > 1.0) ? 0.0 : smoothstep(0.0, 0.04, k) * (1.0 - k) * (1.0 - k);\n"
+"  vec3 c = mix(vec3(0.1, 1.0, 0.72), vec3(0.3, 0.75, 1.0), seed);\n"
+"  vCol = vec4(c * 1.8 * sqrt(trans(dist)) * spawnFade(dist), a * flick * smoothstep(60.0, 200.0, dist));\n"
+"  if (a <= 0.0) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);\n"
+"}\n";
+static const char *SPARK_FS =
+"varying vec4 vCol;\n"
+"void main() {\n"
+"  float r = length(gl_PointCoord * 2.0 - 1.0);\n"
+"  float core = 1.0 - smoothstep(0.0, 0.35, r);\n"
+"  gl_FragColor = vec4(vCol.rgb * (0.6 + core), vCol.a * exp(-r * r * 4.0));\n"
+"}\n";
+
+/* Shoals of small fish, anchored in the world around the camera; in the
+   deep they thin out into glowing specks */
+static const char *FISH_VS =
+"uniform mat4 uWorldToEye; uniform mat4 uProj; uniform float uPx;\n"
+"varying vec4 vCol; varying float vAngle;\n"
+"vec3 fishAt(vec4 seed, vec3 anchor, float t) {\n"
+"  float ph = seed.x * 6.2832;\n"
+"  vec3 centre = anchor + vec3(sin(t * 0.045 + ph) * 2500.0, sin(t * 0.03 + ph * 2.0) * 700.0, cos(t * 0.037 + ph) * 2500.0);\n"
+"  float a = t * (0.32 + seed.y * 0.04) + seed.z * 6.2832;\n"      /* one school: one pace */
+"  float r = 300.0 + seed.w * 600.0;\n"
+"  return centre + vec3(cos(a) * r, sin(a * 1.3 + seed.x * 3.0) * 120.0 + (seed.x - 0.5) * 300.0, sin(a) * r);\n"
+"}\n"
+"void main() {\n"
+"  vec4 seed = gl_Vertex;\n"                            /* per fish */
+"  vec3 anchor = gl_MultiTexCoord0.xyz;\n"              /* its school */
+"  float t = uTime;\n"
+"  vec3 wp = fishAt(seed, anchor, t);\n"
+"  vec3 wp2 = fishAt(seed, anchor, t + 0.05);\n"
+"  vec4 e = uWorldToEye * vec4(wp, 1.0);\n"
+"  vec4 c1 = uProj * e;\n"
+"  vec4 c2 = uProj * (uWorldToEye * vec4(wp2, 1.0));\n"
+"  gl_Position = c1;\n"
+"  vec2 sdir = c2.xy / c2.w - c1.xy / c1.w;\n"
+"  vAngle = atan(sdir.y, sdir.x);\n"
+"  float dist = length(e.xyz);\n"
+"  gl_PointSize = clamp(260.0 * uPx / max(dist, 1.0), 1.0, 96.0);\n"
+"  float d = depth01(wp.y); float L = surfLight(d);\n"
+"  vec3 c = mix(vec3(0.42, 0.55, 0.60), vec3(0.66, 0.76, 0.80), seed.y) * (0.15 + 0.9 * L);\n"
+"  c += lamps(wp, normalize(uCamToWorld[3].xyz - wp)) * 0.5;\n"
+"  float glow = smoothstep(0.55, 0.9, d);\n"
+"  c = mix(c, vec3(0.2, 0.9, 1.0) * (0.6 + 0.4 * sin(t * 3.0 + seed.x * 40.0)), glow);\n"
+"  vec3 T = trans(dist * 0.9);\n"
+"  vCol = vec4(c * mix(T, sqrt(T), glow) + water(normalize(wp - uCamToWorld[3].xyz), uCamToWorld[3].y) * (1.0 - T) * (1.0 - glow),\n"
+"              (1.0 - smoothstep(14000.0, 22000.0, dist)) * smoothstep(80.0, 300.0, dist));\n"
+"}\n";
+static const char *FISH_FS =
+"varying vec4 vCol; varying float vAngle;\n"
+"void main() {\n"
+"  vec2 p = gl_PointCoord * 2.0 - 1.0;\n"
+"  p.y = -p.y;\n"
+"  float ca = cos(-vAngle), sa = sin(-vAngle);\n"
+"  p = vec2(p.x * ca - p.y * sa, p.x * sa + p.y * ca);\n"
+"  float body = (p.x / 0.62) * (p.x / 0.62) + (p.y / 0.2) * (p.y / 0.2);\n"
+"  float tail = (p.x < -0.5 && p.x > -0.95 && abs(p.y) < (-p.x - 0.5) * 0.8) ? 1.0 : 0.0;\n"
+"  float a = max(1.0 - smoothstep(0.75, 1.0, body), tail);\n"
+"  if (a <= 0.01) discard;\n"
+"  float back = smoothstep(-0.2, 0.2, p.y);\n"
+"  float flash = pow(max(sin(vAngle * 3.0 + gl_FragCoord.x * 0.01), 0.0), 12.0) * 0.6;\n"
+"  gl_FragColor = vec4(vCol.rgb * mix(1.1, 0.65, back) + flash * vCol.rgb, a * vCol.a);\n"
+"}\n";
+
 /* Post: the pass's bright parts and the backdrop mask, half resolution */
 static const char *POST_VS =
 "#version 120\n"
@@ -346,13 +474,42 @@ static const char *BRIGHT_FS =
 "}\n";
 static const char *POST_FS =
 "uniform sampler2D uScene; uniform sampler2D uDepth; uniform sampler2D uBright;\n"
-"uniform vec3 uSunUV; uniform float uBloom; uniform float uRays; uniform int uPV;\n"
+"uniform vec3 uSunUV; uniform float uBloom; uniform float uRays; uniform int uPV; uniform float uClean; uniform float uSpeed;\n"
+"uniform float uRad; uniform float uPres;\n"
 "varying vec2 vUV;\n"
 "void main() {\n"
 "  vec2 uv = vUV;\n"
 "  vec2 w = vec2(sin(uv.y * 38.0 + uTime * 1.1) + sin(uv.y * 71.0 - uTime * 0.7),\n"
-"                cos(uv.x * 33.0 + uTime * 0.9) + cos(uv.x * 57.0 + uTime * 1.3)) * 0.0006;\n"
+"                cos(uv.x * 33.0 + uTime * 0.9) + cos(uv.x * 57.0 + uTime * 1.3)) * 0.0006 * (1.0 - uClean);\n"
+   /* too deep: the hull groans. The view squeezes in on a heartbeat, jolts
+      now and then, and its edges split into colours */
+"  float beat = 0.0;\n"
+"  if (uPres > 0.0) {\n"
+"    float ph = fract(uTime * 1.15);\n"
+"    beat = exp(-ph * 10.0) + 0.6 * exp(-max(ph - 0.2, 0.0) * 10.0) * step(0.2, ph);\n"
+"    uv = 0.5 + (uv - 0.5) * (1.0 - uPres * (0.012 + 0.018 * beat));\n"
+"    float jolt = step(0.93, hash(vec2(floor(uTime * 4.0), 7.0)));\n"
+"    uv += (vec2(hash(vec2(floor(uTime * 30.0), 1.0)), hash(vec2(floor(uTime * 30.0), 2.0))) - 0.5) * 0.006 * jolt * uPres;\n"
+"  }\n"
+   /* too shallow: radiation. Rows of the picture slip, like a failing camera */
+"  if (uRad > 0.0) {\n"
+"    float row = floor(uv.y * 90.0);\n"
+"    float slip = step(1.0 - 0.05 * uRad, hash(vec2(row, floor(uTime * 14.0))));\n"
+"    uv.x += slip * (hash(vec2(row, uTime)) - 0.5) * 0.03 * uRad;\n"
+"  }\n"
 "  vec3 c = texture2D(uScene, uv + w).rgb;\n"
+"  if (uPres > 0.0) {\n"
+"    vec2 ca = (uv - 0.5) * uPres * (0.006 + 0.01 * beat);\n"
+"    c.r = texture2D(uScene, uv + w + ca).r;\n"
+"    c.b = texture2D(uScene, uv + w - ca).b;\n"
+"  }\n"
+   /* boosting: the world streams past (a zoom blur towards the edges) */
+"  if (uSpeed > 0.01) {\n"
+"    vec2 dz = (uv - 0.5) * 0.018 * uSpeed;\n"
+"    vec3 acc = c;\n"
+"    for (int i = 1; i < 7; i++) acc += texture2D(uScene, uv - dz * float(i)).rgb;\n"
+"    c = mix(c, acc / 7.0, smoothstep(0.05, 0.45, length(uv - 0.5)));\n"
+"  }\n"
 "  vec3 b = texture2D(uBright, uv, 1.0).rgb * 0.30 + texture2D(uBright, uv, 2.5).rgb * 0.30\n"
 "         + texture2D(uBright, uv, 4.0).rgb * 0.35 + texture2D(uBright, uv, 5.5).rgb * 0.45;\n"
 "  c += b * uBloom;\n"
@@ -386,7 +543,7 @@ static const char *POST_FS =
 "      vec3 p = cam + wrd * t;\n"
 "      vec3 tl = p - lp; float dl = max(length(tl), 1.0);\n"
 "      float cone = smoothstep(0.80, 0.975, dot(tl / dl, uSubDir));\n"
-"      acc += cone / (1.0 + (dl / 2600.0) * (dl / 2600.0)) * trans1((dl + t) * 0.5);\n"
+"      acc += cone / (1.0 + (dl / 2600.0) * (dl / 2600.0)) * trans1((dl + t) * 0.5) * smoothstep(250.0, 1600.0, dl);\n"
 "    }\n"
 "    c += vec3(0.85, 0.93, 1.0) * acc / 20.0 * (tmax / 9000.0) * mix(0.3, 1.6, d);\n"
 "  }\n"
@@ -400,7 +557,7 @@ static const char *POST_FS =
 "    float ld = length(lp);\n"
 "    float vis = ld < sceneDist + 600.0 ? 1.0 : 0.25;\n"
 "    float g = 900.0 / (h + 60.0);\n"
-"    c += vec3(1.0, 0.8, 0.5) * g * g * 0.012 * trans1(ld * 0.5) * vis;\n"
+"    c += vec3(1.0, 0.8, 0.5) * g * g * 0.012 * trans1(ld * 0.5) * vis * (uLights[k].w < 1.5 ? spawnFade(ld) : 1.0);\n"
 "  }\n"
    /* grade: a touch of contrast, the deep's blacks lifted towards blue,
       and the edges falling into the dark */
@@ -412,7 +569,20 @@ static const char *POST_FS =
 "  c = mix(c, c * c * (3.0 - 2.0 * c), 0.25 * smoothstep(0.15, 0.5, max(c.r, max(c.g, c.b))));\n"
 "  vec2 v = uv - 0.5; float vig = 1.0 - dot(v, v) * mix(0.55, 1.2, d);\n"
 "  c *= vig;\n"
-"  c += (hash(uv * 1200.0 + fract(uTime)) - 0.5) * 0.012;\n"
+"  if (uPres > 0.0) {\n"
+"    float r = length(v * vec2(uVP.z / uVP.w, 1.0));\n"
+"    c *= 1.0 - uPres * smoothstep(0.3 - 0.1 * beat, 1.0, r) * (0.55 + 0.25 * beat);\n"
+"    c = mix(c, vec3(dot(c, vec3(0.3, 0.55, 0.15))), uPres * 0.35);\n"
+"  }\n"
+"  if (uRad > 0.0) {\n"
+     /* the sensor fogs green, flickers and catches sparks */
+"    c = mix(c, c * vec3(0.88, 1.06, 0.9) + vec3(0.01, 0.035, 0.01), uRad * 0.45);\n"
+"    c *= 1.0 + (hash(vec2(floor(uTime * 24.0), 3.0)) - 0.5) * 0.12 * uRad;\n"
+"    vec2 px = floor(uv * uVP.zw / 2.0);\n"
+"    float spark = step(1.0 - 0.006 * uRad, hash(px + floor(uTime * 30.0) * 17.31));\n"
+"    c += vec3(0.75, 1.0, 0.7) * spark * (0.5 + 0.5 * hash(px.yx + uTime));\n"
+"  }\n"
+"  c += (hash(uv * 1200.0 + fract(uTime)) - 0.5) * (0.012 + 0.05 * uRad) * (1.0 - uClean);\n"
 "  if (any(notEqual(c, c))) c = texture2D(uScene, uv).rgb;\n"
 "  if (uPV == 1) c = vec3(dbg.r, dbg.g, max(0.0, dot(c - c0, vec3(0.33)) - dbg.g));\n"
 "  gl_FragColor = vec4(c, 1.0);\n"
@@ -424,7 +594,8 @@ struct Prog {
     GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf;
 };
 
-static Prog pScene, pBg, pSnow, pBright, pPost, pBub;
+static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pSpark;
+static GLint fiWorldToEye, fiProj, fiPx;
 static GLint buWorldToEye, buProj, buPx, buLife, buBub, buSeed;
 static GLint sTex0, sTex1, sEn0, sEn1, sMode0, sMode1, sFmt0, sFmt1, sKind, sSprite;
 static GLint snWorldToEye, snProj, snBox, snPx, snSeed;
@@ -501,7 +672,9 @@ static int buildPrograms() {
         || !link(&pSnow, WATER, SNOW_VS, SNOW_FS)
         || !link(&pBright, POST_VS, NULL, BRIGHT_FS)
         || !link(&pPost, POST_VS, NULL, POST_FS)
-        || !link(&pBub, WATER, BUBBLE_VS, BUBBLE_FS)) {
+        || !link(&pBub, WATER, BUBBLE_VS, BUBBLE_FS)
+        || !link(&pSpark, WATER, SPARK_VS, SPARK_FS)
+        || !link(&pFish, WATER, FISH_VS, FISH_FS)) {
         rmBroken = 1;
         fprintf(stderr, "[remaster] disabled\n");
         return 0;
@@ -529,6 +702,9 @@ static int buildPrograms() {
     poSunUV = glGetUniformLocation(pPost.id, "uSunUV");
     poBloom = glGetUniformLocation(pPost.id, "uBloom");
     poRays = glGetUniformLocation(pPost.id, "uRays");
+    fiWorldToEye = glGetUniformLocation(pFish.id, "uWorldToEye");
+    fiProj = glGetUniformLocation(pFish.id, "uProj");
+    fiPx = glGetUniformLocation(pFish.id, "uPx");
     buWorldToEye = glGetUniformLocation(pBub.id, "uWorldToEye");
     buProj = glGetUniformLocation(pBub.id, "uProj");
     buPx = glGetUniformLocation(pBub.id, "uPx");
@@ -581,7 +757,7 @@ static void setCommon(const Prog *p) {
     glUniform1f(p->uBoost, F[F_BOOST]);
     glUniform1i(p->uNumLights, (int) F[F_NLIGHTS]);
     glUniform4fv(p->uLights, F_MAXLIGHTS, F + F_LIGHTS);
-    glUniform1f(p->uLong, rmLayer == 0 ? 1.0f : 0.0f);
+    glUniform1f(p->uLong, rmStructure ? 1.0f : 0.0f);
     glUniform1f(p->uSelf, rmLayer >= 3 ? 1.0f : 0.0f);
 }
 
@@ -629,28 +805,33 @@ static void captureProjection() {
 /* ------------------------------------------------------------------ */
 
 struct Saved {
-    GLint program, activeTex, clientTex, arrayBuf, elemBuf, drawFb, readFb;
+    GLint program, activeTex, clientTex, matrixMode, arrayBuf, elemBuf, drawFb, readFb;
     GLint tex[4];
+    GLfloat texMatrix[4][16];
 };
 
 static void pushState(Saved *s) {
     glGetIntegerv(GL_CURRENT_PROGRAM, &s->program);
+    glGetIntegerv(GL_MATRIX_MODE, &s->matrixMode);
     glGetIntegerv(GL_ACTIVE_TEXTURE, &s->activeTex);
     glGetIntegerv(GL_CLIENT_ACTIVE_TEXTURE, &s->clientTex);
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &s->arrayBuf);
     glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &s->elemBuf);
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &s->drawFb);
     glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &s->readFb);
-    /* the engine caches its texture bindings: every unit gets its own back
-       (a leaked post-pass texture showed up on the next frame's first face) */
+    /* the engine caches its texture bindings and matrices: every unit gets
+       its own back (a leaked post-pass texture showed up on the next frame's
+       first face; the matrix stack saves only the active unit's matrix, and
+       M3G scales texture coordinates with them: a unit left at identity drew
+       creatures flat white or blotched) */
     for (int u = 0; u < 4; u++) {
         glActiveTexture(GL_TEXTURE0 + u);
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &s->tex[u]);
+        glGetFloatv(GL_TEXTURE_MATRIX, s->texMatrix[u]);
     }
     glActiveTexture(s->activeTex);
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
-    glMatrixMode(GL_TEXTURE); glPushMatrix();
     glMatrixMode(GL_PROJECTION); glPushMatrix();
     glMatrixMode(GL_MODELVIEW); glPushMatrix();
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -658,7 +839,6 @@ static void pushState(Saved *s) {
 }
 
 static void popState(const Saved *s) {
-    glMatrixMode(GL_TEXTURE); glPopMatrix();
     glMatrixMode(GL_PROJECTION); glPopMatrix();
     glMatrixMode(GL_MODELVIEW); glPopMatrix();
     glPopClientAttrib();
@@ -670,7 +850,10 @@ static void popState(const Saved *s) {
     for (int u = 0; u < 4; u++) {
         glActiveTexture(GL_TEXTURE0 + u);
         glBindTexture(GL_TEXTURE_2D, s->tex[u]);
+        glMatrixMode(GL_TEXTURE);
+        glLoadMatrixf(s->texMatrix[u]);
     }
+    glMatrixMode(s->matrixMode);
     glActiveTexture(s->activeTex);
     glClientActiveTexture(s->clientTex);
     glUseProgram(s->program);
@@ -697,6 +880,90 @@ static void drawQuad(GLint) {
 /* Backdrop                                                            */
 /* ------------------------------------------------------------------ */
 
+/* Fish: schools in world cells around the camera */
+#define FISH_CELL 12000.0f
+#define FISH_PER 90
+static GLfloat fishSeed[9 * FISH_PER * 4];
+static GLfloat fishAnchor[9 * FISH_PER * 3];
+
+static float cellHash(int x, int z, int k) {
+    unsigned h = (unsigned) (x * 73856093) ^ (unsigned) (z * 19349663) ^ (unsigned) (k * 83492791);
+    h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15;
+    return (h & 0xffffff) / 16777216.0f;
+}
+
+static void drawFish() {
+    const float *c = F + F_CAM;
+    float d = (F[F_SECTOR] - c[13] / 8.0f - 15000.0f) / 15000.0f;
+    d = d < 0 ? 0 : d > 1 ? 1 : d;
+    int cx = (int) floorf(c[12] / FISH_CELL), cz = (int) floorf(c[14] / FISH_CELL);
+    int n = 0;
+    for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; i++) {
+            int x = cx + i, z = cz + j;
+            if ((i || j) && cellHash(x, z, 0) > 0.65f - 0.35f * d) {   /* always one close by */
+                continue;               /* fewer shoals in the deep */
+            }
+            float ax = (x + 0.5f) * FISH_CELL + (cellHash(x, z, 1) - 0.5f) * FISH_CELL * 0.5f;
+            float az = (z + 0.5f) * FISH_CELL + (cellHash(x, z, 2) - 0.5f) * FISH_CELL * 0.5f;
+            float ay = (cellHash(x, z, 3) - 0.5f) * 6000.0f;
+            for (int f = 0; f < FISH_PER; f++) {
+                for (int k = 0; k < 4; k++) {
+                    fishSeed[n * 4 + k] = cellHash(x * 131 + f, z * 71 + k, 7);
+                }
+                fishAnchor[n * 3] = ax;
+                fishAnchor[n * 3 + 1] = ay;
+                fishAnchor[n * 3 + 2] = az;
+                if (getenv("DEEP3D_RM_FISHTEST")) {   /* all shoals right in front */
+                    fishAnchor[n * 3] = c[12] - c[8] * 3000.0f;
+                    fishAnchor[n * 3 + 1] = c[13] - c[9] * 3000.0f;
+                    fishAnchor[n * 3 + 2] = c[14] - c[10] * 3000.0f;
+                }
+                n++;
+            }
+        }
+    }
+    if (!n) {
+        return;
+    }
+    float worldToEye[16];
+    if (!invert4(F + F_CAM, worldToEye)) {
+        return;
+    }
+    Saved s;
+    pushState(&s);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+    glEnable(GL_POINT_SPRITE);
+    glUseProgram(pFish.id);
+    setCommon(&pFish);
+    glUniformMatrix4fv(fiWorldToEye, 1, GL_FALSE, worldToEye);
+    glUniformMatrix4fv(fiProj, 1, GL_FALSE, proj);
+    glUniform1f(fiPx, proj[5] * vp[3] * 0.5f);      /* world size -> pixels */
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+    for (int u = 1; u < 4; u++) {
+        glClientActiveTexture(GL_TEXTURE0 + u);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    glClientActiveTexture(GL_TEXTURE0);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glTexCoordPointer(3, GL_FLOAT, 0, fishAnchor);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(4, GL_FLOAT, 0, fishSeed);
+    glDrawArrays(GL_POINTS, 0, n);
+    glDisable(GL_POINT_SPRITE);
+    glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+    popState(&s);
+}
+
 static void drawBackdrop() {
     Saved s;
     pushState(&s);
@@ -717,15 +984,22 @@ static void drawBackdrop() {
 /* Per-draw scene shader                                               */
 /* ------------------------------------------------------------------ */
 
+/* A texture's channels, looked up once a frame: the engine recycles texture
+   names and uploads new images into old ones, and a stale entry (an
+   alpha-only format for what is now a colour texture) left creatures flat
+   white */
 struct TexInfo {
     GLuint name;
+    int frame;
     int fmt;
 };
 static TexInfo texCache[512];
+static int texFrame = 1;
+static GLuint texScene, texDepth, texBright;
 
 static int texFormat(GLuint name) {
     TexInfo *t = &texCache[name & 511];
-    if (t->name == name && name != 0) {
+    if (t->name == name && t->frame == texFrame && name != 0) {
         return t->fmt;
     }
     GLint r = 0, l = 0, a = 0;
@@ -734,6 +1008,7 @@ static int texFormat(GLuint name) {
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_ALPHA_SIZE, &a);
     int fmt = ((r > 0 || l > 0) ? 1 : 0) | (a > 0 ? 2 : 0);
     t->name = name;
+    t->frame = texFrame;
     t->fmt = fmt;
     return fmt;
 }
@@ -779,6 +1054,13 @@ static int sceneBegin() {
         if (en[u]) {
             glGetIntegerv(GL_TEXTURE_BINDING_2D, &name);
             fmt[u] = texFormat((GLuint) name);
+            static int told;
+            if (name != 0 && ((GLuint) name == texScene || (GLuint) name == texDepth || (GLuint) name == texBright)
+                && told < 20) {
+                told++;
+                fprintf(stderr, "[remaster] a game draw samples our post texture %d (unit %d, scene %u depth %u bright %u)\n",
+                        name, u, texScene, texDepth, texBright);
+            }
         }
     }
     glActiveTexture(active);
@@ -822,7 +1104,7 @@ static int sceneBegin() {
     }
     /* the stations' translucent parts stay the engine's own: shaded, one
        (at Gosu's hangar) turned into a solid block of water colour */
-    if (kind == 1 && rmLayer == 0 && !rmSprite) {
+    if (kind == 1 && rmStructure && !rmSprite) {
         return 0;
     }
     /* debugging: DEEP3D_RM_PLAIN=<kind> leaves those draws to the engine */
@@ -880,7 +1162,9 @@ extern "C" void deep3d_rm_draw_arrays(GLenum mode, GLint first, GLsizei count) {
 extern "C" void deep3d_rm_pass_begin(void) {
     rmPass = rmNext && !rmBroken;
     rmDrawn = 0;
+    texFrame++;
     rmLayer = 0;
+    rmStructure = 0;
     haveProj = 0;
     if (!rmPass) {
         return;
@@ -914,6 +1198,31 @@ extern "C" void deep3d_rm_pass_begin(void) {
 static GLfloat snowSeeds[SNOW_COUNT * 4];
 static int snowReady = 0;
 
+/* the sub's path: where it is, then where it was every WAKE_STEP seconds */
+#define WAKE_STEP 0.16f
+static float wake[8][3];
+static float wakeTime = -1.0f;
+
+static void updateWake() {
+    float t = F[F_TIME];
+    const float *sp = F + F_SUB;
+    float dx = sp[0] - wake[0][0], dy = sp[1] - wake[0][1], dz = sp[2] - wake[0][2];
+    if (wakeTime < 0 || F[F_SUBON] < 0.5f || dx * dx + dy * dy + dz * dz > 4000.0f * 4000.0f
+            || t < wakeTime) {
+        for (int k = 0; k < 8; k++) {
+            memcpy(wake[k], sp, sizeof wake[k]);
+        }
+        wakeTime = t;
+        return;
+    }
+    if (t - wakeTime >= WAKE_STEP) {
+        memmove(wake[2], wake[1], sizeof(float) * 3 * 6);
+        memcpy(wake[1], sp, sizeof wake[1]);
+        wakeTime = t;
+    }
+    memcpy(wake[0], sp, sizeof wake[0]);
+}
+
 static void drawSnow() {
     if (!snowReady) {
         unsigned x = 12345;
@@ -946,6 +1255,8 @@ static void drawSnow() {
     glUniform1f(snBox, 6000.0f);
     /* point size scale: the projection's focal length in pixels */
     glUniform1f(snPx, proj[5] * vp[3] * 0.5f / 12.0f);
+    updateWake();
+    glUniform3fv(glGetUniformLocation(pSnow.id, "uWake"), 8, &wake[0][0]);
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
     for (int u = 0; u < 4; u++) {
@@ -1047,8 +1358,92 @@ static void drawBubbles(const float *worldToEye) {
     popState(&s);
 }
 
-/* Post targets (textures shared across passes; framebuffers per pass) */
-static GLuint texScene, texDepth, texBright;
+/* Plankton sparks: shed around the hull in the deep (many when boosting) */
+#define SPARK_COUNT 2400
+#define SPARK_LIFE 2.4f
+static GLfloat sparks[SPARK_COUNT * 4];
+static GLfloat sparkSeed[SPARK_COUNT];
+static int sparkHead = 0;
+static float sparkLastTime = -1.0f, sparkCarry = 0.0f;
+
+static void emitSparks() {
+    float now = F[F_TIME];
+    if (sparkLastTime < 0) {
+        for (int i = 0; i < SPARK_COUNT; i++) {
+            sparks[i * 4 + 3] = -1e6f;
+        }
+    }
+    float dt = sparkLastTime < 0 ? 0 : now - sparkLastTime;
+    sparkLastTime = now;
+    float d = (F[F_SECTOR] - F[F_CAM + 13] / 8.0f - 15000.0f) / 15000.0f;
+    float deep = d < 0.3f ? 0.0f : d > 0.6f ? 1.0f : (d - 0.3f) / 0.3f;
+    if (F[F_SUBON] < 0.5f || dt <= 0 || dt > 0.5f || deep <= 0) {
+        return;
+    }
+    const float *p = F + F_SUB, *f = F + F_SUBDIR;
+    /* the hull's frame: sideways (heading x up) and its own up */
+    float sx = f[2], sz = -f[0];
+    float n = sqrtf(sx * sx + sz * sz);
+    if (n < 1e-3f) {
+        sx = 1; sz = 0; n = 1;
+    }
+    sx /= n; sz /= n;
+    float ux = -sz * f[1], uy = sz * f[0] - sx * f[2], uz = sx * f[1];
+    sparkCarry += (160.0f + 600.0f * F[F_BOOST]) * deep * dt;
+    while (sparkCarry >= 1.0f) {
+        sparkCarry -= 1.0f;
+        float t = rnd() * 2.0f - 1.0f;                  /* nose .. tail */
+        float a = rnd() * 6.2832f, r = 320.0f * sqrtf(rnd()) * (1.0f - 0.4f * fabsf(t));
+        float along = -150.0f - t * 380.0f;
+        float cs = cosf(a) * r, sn = sinf(a) * r * 0.6f;
+        GLfloat *b = sparks + sparkHead * 4;
+        b[0] = p[0] + f[0] * along + sx * cs + ux * sn;
+        b[1] = p[1] + f[1] * along + uy * sn;
+        b[2] = p[2] + f[2] * along + sz * cs + uz * sn;
+        b[3] = now - rnd() * dt;
+        sparkSeed[sparkHead] = rnd();
+        sparkHead = (sparkHead + 1) % SPARK_COUNT;
+    }
+}
+
+static void drawSparks(const float *worldToEye) {
+    Saved s;
+    pushState(&s);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+    glEnable(GL_POINT_SPRITE);
+    glUseProgram(pSpark.id);
+    setCommon(&pSpark);
+    glUniformMatrix4fv(glGetUniformLocation(pSpark.id, "uWorldToEye"), 1, GL_FALSE, worldToEye);
+    glUniformMatrix4fv(glGetUniformLocation(pSpark.id, "uProj"), 1, GL_FALSE, proj);
+    glUniform1f(glGetUniformLocation(pSpark.id, "uPx"), proj[5] * vp[3] * 0.5f);
+    glUniform1f(glGetUniformLocation(pSpark.id, "uLife"), SPARK_LIFE);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+    for (int u = 1; u < 4; u++) {
+        glClientActiveTexture(GL_TEXTURE0 + u);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    glClientActiveTexture(GL_TEXTURE0);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glTexCoordPointer(1, GL_FLOAT, 0, sparkSeed);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(4, GL_FLOAT, 0, sparks);
+    glDrawArrays(GL_POINTS, 0, SPARK_COUNT);
+    glDisable(GL_POINT_SPRITE);
+    glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+    popState(&s);
+}
+
+/* Post targets: texScene, texDepth, texBright (declared with the texture
+   cache; framebuffers per pass) */
 static int postW = 0, postH = 0, postStencil = -1;
 
 static void ensurePostTextures(int w, int h) {
@@ -1151,7 +1546,7 @@ static void post(int w, int h) {
     float cy = F[F_CAM + 13];
     float d = (F[F_SECTOR] - cy / 8.0f - 15000.0f) / 15000.0f;
     d = d < 0 ? 0 : d > 1 ? 1 : d;
-    glUniform1f(brThresh, 0.86f - 0.3f * d);
+    glUniform1f(brThresh, 0.86f - 0.12f * d);
     drawQuad(brPos);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, texBright);
@@ -1191,10 +1586,25 @@ static void post(int w, int h) {
         sunUV[2] = f < 0 ? 0 : f > 1 ? 1 : f;
     }
     glUniform3fv(poSunUV, 1, sunUV);
-    glUniform1f(poBloom, 0.4f + 0.35f * d);
+    glUniform1f(poBloom, 0.42f + 0.12f * d);
     glUniform1f(poRays, 1.1f);
     static int pv = getenv("DEEP3D_RM_POSTVIS") ? atoi(getenv("DEEP3D_RM_POSTVIS")) : 0;
     glUniform1i(glGetUniformLocation(pPost.id, "uPV"), pv);
+    glUniform1f(glGetUniformLocation(pPost.id, "uClean"), F[F_CLEAN]);
+    static float speed = 0.0f;
+    speed += (F[F_BOOST] - speed) * 0.08f;
+    glUniform1f(glGetUniformLocation(pPost.id, "uSpeed"), F[F_CLEAN] > 0.5f ? 0.0f : speed);
+    /* the hazard eases in and out */
+    static float rad = 0.0f, pres = 0.0f;
+    static int hz = getenv("DEEP3D_RM_HAZARD") ? atoi(getenv("DEEP3D_RM_HAZARD")) : 0;
+    float wantRad = hz == 1 ? 1.0f : F[F_HAZARD], wantPres = hz == 2 ? 1.0f : F[F_HAZARD + 1];
+    rad += (wantRad - rad) * 0.05f;
+    pres += (wantPres - pres) * 0.05f;
+    if (F[F_CLEAN] > 0.5f) {
+        rad = pres = 0.0f;
+    }
+    glUniform1f(glGetUniformLocation(pPost.id, "uRad"), rad < 0.003f ? 0.0f : rad);
+    glUniform1f(glGetUniformLocation(pPost.id, "uPres"), pres < 0.003f ? 0.0f : pres);
     drawQuad(poPos);
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -1214,14 +1624,18 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
         return;
     }
     postFrame = (int) F[F_FRAME];
-    if (!getenv("DEEP3D_RM_NOSNOW")) {
+    int clean = F[F_CLEAN] > 0.5f;
+    if (!getenv("DEEP3D_RM_NOSNOW") && !clean) {
         drawSnow();
+        drawFish();
     }
     emitBubbles();
-    if (!getenv("DEEP3D_RM_NOBUB")) {
+    emitSparks();
+    if (!getenv("DEEP3D_RM_NOBUB") && !clean) {
         float worldToEye[16];
         if (invert4(F + F_CAM, worldToEye)) {
             drawBubbles(worldToEye);
+            drawSparks(worldToEye);
         }
     }
     if (getenv("DEEP3D_RM_NOPOSTFX")) {
@@ -1242,6 +1656,11 @@ Java_javax_microedition_m3g_Platform__1remaster(JNIEnv *env, jclass, jfloatArray
     }
     env->GetFloatArrayRegion(frame, 0, F_SIZE, F);
     rmNext = 1;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_javax_microedition_m3g_Platform__1remasterObject(JNIEnv *, jclass, jboolean structure) {
+    rmStructure = structure ? 1 : 0;
 }
 
 extern "C" JNIEXPORT void JNICALL

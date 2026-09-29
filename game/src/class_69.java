@@ -406,6 +406,10 @@ public final class class_69 {
          field_935 = (int)(field_935 + var0);
          boolean var5 = var4 > class_21.method_178().field_890;
          field_942 = true;
+         // Deep3D-PC: Remastered shows it (warning, then damage; worse further out)
+         float deep3dLevel = (field_941 ? 0.7F : 0.5F * Math.min(1.0F, field_937 / 5000.0F))
+               + 0.3F * Math.min(1.0F, (var5 ? var4 - class_21.method_178().field_890 : class_21.method_178().field_889 - var4) / 4000.0F);
+         org.deep3d.Remaster.hazard(var5 ? 0.0F : deep3dLevel, var5 ? deep3dLevel : 0.0F);
          if (field_941 && !var3 && field_937 > 250) {
             field_937 = 0;
             if (var5) {
