@@ -21,6 +21,7 @@ import org.deep3d.Config;
 import org.deep3d.GameUi;
 import org.deep3d.Input;
 import org.deep3d.Overlay;
+import org.deep3d.MouseFlight;
 import org.deep3d.Runtime;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
@@ -308,6 +309,18 @@ public final class GLBackend {
             }
         });
         glfwSetCursorPosCallback(window, (win, x, y) -> {
+            if (MouseFlight.captured()) {
+                // mouse flight: relative motion pulls the aim reticle
+                if (!Double.isNaN(lastCursorX)) {
+                    int[] ww = new int[1];
+                    int[] wh = new int[1];
+                    glfwGetWindowSize(window, ww, wh);
+                    MouseFlight.move(x - lastCursorX, y - lastCursorY, wh[0]);
+                }
+                lastCursorX = x;
+                lastCursorY = y;
+                return;
+            }
             int px = (int) (x * mouseScaleX);
             int py = (int) (y * mouseScaleY);
             if (Overlay.isOpen()) {
@@ -317,6 +330,22 @@ public final class GLBackend {
             }
         });
         glfwSetMouseButtonCallback(window, (win, button, action, mods) -> {
+            if (MouseFlight.captured() || mouseFlightHeld[button & 7]) {
+                // mouse flight: left fires, right boosts, middle docks
+                boolean down = action == GLFW_PRESS;
+                if (down && !MouseFlight.captured()) {
+                    return;
+                }
+                mouseFlightHeld[button & 7] = down;
+                if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                    Input.sendMidpKey(Input.Action.FIRE.midpCode, down);
+                } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                    Input.sendMidpKey(Input.Action.BOOST.midpCode, down);
+                } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+                    Input.handleAction(Input.Action.DOCK, down);
+                }
+                return;
+            }
             if (action != GLFW_PRESS) {
                 return;
             }
@@ -341,6 +370,12 @@ public final class GLBackend {
             if (rot == 0) {
                 return;
             }
+            if (MouseFlight.captured()) {
+                // mouse flight: the wheel switches weapon (key 1)
+                Input.sendMidpKey(Input.Action.KEY1.midpCode, true);
+                mainThreadTasks.add(() -> Input.sendMidpKey(Input.Action.KEY1.midpCode, false));
+                return;
+            }
             if (Overlay.isOpen()) {
                 Overlay.mouseWheel(rot);
             } else {
@@ -350,9 +385,45 @@ public final class GLBackend {
     }
 
     /** Main-thread event loop; returns when the game shuts down. */
+    private static double lastCursorX = Double.NaN;
+    private static double lastCursorY = Double.NaN;
+    private static final boolean[] mouseFlightHeld = new boolean[8];
+
+    /* Mouse flight captures the cursor in flight and gives it back otherwise */
+    private static void updateMouseCapture() {
+        boolean want = MouseFlight.wanted() && glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE;
+        if (want == MouseFlight.captured()) {
+            return;
+        }
+        if (want) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            if (glfwRawMouseMotionSupported()) {
+                glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+            }
+            lastCursorX = Double.NaN;
+            lastCursorY = Double.NaN;
+        } else {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            for (int b = 0; b < mouseFlightHeld.length; b++) {
+                if (mouseFlightHeld[b]) {
+                    mouseFlightHeld[b] = false;
+                    if (b == GLFW_MOUSE_BUTTON_LEFT) {
+                        Input.sendMidpKey(Input.Action.FIRE.midpCode, false);
+                    } else if (b == GLFW_MOUSE_BUTTON_RIGHT) {
+                        Input.sendMidpKey(Input.Action.BOOST.midpCode, false);
+                    } else if (b == GLFW_MOUSE_BUTTON_MIDDLE) {
+                        Input.handleAction(Input.Action.DOCK, false);
+                    }
+                }
+            }
+        }
+        MouseFlight.setCaptured(want);
+    }
+
     public static void eventLoop() {
         while (running) {
-            glfwWaitEventsTimeout(0.05);
+            glfwWaitEventsTimeout(0.02);
+            updateMouseCapture();
             Runnable task;
             while ((task = mainThreadTasks.poll()) != null) {
                 task.run();
@@ -541,6 +612,10 @@ public final class GLBackend {
         }
 
         Draw2D frame = recorders.get();
+        MouseFlight.frame();
+        if (MouseFlight.captured() && screenGraphics != null) {
+            MouseFlight.draw(screenGraphics, virtWidth, virtHeight);
+        }
         renderFrame(frame, null);
         if (screenshotRequested) {
             screenshotRequested = false;

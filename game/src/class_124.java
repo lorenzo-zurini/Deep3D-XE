@@ -124,9 +124,11 @@ public final class class_124 extends GameCanvas {
          class_84.field_1127[0] = new class_66();
          class_84.field_1127[1] = new class_63();
          class_84.field_1127[2] = new class_64();
+         Deep3dDebug.install(); // Deep3D-PC
          class_21.method_221();
          this.field_1520.method_439(class_84.field_1127[3]);
       } else {
+         Deep3dDebug.tick(); // Deep3D-PC: debug teleport, between frames
          class_67.method_596();
          this.field_1520.method_442(this.field_1514);
          if (this.field_1518 == 16384) {

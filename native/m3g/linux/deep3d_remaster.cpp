@@ -93,9 +93,11 @@ static const char *WATER =
 "const vec3 TEAL = vec3(0.012, 0.529, 0.620);\n"
 "vec3 dome(vec3 dir) {\n"
 "  float v = 0.5 - asin(clamp(dir.y, -1.0, 1.0)) / 3.14159265;\n"
-"  if (v < 0.25) return mix(uTint, ZENITH, 1.0 - smoothstep(0.0, 0.25, v));\n"
-"  if (v < 0.5) return mix(uTint, TEAL, smoothstep(0.25, 0.5, v));\n"
-"  return TEAL * clamp(1.0 - (v - 0.5) / 0.27, 0.0, 1.0) + TEAL * 0.035;\n"
+   /* overlapping smooth ramps: no kink, so no visible horizon line */
+"  vec3 c = mix(ZENITH, uTint, smoothstep(0.0, 0.27, v));\n"
+"  c = mix(c, TEAL, smoothstep(0.2, 0.54, v));\n"
+"  c *= 1.0 - smoothstep(0.44, 0.88, v);\n"
+"  return c + TEAL * 0.035;\n"
 "}\n"
 /* the water's light along dir, seen from height y: the dome, dimmer and
    murkier the deeper the station; what distant things melt into */
@@ -140,15 +142,15 @@ static const char *WATER =
 "    float cone = smoothstep(0.78, 0.97, dot(ld, uSubDir));\n"
 "    float att = 1.0 / (1.0 + (dl / 3400.0) * (dl / 3400.0));\n"
 "    float lam = max(dot(N, -ld), 0.0) * 0.8 + 0.2;\n"
-"    acc += vec3(1.0, 0.96, 0.86) * cone * att * lam * trans1(dl * 0.6) * 2.4;\n"
+"    acc += vec3(1.0, 0.96, 0.86) * cone * att * lam * trans1(dl * 0.6) * 1.1;\n"
 "    vec3 ep = uSub - uSubDir * 240.0; float de = length(wp - ep);\n"
-"    acc += vec3(0.25, 0.8, 1.0) * (0.25 + 0.7 * uBoost) / (1.0 + (de / 900.0) * (de / 900.0));\n"
+"    acc += vec3(0.25, 0.8, 1.0) * (0.12 + 0.4 * uBoost) / (1.0 + (de / 900.0) * (de / 900.0));\n"
 "  }\n"
 "  for (int k = 0; k < 8; k++) {\n"
 "    if (k >= uNumLights) break;\n"
 "    vec3 tl = uLights[k].xyz - wp; float dl = length(tl);\n"
 "    float lam = max(dot(N, tl / max(dl, 1.0)), 0.0) * 0.7 + 0.3;\n"
-"    acc += vec3(1.0, 0.82, 0.55) * 1.3 * lam / (1.0 + (dl / 1900.0) * (dl / 1900.0));\n"
+"    acc += vec3(1.0, 0.82, 0.55) * 0.8 * lam / (1.0 + (dl / 1900.0) * (dl / 1900.0));\n"
 "  }\n"
 "  return acc;\n"
 "}\n"
@@ -197,7 +199,11 @@ static const char *SCENE_FS =
       the murk and feed the bloom */
 "  if (uSprite != 0 && uKind != 0) {\n"
 "    vec3 T = trans(dist * 0.3);\n"
-"    gl_FragColor = vec4(col * T * 1.15, base.a);\n"
+     /* red flares burn deep red, like the warning lights on buildings */
+"    float lum = max(col.r, max(col.g, col.b));\n"
+"    float red = smoothstep(1.05, 1.5, col.r / (max(col.g, col.b) + 0.02));\n"
+"    col = mix(col, vec3(lum, lum * 0.1, lum * 0.06), red * 0.85);\n"
+"    gl_FragColor = vec4(col * T * 1.1, base.a);\n"
 "    return;\n"
 "  }\n"
 "  if (uKind == 2) {\n"
@@ -1108,7 +1114,7 @@ static void post(int w, int h) {
     float cy = F[F_CAM + 13];
     float d = (F[F_SECTOR] - cy / 8.0f - 15000.0f) / 15000.0f;
     d = d < 0 ? 0 : d > 1 ? 1 : d;
-    glUniform1f(brThresh, 0.78f - 0.33f * d);
+    glUniform1f(brThresh, 0.86f - 0.3f * d);
     drawQuad(brPos);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, texBright);
@@ -1148,7 +1154,7 @@ static void post(int w, int h) {
         sunUV[2] = f < 0 ? 0 : f > 1 ? 1 : f;
     }
     glUniform3fv(poSunUV, 1, sunUV);
-    glUniform1f(poBloom, 0.75f + 0.6f * d);
+    glUniform1f(poBloom, 0.4f + 0.35f * d);
     glUniform1f(poRays, 1.1f);
     drawQuad(poPos);
 

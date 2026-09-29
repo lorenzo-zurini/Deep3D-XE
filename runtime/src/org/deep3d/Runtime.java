@@ -806,6 +806,11 @@ public final class Runtime {
             case "ui":
                 System.out.println("[ui " + parts[1] + "] " + GameUi.describe());
                 break;
+            case "mflight":
+                // test hook: relative mouse motion for mouse flight (window px)
+                System.out.println("[mflight] captured " + MouseFlight.captured());
+                MouseFlight.move(Double.parseDouble(parts[1]), Double.parseDouble(parts[2]), 1080);
+                break;
             case "mm":
                 if (Overlay.isOpen()) {
                     Overlay.mouseMoved(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));

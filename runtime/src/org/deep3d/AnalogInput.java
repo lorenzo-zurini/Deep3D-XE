@@ -13,6 +13,10 @@ public final class AnalogInput {
 
     private static volatile float rawX;
     private static volatile float rawY;
+    /* mouse flight (MouseFlight): the reticle's pull, -1..1 */
+    private static volatile float mouseX;
+    private static volatile float mouseY;
+    private static volatile boolean mouseOn;
 
     private AnalogInput() {
     }
@@ -23,22 +27,41 @@ public final class AnalogInput {
         rawY = clamp(y);
     }
 
-    /** True when the stick is outside the deadzone. */
+    /** Mouse flight's steering, like a stick (right / down positive). */
+    public static void setMouse(float x, float y, boolean on) {
+        mouseX = clamp(x);
+        mouseY = clamp(y);
+        mouseOn = on;
+    }
+
+    private static boolean mouseSteering() {
+        return mouseOn && !Overlay.isOpen() && (mouseX * mouseX + mouseY * mouseY) > 0.0009f;
+    }
+
+    /** True when the stick is outside the deadzone (or the mouse steers). */
     public static boolean active() {
-        if (!Config.gamepadEnabled || Overlay.isOpen()) {
+        if (Overlay.isOpen()) {
             return false;
         }
-        return magnitude() > DEADZONE;
+        if (mouseSteering()) {
+            return true;
+        }
+        return Config.gamepadEnabled && magnitude() > DEADZONE;
     }
 
     /** Horizontal deflection after deadzone/curve (right positive). */
     public static float x() {
-        return shaped()[0];
+        return mouseSteering() ? mouseShaped(mouseX) : shaped()[0];
     }
 
     /** Vertical deflection after deadzone/curve (down positive). */
     public static float y() {
-        return shaped()[1];
+        return mouseSteering() ? mouseShaped(mouseY) : shaped()[1];
+    }
+
+    /* the reticle: a gentle curve, fine aim near the centre */
+    private static float mouseShaped(float v) {
+        return Math.copySign((float) Math.pow(Math.abs(v), 1.25), v);
     }
 
     private static float magnitude() {

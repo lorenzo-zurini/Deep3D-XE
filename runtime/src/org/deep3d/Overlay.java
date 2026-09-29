@@ -18,7 +18,7 @@ import org.deep3d.media.AudioSettings;
  */
 public final class Overlay {
 
-    private enum Page { ROOT, OPTIONS, DISPLAY, AUDIO, CONTROLS }
+    private enum Page { ROOT, OPTIONS, DISPLAY, AUDIO, CONTROLS, DEBUG }
 
     /** One row in a menu page: "Label    Value", like the game's options. */
     private static final class Item {
@@ -148,7 +148,25 @@ public final class Overlay {
                 items.add(Item.button("Display", () -> enter(Page.DISPLAY)));
                 items.add(Item.button("Audio", () -> enter(Page.AUDIO)));
                 items.add(Item.button("Controls", () -> enter(Page.CONTROLS)));
+                items.add(Item.button("Debug", () -> enter(Page.DEBUG)));
                 break;
+            case DEBUG: {
+                items.add(Item.toggle("God mode", () -> Cheats.god, () -> Cheats.god = !Cheats.god));
+                Cheats.Game g = Cheats.game();
+                if (g != null && g.inGame()) {
+                    String[] labels = g.stationLabels();
+                    int[] ids = g.stationIds();
+                    for (int i = 0; i < labels.length; i++) {
+                        final int id = ids[i];
+                        items.add(Item.button(labels[i], () -> {
+                            Cheats.teleport(id);
+                            close();
+                            Runtime.repaintWindow();
+                        }));
+                    }
+                }
+                break;
+            }
             case DISPLAY:
                 if (gl) {
                     // The game lays its UI out for the screen it starts with
@@ -375,7 +393,8 @@ public final class Overlay {
         switch (page) {
             case DISPLAY:
             case AUDIO:
-            case CONTROLS: {
+            case CONTROLS:
+            case DEBUG: {
                 int row = page.ordinal() - Page.DISPLAY.ordinal();
                 enter(Page.OPTIONS);
                 selected = row;
@@ -818,6 +837,7 @@ public final class Overlay {
             case DISPLAY: return "Display";
             case AUDIO: return "Audio";
             case CONTROLS: return "Controls";
+            case DEBUG: return "Debug";
             case ROOT:
             default: return "Pause";
         }

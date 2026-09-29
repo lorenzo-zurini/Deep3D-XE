@@ -140,6 +140,27 @@ static inline unsigned char *deep3d_quantize_texels(GLenum fmt, const void *src,
     return out;
 }
 
+/*
+ * Full-colour textures: alpha below 1/16 is cleared, as the phones' 4-bit
+ * alpha did. Glow textures (the stations' flares) keep bright colour in
+ * their nearly transparent texels, which additive blending otherwise sums
+ * into a visible square. Returns a malloc'd copy, or NULL when unchanged.
+ */
+static inline unsigned char *deep3d_clean_alpha(GLenum fmt, const void *src, size_t count) {
+    int comps = fmt == GL_RGBA ? 4 : fmt == GL_LUMINANCE_ALPHA ? 2 : fmt == GL_ALPHA ? 1 : 0;
+    if (!comps || !src) {
+        return NULL;
+    }
+    unsigned char *out = (unsigned char *) malloc(count * comps);
+    memcpy(out, src, count * comps);
+    for (size_t i = comps - 1; i < count * comps; i += comps) {
+        if (out[i] < 16) {
+            out[i] = 0;
+        }
+    }
+    return out;
+}
+
 /* OES paletted textures: expand to RGB(A) and upload uncompressed. */
 static inline void deep3d_glCompressedTexImage2D(GLenum target, GLint level, GLenum fmt,
                                                  GLsizei w, GLsizei h, GLint border,
@@ -152,8 +173,10 @@ static inline void deep3d_glCompressedTexImage2D(GLenum target, GLint level, GLe
         for (GLsizei i = 0; i < w * h; i++) {
             memcpy(out + (size_t)i * comps, pal + (size_t)idx[i] * comps, comps);
         }
-        if (deep3d_phone_textures) {
-            unsigned char *q = deep3d_quantize_texels(comps == 4 ? GL_RGBA : GL_RGB, out, (size_t)w * h);
+        unsigned char *q = deep3d_phone_textures
+            ? deep3d_quantize_texels(comps == 4 ? GL_RGBA : GL_RGB, out, (size_t)w * h)
+            : deep3d_clean_alpha(comps == 4 ? GL_RGBA : GL_RGB, out, (size_t)w * h);
+        if (q) {
             free(out);
             out = q;
         }

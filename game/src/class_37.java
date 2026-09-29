@@ -240,6 +240,9 @@ public final class class_37 {
 
    // $VF: renamed from: h (int) void
    public final void method_339(int var1) {
+      if (Deep3dDebug.godFor(this)) {
+         return; // Deep3D-PC: god mode
+      }
       if (this.field_376 && this.field_375) {
          if (this.field_367 <= 0) {
             this.method_341(var1);
@@ -257,6 +260,9 @@ public final class class_37 {
 
    // $VF: renamed from: i (int) void
    public final void method_340(int var1) {
+      if (Deep3dDebug.godFor(this)) {
+         return; // Deep3D-PC: god mode
+      }
       if (this.field_376 && this.field_375) {
          if (this.field_365 <= 0) {
             this.method_341(var1);
@@ -274,6 +280,9 @@ public final class class_37 {
 
    // $VF: renamed from: j (int) void
    public final void method_341(int var1) {
+      if (Deep3dDebug.godFor(this)) {
+         return; // Deep3D-PC: god mode
+      }
       this.field_363 -= var1;
       if (this.field_363 < 0) {
          this.field_363 = 0;
@@ -282,6 +291,9 @@ public final class class_37 {
 
    // $VF: renamed from: a (int, boolean) void
    public final void method_342(int var1, boolean var2) {
+      if (Deep3dDebug.godFor(this)) {
+         return; // Deep3D-PC: god mode
+      }
       if (this.field_376 && this.field_375) {
          int var3;
          if ((var3 = this.field_365 - var1) < 0) {

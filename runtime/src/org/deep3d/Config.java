@@ -32,6 +32,8 @@ public final class Config {
     public static boolean enhanced = false;
     /** Enhanced as the Remastered mode: the underwater renderer on top. */
     public static boolean remastered = false;
+    /** In flight, the mouse steers with an aim reticle (MouseFlight). */
+    public static boolean mouseFlight = true;
     /** Original look: "widescreen" (320 lines) or "phone" (240x320). */
     public static String originalScreen = "widescreen";
     public static int originalLines = 320;
@@ -144,6 +146,7 @@ public final class Config {
         musicVolume = clamp(getInt("audio.music", musicVolume));
         sfxVolume = clamp(getInt("audio.sfx", sfxVolume));
         gamepadEnabled = getBool("input.gamepad", gamepadEnabled);
+        mouseFlight = getBool("input.mouse_flight", mouseFlight);
         textureFilter = getBool("display.texture_filter", textureFilter);
         showFps = getBool("display.show_fps", showFps);
     }
@@ -175,6 +178,7 @@ public final class Config {
         props.setProperty("audio.music", String.valueOf(musicVolume));
         props.setProperty("audio.sfx", String.valueOf(sfxVolume));
         props.setProperty("input.gamepad", String.valueOf(gamepadEnabled));
+        props.setProperty("input.mouse_flight", String.valueOf(mouseFlight));
         try (FileOutputStream out = new FileOutputStream(FILE)) {
             props.store(out, "Deep3D-PC settings");
         } catch (IOException e) {

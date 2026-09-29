@@ -122,6 +122,7 @@ public final class class_70 {
       this.field_1007 = false;
       this.field_1008 = null;
       this.field_1003 = class_21.method_180().field_1140;
+      Deep3dDebug.player = this.field_969; // Deep3D-PC: god mode
       this.field_1004 = this.field_1003;
       field_968 = class_21.method_178().field_878;
       field_966 = class_21.method_178().field_877;

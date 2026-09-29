@@ -200,7 +200,8 @@ static void m3gBindTextureObject(Image *img, M3Gbool mipmap)
                     M3Gubyte *q = deep3d_phone_textures
                         ? deep3d_quantize_texels(img->glFormat, pixels,
                                                  img->width * img->height)
-                        : NULL;
+                        : deep3d_clean_alpha(img->glFormat, pixels,
+                                             img->width * img->height);
                     glTexImage2D(GL_TEXTURE_2D,
                                  0,
                                  img->glFormat,

@@ -74,6 +74,15 @@ official English text from the international release.
   exactly like the game's menus ("Label    Value" rows, the same panel,
   font and command bar); mouse, keyboard and controller navigable.
   Settings persist in `deep3d.cfg` next to the game.
+- **Mouse flight** (all graphics modes), like War Thunder's arcade
+  controls: in flight the mouse pulls an aim reticle from the centre, its
+  offset steers like a stick and it drifts back as the sub turns into it.
+  Left button fires, right boosts, the wheel switches weapon, the middle
+  button docks. The cursor is captured only in flight
+  (`input.mouse_flight=false` turns it off).
+- **Debug options** (Options > Debug): god mode (no damage from
+  radiation, pressure or weapons) and teleporting to one station of each
+  sector tint and depth band.
 - **Controller support** (Linux, zero dependencies) — standard gamepads via
   `/dev/input/js*`, hot-plugged. In flight: left stick / d-pad steer
   (analogue), A fires, Y docks, LB weapon, RB boost, LT auto-fire,
