@@ -48,8 +48,11 @@ official English text from the international release.
   shallows, sky light and a rim of water colour giving the pre-lit
   models shape, the sub's headlight as a beam in the water, other ships'
   lamps lighting their surroundings, station lights shining through the
-  murk with bloom, marine snow, shoals of small fish, bubble trails from
-  the engines and a subtle refraction wobble. In the deep, creatures and
+  murk with bloom, marine snow, bubble trails from the engines and a
+  subtle refraction wobble. Schools of fish (sardines, yellowtails,
+  blue-green and orange reef fish; in the deep, dark ones with glowing
+  spots) flock, mill into balls, dart about, flash silver as they turn,
+  and scatter out of the sub's way. In the deep, creatures and
   ships glow faintly at their edges and the sub's hull stirs up
   plankton that sparks and hangs in its wake. Boosting streaks the
   view; outside the hull's rated depth the screen shows it: radiation in
@@ -84,11 +87,13 @@ official English text from the international release.
   font and command bar); mouse, keyboard and controller navigable.
   Settings persist in `deep3d.cfg` next to the game.
 - **Mouse flight** (all graphics modes), like War Thunder's arcade
-  controls: in flight the mouse pulls an aim reticle from the centre, its
-  offset steers like a stick and it drifts back as the sub turns into it.
-  Left button fires, right boosts, the wheel switches weapon, the middle
-  button docks. The cursor is captured only in flight
-  (`input.mouse_flight=false` turns it off).
+  controls: in flight the mouse pulls an aim reticle out of the sub's
+  crosshair, and its offset steers like a held stick: the sub keeps
+  turning towards it (up climbs, whatever the invert option) until you
+  bring it back into the ring around the crosshair. Left button fires,
+  right boosts, the wheel switches weapon, the middle button docks. The
+  cursor is captured only while flying (not in the intro, menus, stations
+  or cutscenes; `input.mouse_flight=false` turns it off).
 - **Debug options** (Options > Debug): god mode (no damage from
   radiation, pressure or weapons) and teleporting to one station of each
   sector tint and depth band.

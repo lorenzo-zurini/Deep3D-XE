@@ -110,6 +110,11 @@ public final class Remaster {
         pressure = pres;
     }
 
+    /** Tests: the sub's heading (unit, world; y up), as last handed over. */
+    public static float[] subHeading() {
+        return new float[] {data[SUB_DIR], data[SUB_DIR + 1], data[SUB_DIR + 2]};
+    }
+
     /** A light in the world (another ship's lamps, kind 1; a station's, 2). */
     public static void light(float x, float y, float z, int kind) {
         if (lights >= MAX_LIGHTS) {

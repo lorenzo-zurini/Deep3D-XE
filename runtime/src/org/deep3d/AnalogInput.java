@@ -34,7 +34,8 @@ public final class AnalogInput {
         mouseOn = on;
     }
 
-    private static boolean mouseSteering() {
+    /** Mouse flight steers now (its reticle is off centre). */
+    public static boolean mouseSteering() {
         return mouseOn && !Overlay.isOpen() && (mouseX * mouseX + mouseY * mouseY) > 0.0009f;
     }
 

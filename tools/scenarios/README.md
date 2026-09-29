@@ -35,11 +35,11 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `select <row text>` | walk a menu to the row and confirm it |
 | `overlay toggle\|settings\|up\|down\|left\|right\|enter\|back` | the settings menu |
 | `pin creature\|ship\|off [dist] [dx] [dy]` | hold the nearest creature / ship in front of the camera |
-| `mouse <dx> <dy>` | mouse-flight motion |
+| `mouse on\|off`, `mouse <dx> <dy>` | mouse flight (on: without the window's focus), its motion |
 | `god on\|off`, `setf <class> <field> <value>` | cheats, game state (`setf class_21 field_209 12`: story step, cutscenes skippable) |
 | `mode original\|enhanced\|remastered`, `set <Config field> <value>` | graphics |
 | `depth <game depth>\|off` | Remastered: show any depth |
-| `shot <name>` | a screenshot, logged to metrics.tsv with state and FPS |
+| `shot <name>` | a screenshot, logged to metrics.tsv with state, FPS and the sub's heading |
 | `pair <name>` | the same moment in Remastered and Enhanced (`<name>__alt`), without particles |
 | `describe` | log what the UI layer sees (rows, buttons, bar) |
 
@@ -69,7 +69,10 @@ still need eyes: the report shows pairs side by side.
   the deep's plankton wake, fish)
 - `reach.scn`: a creature and a ship held at growing distances; past
   the respawn distance (36000) nothing may show
-- `pass2.scn`, `fish.scn`, `smoke.scn`: focused checks
+- `mouse.scn`: mouse flight (the reticle only in flight; up climbs, the
+  pull holds; metrics.tsv logs the sub's heading)
+- `fish.scn` with `DEEP3D_RM_FISHTEST=1`: every school in the sub's path
+- `pass2.scn`, `smoke.scn`: focused checks
 - `full.suite`: every mode, plus setting variants
 
 ## Remastered debugging switches
@@ -84,4 +87,5 @@ Environment variables for `run.sh` (`EXTRA_ENV="..."`):
 | `DEEP3D_RM_NOPOST`, `_NOPOSTFX`, `_NOSNOW`, `_NOBUB`, `_NOBG` | leave a stage out |
 | `DEEP3D_RM_PLAIN=<kind>` | leave draws of a kind (0 opaque, 1 blended, 2 additive, 9 sprites, 99 all) to the engine |
 | `DEEP3D_RM_DEPTH=<game depth>` | show any depth |
+| `DEEP3D_RM_FISHTEST=1` | every fish school in the sub's path |
 | `DEEP3D_RM_DEBUG=1` | log the frame data and draw states |

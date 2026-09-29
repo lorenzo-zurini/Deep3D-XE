@@ -388,6 +388,7 @@ public final class class_64 extends class_61 {
                this.method_561();
                this.method_562();
                if (!this.field_796 && !this.field_795) {
+                  org.deep3d.MouseFlight.flying(); // Deep3D-PC: the mouse may fly the sub
                   if (this.field_787.field_987 >= 0 && this.field_792 && !this.field_787.method_662()) {
                      this.field_787.method_656(this.field_781);
                   }
@@ -400,8 +401,10 @@ public final class class_64 extends class_61 {
                         class_69.method_633(7, this.field_787);
                      } else {
                         float var90 = -org.deep3d.AnalogInput.y();
+                        // the mouse's reticle is where the sub goes: up climbs,
+                        // whatever the stick's invert option
                         this.field_787.steerAnalog(this.field_781, -org.deep3d.AnalogInput.x(),
-                              class_84.field_1082 ? var90 : -var90);
+                              class_84.field_1082 && !org.deep3d.AnalogInput.mouseSteering() ? var90 : -var90);
                      }
                   }
 

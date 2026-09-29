@@ -387,7 +387,19 @@ public final class Scenario {
                     log("pin " + s[1] + (ok ? "" : " (nothing to pin)"));
                 }
                 return true;
-            case "mouse":                   // mouse <dx> <dy>: mouse flight motion
+            case "mouse":                   // mouse on|off, mouse <dx> <dy>: mouse flight motion
+                if (s[1].equals("on") || s[1].equals("off")) {
+                    Config.mouseFlight = s[1].equals("on");
+                    MouseFlight.testing = Config.mouseFlight;
+                    return true;
+                }
+                if (!MouseFlight.captured()) {
+                    if (stepFrame < 60) {
+                        return false;       // the window captures the mouse between frames
+                    }
+                    log("mouse: not captured");
+                    return true;
+                }
                 MouseFlight.move(argf(s, 1, 0), argf(s, 2, 0), 1080);
                 return true;
             case "shot":                    // shot <name>
@@ -485,8 +497,10 @@ public final class Scenario {
     private static void shot(String name) {
         File f = new File(out, name + ".png");
         org.deep3d.gl.GLBackend.screenshotTo(f);
+        float[] hd = Remaster.subHeading();
         String line = name + "\t" + frame + "\t" + state() + "\t" + Runtime.getDisplayFps()
-                + "\t" + Config.graphicsMode();
+                + "\t" + Config.graphicsMode()
+                + String.format("\theading %.2f %.2f %.2f", hd[0], hd[1], hd[2]);
         if (metrics != null) {
             metrics.println(line);
         }

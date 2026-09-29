@@ -1,13 +1,38 @@
+# Fish schools (DEEP3D_RM_FISHTEST=1 puts every school in the sub's path):
+# shallow, mid and deep; flying through them they scatter out of the way
 include prologue.scn
+teleport 17                 # Keera, 7%
+until station 2400
+shot keera_docked
+depart
+until flight 6000
+wait 20
+shot keera_a
+wait 25
+shot keera_b
+wait 25
+shot keera_c
+wait 40
+shot keera_d
+boost 60
+shot keera_boost
 teleport 10                 # Sula, 25%
 until station 2400
 depart
 until flight 6000
-wait 60
-shot a
-steer 0.7 0 90
-shot b
-steer -0.7 0.3 120
-shot c
-wait 200
-shot d
+wait 20
+shot sula_a
+wait 30
+shot sula_b
+wait 30
+shot sula_c
+teleport 16                 # Wagoll, 99%
+until station 2400
+depart
+until flight 6000
+wait 20
+shot wagoll_a
+wait 30
+shot wagoll_b
+wait 30
+shot wagoll_c

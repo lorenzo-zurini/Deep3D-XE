@@ -1,0 +1,30 @@
+# Mouse flight: the reticle only in flight, anchored on the sub's crosshair;
+# pulled down the sub dives and keeps diving until it is brought back
+# (metrics.tsv logs the sub's heading: y > 0 climbs)
+mouse on
+until title 2400
+shot title
+include prologue.scn
+calm 120
+wait 60
+shot m_centre
+mouse 0 120                 # pull down (it starts at the sector's ceiling)
+wait 30
+shot m_down_a
+wait 90
+shot m_down_b               # still diving
+mouse 0 -240                # through the crosshair: pull up
+wait 60
+shot m_up_a
+wait 90
+shot m_up_b
+mouse 0 120                 # back to the crosshair
+mouse 160 0                 # pull right
+wait 40
+shot m_right_a
+wait 90
+shot m_right_b
+mouse -160 0
+teleport 10
+until station 2400
+shot m_station              # no reticle

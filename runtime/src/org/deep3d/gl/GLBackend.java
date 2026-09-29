@@ -391,7 +391,8 @@ public final class GLBackend {
 
     /* Mouse flight captures the cursor in flight and gives it back otherwise */
     private static void updateMouseCapture() {
-        boolean want = MouseFlight.wanted() && glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE;
+        boolean want = MouseFlight.wanted()
+                && (glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE || MouseFlight.testing);
         if (want == MouseFlight.captured()) {
             return;
         }
@@ -612,7 +613,6 @@ public final class GLBackend {
         }
 
         Draw2D frame = recorders.get();
-        MouseFlight.frame();
         if (MouseFlight.captured() && screenGraphics != null) {
             MouseFlight.draw(screenGraphics, virtWidth, virtHeight);
         }

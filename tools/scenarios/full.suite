@@ -10,3 +10,5 @@ flight_rm_noaa_16bit flight.scn   graphics.enhanced=true graphics.remastered=tru
 flight_rm_fov100    flight.scn    graphics.enhanced=true graphics.remastered=true display.fov=100
 art_remastered      art.scn       graphics.enhanced=true graphics.remastered=true
 reach_remastered    reach.scn     graphics.enhanced=true graphics.remastered=true
+mouse_remastered    mouse.scn     graphics.enhanced=true graphics.remastered=true
+mouse_original      mouse.scn     graphics.enhanced=false

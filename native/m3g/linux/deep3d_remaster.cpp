@@ -407,55 +407,59 @@ static const char *SPARK_FS =
 "  gl_FragColor = vec4(vCol.rgb * (0.6 + core), vCol.a * exp(-r * r * 4.0));\n"
 "}\n";
 
-/* Shoals of small fish, anchored in the world around the camera; in the
-   deep they thin out into glowing specks */
+/* Shoals of small fish (simulated on the CPU, see drawFish): each fish is
+   a little faceted body, countershaded (a dark back, silver flanks, a pale
+   belly); the flanks mirror the water above, so a school flashes as it
+   turns. In the deep they darken and carry a row of glowing spots. */
 static const char *FISH_VS =
-"uniform mat4 uWorldToEye; uniform mat4 uProj; uniform float uPx;\n"
-"varying vec4 vCol; varying float vAngle;\n"
-"vec3 fishAt(vec4 seed, vec3 anchor, float t) {\n"
-"  float ph = seed.x * 6.2832;\n"
-"  vec3 centre = anchor + vec3(sin(t * 0.045 + ph) * 2500.0, sin(t * 0.03 + ph * 2.0) * 700.0, cos(t * 0.037 + ph) * 2500.0);\n"
-"  float a = t * (0.32 + seed.y * 0.04) + seed.z * 6.2832;\n"      /* one school: one pace */
-"  float r = 300.0 + seed.w * 600.0;\n"
-"  return centre + vec3(cos(a) * r, sin(a * 1.3 + seed.x * 3.0) * 120.0 + (seed.x - 0.5) * 300.0, sin(a) * r);\n"
-"}\n"
+"uniform mat4 uWorldToEye; uniform mat4 uProj;\n"
+"varying vec3 vWp; varying vec3 vN; varying vec4 vUV;\n"
 "void main() {\n"
-"  vec4 seed = gl_Vertex;\n"                            /* per fish */
-"  vec3 anchor = gl_MultiTexCoord0.xyz;\n"              /* its school */
-"  float t = uTime;\n"
-"  vec3 wp = fishAt(seed, anchor, t);\n"
-"  vec3 wp2 = fishAt(seed, anchor, t + 0.05);\n"
-"  vec4 e = uWorldToEye * vec4(wp, 1.0);\n"
-"  vec4 c1 = uProj * e;\n"
-"  vec4 c2 = uProj * (uWorldToEye * vec4(wp2, 1.0));\n"
-"  gl_Position = c1;\n"
-"  vec2 sdir = c2.xy / c2.w - c1.xy / c1.w;\n"
-"  vAngle = atan(sdir.y, sdir.x);\n"
-"  float dist = length(e.xyz);\n"
-"  gl_PointSize = clamp(260.0 * uPx / max(dist, 1.0), 1.0, 96.0);\n"
-"  float d = depth01(wp.y); float L = surfLight(d);\n"
-"  vec3 c = mix(vec3(0.42, 0.55, 0.60), vec3(0.66, 0.76, 0.80), seed.y) * (0.15 + 0.9 * L);\n"
-"  c += lamps(wp, normalize(uCamToWorld[3].xyz - wp)) * 0.5;\n"
-"  float glow = smoothstep(0.55, 0.9, d);\n"
-"  c = mix(c, vec3(0.2, 0.9, 1.0) * (0.6 + 0.4 * sin(t * 3.0 + seed.x * 40.0)), glow);\n"
-"  vec3 T = trans(dist * 0.9);\n"
-"  vCol = vec4(c * mix(T, sqrt(T), glow) + water(normalize(wp - uCamToWorld[3].xyz), uCamToWorld[3].y) * (1.0 - T) * (1.0 - glow),\n"
-"              (1.0 - smoothstep(14000.0, 22000.0, dist)) * smoothstep(80.0, 300.0, dist));\n"
+"  vWp = gl_Vertex.xyz;\n"
+"  vN = gl_Normal;\n"
+"  vUV = gl_MultiTexCoord0;\n"                 /* x: nose 0 .. tail 1, y: belly -1 .. back 1, z: species + seed, w: fade */
+"  gl_Position = uProj * (uWorldToEye * vec4(vWp, 1.0));\n"
 "}\n";
 static const char *FISH_FS =
-"varying vec4 vCol; varying float vAngle;\n"
+"varying vec3 vWp; varying vec3 vN; varying vec4 vUV;\n"
 "void main() {\n"
-"  vec2 p = gl_PointCoord * 2.0 - 1.0;\n"
-"  p.y = -p.y;\n"
-"  float ca = cos(-vAngle), sa = sin(-vAngle);\n"
-"  p = vec2(p.x * ca - p.y * sa, p.x * sa + p.y * ca);\n"
-"  float body = (p.x / 0.62) * (p.x / 0.62) + (p.y / 0.2) * (p.y / 0.2);\n"
-"  float tail = (p.x < -0.5 && p.x > -0.95 && abs(p.y) < (-p.x - 0.5) * 0.8) ? 1.0 : 0.0;\n"
-"  float a = max(1.0 - smoothstep(0.75, 1.0, body), tail);\n"
-"  if (a <= 0.01) discard;\n"
-"  float back = smoothstep(-0.2, 0.2, p.y);\n"
-"  float flash = pow(max(sin(vAngle * 3.0 + gl_FragCoord.x * 0.01), 0.0), 12.0) * 0.6;\n"
-"  gl_FragColor = vec4(vCol.rgb * mix(1.1, 0.65, back) + flash * vCol.rgb, a * vCol.a);\n"
+"  vec3 cam = uCamToWorld[3].xyz;\n"
+"  float dist = length(vWp - cam);\n"
+"  vec3 V = (vWp - cam) / max(dist, 1.0);\n"
+"  vec3 N = normalize(vN);\n"
+"  if (dot(N, V) > 0.0) N = -N;\n"
+"  float d = depth01(vWp.y); float L = surfLight(d);\n"
+"  float h = vUV.y;\n"
+   /* the species: back, flank, belly, the stripe along the flank and the
+      tail (sardines, yellowtails, blue-green, orange reef fish) */
+"  float sp = floor(vUV.z), seed = fract(vUV.z);\n"
+"  vec3 cBack = vec3(0.07, 0.19, 0.3), cFlank = vec3(0.68, 0.76, 0.8), cStripe = vec3(0.35, 0.5, 0.6), cTail = cFlank;\n"
+"  float silver = 1.0;\n"
+"  if (sp == 1.0) { cBack = vec3(0.1, 0.24, 0.34); cFlank = vec3(0.72, 0.74, 0.62); cStripe = vec3(1.0, 0.82, 0.18); cTail = vec3(1.0, 0.78, 0.15); silver = 0.7; }\n"
+"  else if (sp == 2.0) { cBack = vec3(0.03, 0.25, 0.32); cFlank = vec3(0.3, 0.72, 0.78); cStripe = vec3(0.55, 1.0, 0.95); cTail = vec3(0.2, 0.55, 0.9); silver = 0.55; }\n"
+"  else if (sp == 3.0) { cBack = vec3(0.75, 0.22, 0.14); cFlank = vec3(1.0, 0.52, 0.3); cStripe = vec3(1.0, 0.85, 0.6); cTail = vec3(0.95, 0.35, 0.5); silver = 0.3; }\n"
+"  vec3 alb = mix(cFlank, cBack, smoothstep(0.2, 0.75, h));\n"
+"  alb = mix(alb, vec3(0.88, 0.9, 0.9), (1.0 - smoothstep(-0.85, -0.3, h)) * 0.8);\n"
+"  alb = mix(alb, cStripe, exp(-(h - 0.12) * (h - 0.12) * 70.0) * 0.8);\n"      /* the stripe */
+"  alb = mix(alb, cTail, smoothstep(0.75, 0.9, vUV.x));\n"
+"  alb *= 0.9 + 0.2 * seed;\n"
+"  float sky = N.y * 0.5 + 0.5;\n"
+"  vec3 col = alb * (0.3 + 0.7 * sky) * (0.18 + 0.82 * L);\n"
+   /* silver: the flanks mirror the water and the light above */
+"  vec3 R = reflect(V, N);\n"
+"  vec3 env = water(R, cam.y) + uSunCol * pow(max(dot(R, uSunDir), 0.0), 20.0) * L * L * 1.6;\n"
+"  float mirror = (1.0 - smoothstep(0.35, 0.9, abs(h))) * (1.0 - smoothstep(0.75, 1.0, vUV.x)) * silver;\n"
+"  float fres = pow(1.0 - abs(dot(N, V)), 2.0);\n"
+"  col = mix(col, env * 1.4, mirror * (0.35 + 0.6 * fres));\n"
+   /* a flash as a flank catches the light from above */
+"  col += uSunCol * pow(max(dot(R, vec3(0.0, 1.0, 0.0)), 0.0), 6.0) * mirror * L * 0.5;\n"
+"  col += alb * lamps(vWp, N) * 0.8;\n"
+   /* the deep: darker, with glowing spots along the lateral line */
+"  float glow = smoothstep(0.55, 0.9, d);\n"
+"  float spot = (1.0 - smoothstep(0.15, 0.3, abs(fract(vUV.x * 7.0) - 0.5))) * exp(-(h - 0.1) * (h - 0.1) * 40.0);\n"
+"  col = mix(col, col * 0.35, glow * 0.7) + vec3(0.2, 0.9, 1.0) * spot * glow * (0.6 + 0.4 * sin(uTime * 3.0 + seed * 40.0));\n"
+"  vec3 T = trans(dist) * spawnFade(dist) * vUV.w;\n"
+"  gl_FragColor = vec4(col * T + water(V, cam.y) * (1.0 - T), 1.0);\n"
 "}\n";
 
 /* Post: the pass's bright parts and the backdrop mask, half resolution */
@@ -595,7 +599,7 @@ struct Prog {
 };
 
 static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pSpark;
-static GLint fiWorldToEye, fiProj, fiPx;
+static GLint fiWorldToEye, fiProj;
 static GLint buWorldToEye, buProj, buPx, buLife, buBub, buSeed;
 static GLint sTex0, sTex1, sEn0, sEn1, sMode0, sMode1, sFmt0, sFmt1, sKind, sSprite;
 static GLint snWorldToEye, snProj, snBox, snPx, snSeed;
@@ -704,7 +708,6 @@ static int buildPrograms() {
     poRays = glGetUniformLocation(pPost.id, "uRays");
     fiWorldToEye = glGetUniformLocation(pFish.id, "uWorldToEye");
     fiProj = glGetUniformLocation(pFish.id, "uProj");
-    fiPx = glGetUniformLocation(pFish.id, "uPx");
     buWorldToEye = glGetUniformLocation(pBub.id, "uWorldToEye");
     buProj = glGetUniformLocation(pBub.id, "uProj");
     buPx = glGetUniformLocation(pBub.id, "uPx");
@@ -881,49 +884,355 @@ static void drawQuad(GLint) {
 /* ------------------------------------------------------------------ */
 
 /* Fish: schools in world cells around the camera */
-#define FISH_CELL 12000.0f
-#define FISH_PER 90
-static GLfloat fishSeed[9 * FISH_PER * 4];
-static GLfloat fishAnchor[9 * FISH_PER * 3];
+/* Fish: a few schools around the sub, simulated like flocks. Each school
+   wanders and now and then changes its mind (cruising, milling into a
+   ball, loosening up); each fish keeps near its place in the school, clear
+   of its neighbours, darts off at random, and scatters out of the sub's way
+   (sideways, off its path), then regroups. Schools come and go beyond the
+   murk (see spawnFade), so none pops in. */
+#define SCHOOLS 8
+#define FISH_MAX 64
+#define FISH_TRIS 22
 
-static float cellHash(int x, int z, int k) {
-    unsigned h = (unsigned) (x * 73856093) ^ (unsigned) (z * 19349663) ^ (unsigned) (k * 83492791);
-    h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15;
-    return (h & 0xffffff) / 16777216.0f;
+struct Fish {
+    float p[3], v[3];
+    float phase, len, speed, bank, panic, dart, dd[3];
+    float slot[3];                  /* its place in the school */
+    float seed;
+};
+
+struct School {
+    int n, mode;
+    float c[3], v[3];
+    float heading, climb, modeT, fade, spin;
+    int species;
+    Fish f[FISH_MAX];
+};
+
+static School schools[SCHOOLS];
+static float fishTime = -1.0f, fishFocus[3];
+static unsigned fishRng = 0x2545F491u;
+static GLfloat fishPos[SCHOOLS * FISH_MAX * FISH_TRIS * 3 * 3];
+static GLfloat fishNrm[SCHOOLS * FISH_MAX * FISH_TRIS * 3 * 3];
+static GLfloat fishUV[SCHOOLS * FISH_MAX * FISH_TRIS * 3 * 4];
+
+static float frnd() {
+    fishRng = fishRng * 1664525u + 1013904223u;
+    return (float) (fishRng >> 8) / 16777216.0f;
+}
+
+static float len3(const float *a) {
+    return sqrtf(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+}
+
+/* depth of the water at height y, 0..1, as the shaders' depth01 */
+static float depthAt(float y) {
+    float d = (F[F_SECTOR] - y / 8.0f - 15000.0f) / 15000.0f;
+    return d < 0 ? 0 : d > 1 ? 1 : d;
+}
+
+/* a new school at distance [r0, r1] from the focus along dir (unit, may
+   be 0: any direction), up to side units off that line and 1600 above or
+   below */
+static void spawnSchool(School *s, const float *focus, const float *dir, float r0, float r1, float side) {
+    float yaw = dir && (dir[0] != 0 || dir[2] != 0) ? atan2f(dir[0], dir[2]) : frnd() * 6.2832f;
+    float r = r0 + (r1 - r0) * frnd();
+    float lat = (frnd() * 2 - 1) * side;
+    s->c[0] = focus[0] + sinf(yaw) * r + cosf(yaw) * lat;
+    s->c[2] = focus[2] + cosf(yaw) * r - sinf(yaw) * lat;
+    s->c[1] = focus[1] + (frnd() * 2 - 1) * 1600.0f;
+    s->heading = frnd() * 6.2832f;
+    s->climb = 0;
+    s->mode = (int) (frnd() * 3);
+    s->modeT = 6 + frnd() * 14;
+    s->spin = frnd() < 0.5f ? -1.0f : 1.0f;
+    s->fade = 1;
+    float d = depthAt(s->c[1]);
+    s->n = (int) ((34 + frnd() * 30) * (1.0f - 0.5f * d));
+    /* the colourful ones keep to the lit water */
+    float r2 = frnd();
+    s->species = d > 0.6f ? 0 : r2 < 0.4f ? 0 : r2 < 0.65f ? 1 : r2 < 0.85f ? 2 : (d < 0.35f ? 3 : 2);
+    float sp = 380 + 200 * frnd();
+    s->v[0] = sinf(s->heading) * sp; s->v[1] = 0; s->v[2] = cosf(s->heading) * sp;
+    for (int i = 0; i < s->n; i++) {
+        Fish *f = &s->f[i];
+        /* a place in a squashed ball */
+        float a = frnd() * 6.2832f, b = acosf(frnd() * 2 - 1), rr = 180 + 520 * cbrtf(frnd());
+        f->slot[0] = sinf(b) * cosf(a) * rr;
+        f->slot[1] = cosf(b) * rr * 0.45f;
+        f->slot[2] = sinf(b) * sinf(a) * rr;
+        for (int k = 0; k < 3; k++) {
+            f->p[k] = s->c[k] + f->slot[k];
+            f->v[k] = s->v[k];
+        }
+        f->len = 95 + 60 * frnd();
+        f->speed = 0.85f + 0.3f * frnd();
+        f->phase = frnd() * 6.2832f;
+        f->bank = f->panic = f->dart = 0;
+        f->seed = frnd();
+    }
+}
+
+static void simulateFish(float dt, const float *focus, int subOn) {
+    const float *sub = F + F_SUB, *sd = F + F_SUBDIR;
+    const float *cam = F + F_CAM + 12;
+    float t = F[F_TIME];
+    float boost = F[F_BOOST];
+    static int test = getenv("DEEP3D_RM_FISHTEST") != NULL;
+    for (int si = 0; si < SCHOOLS; si++) {
+        School *s = &schools[si];
+        float off[3] = {s->c[0] - cam[0], s->c[1] - cam[1], s->c[2] - cam[2]};
+        float dc = len3(off);
+        /* left behind (the sub is fast) or gone into the murk: a new one
+           out there ahead, as yet unseen */
+        float fwd = -(off[0] * F[F_CAM + 8] + off[1] * F[F_CAM + 9] + off[2] * F[F_CAM + 10]);
+        if (dc > 36000.0f || s->n == 0 || (subOn && fwd < 0 && dc > 9000.0f)) {
+            spawnSchool(s, focus, subOn ? sd : NULL, 31000, 34000, test ? 100.0f : 4500.0f);
+            if (test && subOn) {
+                spawnSchool(s, sub, sd, 9000 + 3000 * si, 9000 + 3000 * si, 100.0f);
+                float dy = sub[1] - s->c[1];
+                s->c[1] += dy;
+                for (int i = 0; i < s->n; i++) s->f[i].p[1] += dy;
+            }
+            continue;
+        }
+        /* the school's mind: cruise, mill (a ball turning on itself), or
+           loosen up and meander */
+        s->modeT -= dt;
+        if (s->modeT <= 0) {
+            s->mode = (int) (frnd() * 3);
+            s->modeT = 7 + frnd() * 16;
+            s->spin = frnd() < 0.5f ? -1.0f : 1.0f;
+        }
+        float turn = (sinf(t * 0.23f + si * 1.7f) + 0.6f * sinf(t * 0.61f + si * 4.1f)) * (s->mode == 2 ? 0.9f : 0.35f);
+        s->heading += turn * dt;
+        s->climb = sinf(t * 0.17f + si * 2.3f) * 0.25f;
+        float sp = s->mode == 1 ? 90.0f : s->mode == 2 ? 260.0f : 480.0f;
+        float want[3] = {sinf(s->heading) * sp, s->climb * sp, cosf(s->heading) * sp};
+        /* keep within reach of the sub's depth */
+        want[1] += (focus[1] - s->c[1]) * 0.05f;
+        /* out of the sub's way: sideways off its path */
+        if (subOn) {
+            float rel[3] = {s->c[0] - sub[0], s->c[1] - sub[1], s->c[2] - sub[2]};
+            float along = rel[0] * sd[0] + rel[1] * sd[1] + rel[2] * sd[2];
+            if (along > -1500.0f && along < 9000.0f) {
+                float lat[3] = {rel[0] - sd[0] * along, rel[1] - sd[1] * along, rel[2] - sd[2] * along};
+                float ll = len3(lat);
+                if (ll < 2600.0f) {
+                    float k = (1.0f - ll / 2600.0f) * 900.0f / fmaxf(ll, 1.0f);
+                    if (ll < 1.0f) {
+                        lat[0] = sd[2]; lat[1] = 0; lat[2] = -sd[0]; k = 900.0f;
+                    }
+                    for (int j = 0; j < 3; j++) {
+                        want[j] += lat[j] * k;
+                    }
+                }
+            }
+        }
+        for (int j = 0; j < 3; j++) {
+            s->v[j] += (want[j] - s->v[j]) * fminf(1.0f, 1.2f * dt);
+            s->c[j] += s->v[j] * dt;
+        }
+        float spin = t * 0.5f * s->spin;
+        float cs = cosf(spin), sn = sinf(spin);
+        for (int i = 0; i < s->n; i++) {
+            Fish *f = &s->f[i];
+            /* its place: turning with the ball when milling, looser when meandering */
+            float spread = s->mode == 2 ? 1.6f : 1.0f;
+            float sx = f->slot[0] * spread, sz = f->slot[2] * spread;
+            if (s->mode == 1) {
+                float x = sx * cs - sz * sn, z = sx * sn + sz * cs;
+                sx = x; sz = z;
+            }
+            float target[3] = {s->c[0] + sx, s->c[1] + f->slot[1] * spread, s->c[2] + sz};
+            float des[3];
+            for (int j = 0; j < 3; j++) {
+                des[j] = s->v[j] + (target[j] - f->p[j]) * 0.8f;
+            }
+            if (s->mode == 1) {
+                /* milling: round the centre */
+                float rx = f->p[0] - s->c[0], rz = f->p[2] - s->c[2];
+                des[0] += -rz * 0.9f * s->spin;
+                des[2] += rx * 0.9f * s->spin;
+            }
+            /* clear of the neighbours */
+            for (int k = 0; k < s->n; k++) {
+                if (k == i) continue;
+                float dx = f->p[0] - s->f[k].p[0], dy = f->p[1] - s->f[k].p[1], dz = f->p[2] - s->f[k].p[2];
+                float d2 = dx * dx + dy * dy + dz * dz;
+                if (d2 < 130.0f * 130.0f && d2 > 1.0f) {
+                    float k2 = (130.0f * 130.0f - d2) / d2 * 1.5f;
+                    des[0] += dx * k2; des[1] += dy * k2; des[2] += dz * k2;
+                }
+            }
+            /* the sub: flee, sideways off its path, then regroup */
+            if (subOn) {
+                float rel[3] = {f->p[0] - sub[0], f->p[1] - sub[1], f->p[2] - sub[2]};
+                float dist = len3(rel);
+                float reach = 1500.0f + 1500.0f * boost;
+                float along = rel[0] * sd[0] + rel[1] * sd[1] + rel[2] * sd[2];
+                float lat[3] = {rel[0] - sd[0] * along, rel[1] - sd[1] * along, rel[2] - sd[2] * along};
+                float ll = len3(lat);
+                float inPath = along > -300.0f && along < 3500.0f + 3000.0f * boost && ll < 900.0f ? 1.0f : 0.0f;
+                if (dist < reach || inPath > 0) {
+                    float k = fmaxf(1.0f - dist / reach, inPath * (1.0f - ll / 900.0f));
+                    f->panic = fmaxf(f->panic, k);
+                    float away = 2600.0f * k;
+                    for (int j = 0; j < 3; j++) {
+                        des[j] += (lat[j] / fmaxf(ll, 1.0f) * 1.4f + rel[j] / fmaxf(dist, 1.0f) * 0.6f) * away;
+                    }
+                }
+            }
+            /* now and then a fish darts off */
+            if (f->dart <= 0 && frnd() < dt * 0.12f) {
+                f->dart = 0.35f + 0.3f * frnd();
+                float a = frnd() * 6.2832f;
+                f->dd[0] = cosf(a); f->dd[1] = (frnd() - 0.5f) * 0.6f; f->dd[2] = sinf(a);
+            }
+            if (f->dart > 0) {
+                f->dart -= dt;
+                for (int j = 0; j < 3; j++) des[j] += f->dd[j] * 700.0f;
+            }
+            f->panic = fmaxf(0.0f, f->panic - dt * 0.7f);
+            /* turn towards it, as fast as a fish can */
+            float rate = 2.5f + 6.0f * f->panic;
+            float old[3] = {f->v[0], f->v[1], f->v[2]};
+            for (int j = 0; j < 3; j++) {
+                f->v[j] += (des[j] - f->v[j]) * fminf(1.0f, rate * dt);
+            }
+            float v = len3(f->v);
+            float vmax = (620.0f + 1900.0f * f->panic) * f->speed, vmin = 120.0f * f->speed;
+            float k = v > vmax ? vmax / v : v < vmin ? vmin / fmaxf(v, 1e-3f) : 1.0f;
+            for (int j = 0; j < 3; j++) {
+                f->v[j] *= k;
+                f->p[j] += f->v[j] * dt;
+            }
+            /* banking into the turn */
+            float cr = old[2] * f->v[0] - old[0] * f->v[2];
+            float bank = fmaxf(-0.9f, fminf(0.9f, cr / fmaxf(v * v, 1.0f) / fmaxf(dt, 1e-3f) * 0.25f));
+            f->bank += (bank - f->bank) * fminf(1.0f, 4.0f * dt);
+            f->phase += dt * (7.0f + len3(f->v) / 45.0f);
+        }
+    }
+}
+
+/* One fish's faceted body, bending with its tail beat, into the arrays */
+static int buildFish(const Fish *f, int species, float fade, int o) {
+    float fw[3] = {f->v[0], f->v[1], f->v[2]};
+    float n = len3(fw);
+    if (n < 1e-3f) return o;
+    for (int j = 0; j < 3; j++) fw[j] /= n;
+    float up[3] = {0, 1, 0};
+    float rt[3] = {fw[1] * up[2] - fw[2] * up[1], fw[2] * up[0] - fw[0] * up[2], fw[0] * up[1] - fw[1] * up[0]};
+    n = len3(rt);
+    if (n < 0.2f) { rt[0] = 1; rt[1] = 0; rt[2] = 0; n = 1; }
+    for (int j = 0; j < 3; j++) rt[j] /= n;
+    float u0[3] = {rt[1] * fw[2] - rt[2] * fw[1], rt[2] * fw[0] - rt[0] * fw[2], rt[0] * fw[1] - rt[1] * fw[0]};
+    float cb = cosf(f->bank), sb = sinf(f->bank);
+    float uu[3], rr[3];
+    for (int j = 0; j < 3; j++) {
+        uu[j] = u0[j] * cb + rt[j] * sb;
+        rr[j] = rt[j] * cb - u0[j] * sb;
+    }
+    float L = f->len, H = L * 0.3f, W = L * 0.11f;
+    /* along the body: x (forward), half height, half width, wiggle; the
+       swing grows towards the tail */
+    const int R = 5;
+    float xs[R] = {0.5f, 0.28f, 0.0f, -0.32f, -0.52f};
+    float hs[R] = {0.0f, 0.42f, 0.5f, 0.12f, 0.46f};
+    float ws[R] = {0.0f, 0.45f, 0.5f, 0.16f, 0.0f};
+    float ring[R][4][3];
+    float uvx[R];
+    for (int r = 0; r < R; r++) {
+        float x = xs[r] * L;
+        float tail = (0.5f - xs[r]);           /* 0 nose .. ~1 tail */
+        float sw = sinf(f->phase - tail * 3.2f) * W * (0.25f + 1.9f * tail * tail);
+        float c[3];
+        for (int j = 0; j < 3; j++) c[j] = f->p[j] + fw[j] * x + rr[j] * sw;
+        for (int j = 0; j < 3; j++) {
+            ring[r][0][j] = c[j] + uu[j] * hs[r] * H;       /* back */
+            ring[r][1][j] = c[j] + rr[j] * ws[r] * W;       /* right */
+            ring[r][2][j] = c[j] - uu[j] * hs[r] * H;       /* belly */
+            ring[r][3][j] = c[j] - rr[j] * ws[r] * W;       /* left */
+        }
+        uvx[r] = tail;
+    }
+    static const float vh[4] = {1.0f, 0.15f, -1.0f, 0.15f};
+    auto tri = [&](const float *a, const float *b, const float *c, float ha, float hb, float hc, float xa, float xb, float xc) {
+        float e1[3] = {b[0] - a[0], b[1] - a[1], b[2] - a[2]}, e2[3] = {c[0] - a[0], c[1] - a[1], c[2] - a[2]};
+        float nn[3] = {e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]};
+        float l = len3(nn);
+        if (l > 1e-6f) for (int j = 0; j < 3; j++) nn[j] /= l;
+        /* outwards: away from the spine */
+        float mid[3], sp[3];
+        for (int j = 0; j < 3; j++) mid[j] = (a[j] + b[j] + c[j]) / 3.0f;
+        float along = (mid[0] - f->p[0]) * fw[0] + (mid[1] - f->p[1]) * fw[1] + (mid[2] - f->p[2]) * fw[2];
+        for (int j = 0; j < 3; j++) sp[j] = mid[j] - (f->p[j] + fw[j] * along);
+        if (nn[0] * sp[0] + nn[1] * sp[1] + nn[2] * sp[2] < 0) for (int j = 0; j < 3; j++) nn[j] = -nn[j];
+        const float *vv[3] = {a, b, c};
+        float hh[3] = {ha, hb, hc}, xx[3] = {xa, xb, xc};
+        for (int k = 0; k < 3; k++) {
+            for (int j = 0; j < 3; j++) {
+                fishPos[o * 3 + j] = vv[k][j];
+                fishNrm[o * 3 + j] = nn[j];
+            }
+            fishUV[o * 4] = xx[k]; fishUV[o * 4 + 1] = hh[k]; fishUV[o * 4 + 2] = species + f->seed * 0.99f; fishUV[o * 4 + 3] = fade;
+            o++;
+        }
+    };
+    /* the nose to the head, head to middle, middle to the tail's root */
+    for (int q = 0; q < 4; q++) {
+        int q2 = (q + 1) & 3;
+        tri(ring[0][0], ring[1][q], ring[1][q2], 0.2f, vh[q], vh[q2], uvx[0], uvx[1], uvx[1]);
+        for (int r = 1; r < 3; r++) {
+            tri(ring[r][q], ring[r + 1][q], ring[r + 1][q2], vh[q], vh[q], vh[q2], uvx[r], uvx[r + 1], uvx[r + 1]);
+            tri(ring[r][q], ring[r + 1][q2], ring[r][q2], vh[q], vh[q2], vh[q2], uvx[r], uvx[r + 1], uvx[r]);
+        }
+    }
+    /* the tail fin, flat */
+    tri(ring[3][0], ring[4][0], ring[4][2], 0.5f, 0.6f, -0.6f, uvx[3], uvx[4], uvx[4]);
+    tri(ring[3][0], ring[4][2], ring[3][2], 0.5f, -0.6f, -0.5f, uvx[3], uvx[4], uvx[3]);
+    return o;
 }
 
 static void drawFish() {
-    const float *c = F + F_CAM;
-    float d = (F[F_SECTOR] - c[13] / 8.0f - 15000.0f) / 15000.0f;
-    d = d < 0 ? 0 : d > 1 ? 1 : d;
-    int cx = (int) floorf(c[12] / FISH_CELL), cz = (int) floorf(c[14] / FISH_CELL);
-    int n = 0;
-    for (int j = -1; j <= 1; j++) {
-        for (int i = -1; i <= 1; i++) {
-            int x = cx + i, z = cz + j;
-            if ((i || j) && cellHash(x, z, 0) > 0.65f - 0.35f * d) {   /* always one close by */
-                continue;               /* fewer shoals in the deep */
-            }
-            float ax = (x + 0.5f) * FISH_CELL + (cellHash(x, z, 1) - 0.5f) * FISH_CELL * 0.5f;
-            float az = (z + 0.5f) * FISH_CELL + (cellHash(x, z, 2) - 0.5f) * FISH_CELL * 0.5f;
-            float ay = (cellHash(x, z, 3) - 0.5f) * 6000.0f;
-            for (int f = 0; f < FISH_PER; f++) {
-                for (int k = 0; k < 4; k++) {
-                    fishSeed[n * 4 + k] = cellHash(x * 131 + f, z * 71 + k, 7);
-                }
-                fishAnchor[n * 3] = ax;
-                fishAnchor[n * 3 + 1] = ay;
-                fishAnchor[n * 3 + 2] = az;
-                if (getenv("DEEP3D_RM_FISHTEST")) {   /* all shoals right in front */
-                    fishAnchor[n * 3] = c[12] - c[8] * 3000.0f;
-                    fishAnchor[n * 3 + 1] = c[13] - c[9] * 3000.0f;
-                    fishAnchor[n * 3 + 2] = c[14] - c[10] * 3000.0f;
-                }
-                n++;
+    float t = F[F_TIME];
+    int subOn = F[F_SUBON] > 0.5f;
+    const float *focus = subOn ? F + F_SUB : F + F_CAM + 12;
+    float jump = fishTime < 0 ? 1e9f : sqrtf((focus[0] - fishFocus[0]) * (focus[0] - fishFocus[0])
+            + (focus[1] - fishFocus[1]) * (focus[1] - fishFocus[1]) + (focus[2] - fishFocus[2]) * (focus[2] - fishFocus[2]));
+    float dt = fishTime < 0 ? 0 : t - fishTime;
+    if (jump > 8000.0f || dt < 0 || dt > 2.0f) {
+        /* a new place (a teleport, a new game): schools all around, some near */
+        static int test = getenv("DEEP3D_RM_FISHTEST") != NULL;
+        for (int i = 0; i < SCHOOLS; i++) {
+            School *sc = &schools[i];
+            if (test && subOn) {
+                /* tests: every school right in the sub's path */
+                spawnSchool(sc, focus, F + F_SUBDIR, 3500 + 3000 * i, 3500 + 3000 * i, 100.0f);
+                float dy = focus[1] - sc->c[1];
+                sc->c[1] += dy;
+                for (int k = 0; k < sc->n; k++) sc->f[k].p[1] += dy;
+            } else {
+                /* ahead of the sub, or all around a docked one */
+                spawnSchool(sc, focus, subOn ? F + F_SUBDIR : NULL, 3000 + 3000 * i, 6000 + 3500 * i, subOn ? 4500.0f : 0.0f);
             }
         }
+        dt = 0;
     }
-    if (!n) {
+    fishTime = t;
+    memcpy(fishFocus, focus, sizeof fishFocus);
+    dt = fminf(dt, 0.05f);
+    if (dt > 0) {
+        simulateFish(dt, focus, subOn);
+    }
+    int o = 0;
+    for (int i = 0; i < SCHOOLS; i++) {
+        for (int k = 0; k < schools[i].n; k++) {
+            o = buildFish(&schools[i].f[k], schools[i].species, 1.0f, o);
+        }
+    }
+    if (!o) {
         return;
     }
     float worldToEye[16];
@@ -934,20 +1243,15 @@ static void drawFish() {
     pushState(&s);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    glDepthMask(GL_FALSE);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
     glDisable(GL_ALPHA_TEST);
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_CULL_FACE);
-    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
-    glEnable(GL_POINT_SPRITE);
     glUseProgram(pFish.id);
     setCommon(&pFish);
     glUniformMatrix4fv(fiWorldToEye, 1, GL_FALSE, worldToEye);
     glUniformMatrix4fv(fiProj, 1, GL_FALSE, proj);
-    glUniform1f(fiPx, proj[5] * vp[3] * 0.5f);      /* world size -> pixels */
-    glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
     for (int u = 1; u < 4; u++) {
         glClientActiveTexture(GL_TEXTURE0 + u);
@@ -955,12 +1259,12 @@ static void drawFish() {
     }
     glClientActiveTexture(GL_TEXTURE0);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glTexCoordPointer(3, GL_FLOAT, 0, fishAnchor);
+    glTexCoordPointer(4, GL_FLOAT, 0, fishUV);
+    glEnableClientState(GL_NORMAL_ARRAY);
+    glNormalPointer(GL_FLOAT, 0, fishNrm);
     glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(4, GL_FLOAT, 0, fishSeed);
-    glDrawArrays(GL_POINTS, 0, n);
-    glDisable(GL_POINT_SPRITE);
-    glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+    glVertexPointer(3, GL_FLOAT, 0, fishPos);
+    glDrawArrays(GL_TRIANGLES, 0, o);
     popState(&s);
 }
 

@@ -4,10 +4,11 @@ import javax.microedition.lcdui.Graphics;
 
 /**
  * Mouse flight, as in War Thunder's arcade controls: in flight the cursor
- * is captured and the mouse pulls an aim reticle away from the centre of
- * the screen. Its offset steers like a controller stick, and it drifts back
- * to the centre as the sub turns towards it. Left button fires, right
- * boosts, the wheel switches weapon, the middle button docks.
+ * is captured and the mouse pulls an aim reticle away from the sub's
+ * crosshair. Its offset steers like a held controller stick: the sub keeps
+ * turning towards it (up climbs, right turns right) until the reticle is
+ * brought back. Left button fires, right boosts, the wheel switches
+ * weapon, the middle button docks.
  */
 public final class MouseFlight {
 
@@ -15,21 +16,40 @@ public final class MouseFlight {
     private static final float RADIUS = 0.26f;
     /** Mouse travel (window pixels per window height) to reticle travel. */
     private static final float SENSITIVITY = 0.9f;
-    /** How fast the aim point comes back to the centre as the sub turns (1/s). */
-    private static final float CATCH_UP = 1.6f;
+    /** The pull below which the sub flies straight (of RADIUS). */
+    private static final float DEADZONE = 0.1f;
 
     private static volatile boolean captured;
+    /** Test scenarios: fly with the mouse without the window's focus. */
+    public static volatile boolean testing;
     private static float offX;
     private static float offY;
-    private static long lastNanos;
+    /* the game's flight steering ran lately (not the intro, title, a
+       station, loading or a cutscene) */
+    private static volatile long flyingNanos;
+    /* where the game drew the sub's crosshair (virtual screen), and when */
+    private static volatile int crossX, crossY;
+    private static volatile long crossNanos;
 
     private MouseFlight() {
     }
 
     /** Whether the mouse should fly the sub now (flight, nothing open). */
     public static boolean wanted() {
-        return Config.mouseFlight && GameUi.profile() == null && !Overlay.isOpen()
-                && !Runtime.isGamePaused();
+        return Config.mouseFlight && System.nanoTime() - flyingNanos < 300_000_000L
+                && GameUi.profile() == null && !Overlay.isOpen() && !Runtime.isGamePaused();
+    }
+
+    /** The game steers the sub this frame (game thread). */
+    public static void flying() {
+        flyingNanos = System.nanoTime();
+    }
+
+    /** The game drew the sub's crosshair at x, y (virtual screen). */
+    public static void crosshair(int x, int y) {
+        crossX = x;
+        crossY = y;
+        crossNanos = System.nanoTime();
     }
 
     public static boolean captured() {
@@ -42,6 +62,7 @@ public final class MouseFlight {
             return;
         }
         captured = on;
+        System.out.println("[mouse] " + (on ? "captured" : "released"));
         offX = 0;
         offY = 0;
         AnalogInput.setMouse(0, 0, on);
@@ -59,20 +80,6 @@ public final class MouseFlight {
         publish();
     }
 
-    /** Each frame (game thread): the aim point drifts back as the sub turns. */
-    public static synchronized void frame() {
-        long now = System.nanoTime();
-        float dt = lastNanos == 0 ? 0 : Math.min(0.1f, (now - lastNanos) / 1e9f);
-        lastNanos = now;
-        if (!captured) {
-            return;
-        }
-        float decay = (float) Math.exp(-CATCH_UP * dt);
-        offX *= decay;
-        offY *= decay;
-        publish();
-    }
-
     private static void clampOffset() {
         float m = (float) Math.sqrt(offX * offX + offY * offY);
         if (m > RADIUS) {
@@ -82,31 +89,33 @@ public final class MouseFlight {
     }
 
     private static void publish() {
-        AnalogInput.setMouse(offX / RADIUS, offY / RADIUS, captured);
+        float m = (float) Math.sqrt(offX * offX + offY * offY) / RADIUS;
+        float k = m <= DEADZONE ? 0 : (m - DEADZONE) / (1 - DEADZONE) / m;
+        AnalogInput.setMouse(offX / RADIUS * k, offY / RADIUS * k, captured);
     }
 
     /**
      * Draws the reticle into the game's frame (virtual screen): the aim
-     * ring where the mouse points, and the sub's heading at the centre.
+     * ring where the mouse points, pulled out of the sub's own crosshair
+     * (the game's; the screen's centre when it isn't drawn).
      */
     public static synchronized void draw(Graphics g, int w, int h) {
-        if (!captured) {
+        if (!captured || !wanted()) {
             return;
         }
-        int cx = w / 2;
-        int cy = h / 2;
+        boolean cross = System.nanoTime() - crossNanos < 300_000_000L;
+        int cx = cross ? crossX : w / 2;
+        int cy = cross ? crossY : h / 2;
         int ax = cx + Math.round(offX * h);
         int ay = cy + Math.round(offY * h);
         g.setClip(0, 0, w, h);
-        // heading: a small cross
-        g.setColor(0x9FD8EE);
-        g.drawLine(cx - 3, cy, cx - 1, cy);
-        g.drawLine(cx + 1, cy, cx + 3, cy);
-        g.drawLine(cx, cy - 3, cx, cy - 1);
-        g.drawLine(cx, cy + 1, cx, cy + 3);
-        // the pull towards the aim point
         float m = (float) Math.sqrt(offX * offX + offY * offY) / RADIUS;
-        if (m > 0.08f) {
+        // flying straight: a faint ring around the crosshair
+        int dz = Math.max(3, Math.round(DEADZONE * RADIUS * h));
+        g.setColor(0x2E5F78);
+        g.drawArc(cx - dz, cy - dz, dz * 2, dz * 2, 0, 360);
+        // the pull towards the aim point
+        if (m > DEADZONE) {
             g.setColor(0x4993B8);
             int steps = Math.max(2, Math.round(m * 6));
             for (int i = 1; i < steps; i++) {
