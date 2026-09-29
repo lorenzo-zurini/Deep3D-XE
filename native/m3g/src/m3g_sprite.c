@@ -519,6 +519,17 @@ static void m3gSpriteDoRender(Node *self,
 
     /* Load indices -> draws the sprite */
     M3G_BEGIN_PROFILE(M3G_INTERFACE(ctx), M3G_PROFILE_NGL_DRAW);
+    {   /* Deep3D-PC: where the sprite is and how big, for the Remastered
+           renderer (its glows become lights) */
+        float x0 = 1e9f, x1 = -1e9f;
+        int i;
+        for (i = 0; i < 4; i++) {
+            float vx = vert[i * 3] / 65536.0f;
+            x0 = vx < x0 ? vx : x0;
+            x1 = vx > x1 ? vx : x1;
+        }
+        deep3d_rm_sprite_at(eyeSpace.x, eyeSpace.y, eyeSpace.z, eyeSpace.w, (x1 - x0) * 0.5f);
+    }
     deep3d_rm_draw_arrays(GL_TRIANGLE_STRIP, 0, 4); /* Deep3D-PC */
     M3G_END_PROFILE(M3G_INTERFACE(ctx), M3G_PROFILE_NGL_DRAW);
 

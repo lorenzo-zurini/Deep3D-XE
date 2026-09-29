@@ -372,6 +372,7 @@ public final class class_101 extends class_91 {
 
    // $VF: renamed from: c () void
    public final void method_809() {
+      class_4.deep3dKind = 2; // Deep3D-PC: a creature (spawns)
       if (this.field_1317 != null) {
          class_84.field_1110.method_25(this.field_1317);
       }
@@ -380,6 +381,7 @@ public final class class_101 extends class_91 {
       if (super.field_1224 == 4 && super.field_1231 != null && !super.field_1231.method_743()) {
          super.field_1231.method_742(this.field_1334);
       }
+      class_4.deep3dKind = 0; // Deep3D-PC
    }
 
    // $VF: renamed from: a (int, int, int) boolean

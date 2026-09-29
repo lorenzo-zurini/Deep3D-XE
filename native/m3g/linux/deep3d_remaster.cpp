@@ -43,6 +43,7 @@ static int rmBroken = 0;        /* shaders failed: stay off */
 static int rmDrawn = 0;         /* draws in this pass */
 static int rmLayer = 0;         /* the game's render layer (0 structures and ships, 2 creatures, 3 the sub) */
 static int rmStructure = 0;     /* the draws belong to a structure (long reach) */
+static int rmSpawner = 0;       /* to something that spawns (fades out before it) */
 static int rmSprite = 0;        /* the current draw is a sprite */
 static int bgFrame = -1;
 static int postFrame = -1;
@@ -71,12 +72,18 @@ static const char *WATER =
 "uniform float uBoost;\n"
 "uniform int uNumLights;\n"
 "uniform vec4 uLights[8];\n"
+/* the glows of the frame (flares, explosions, engines, bolts): point lights,
+   xyz and reach; colour */
+"uniform vec4 uGlowP[16];\n"
+"uniform vec4 uGlowC[16];\n"
+"uniform int uNumGlows;\n"
 /* depth below the surface, 0 (the shallowest stations) .. 1 (the abyss):
    the game's own scale, its depth = station depth - height / 8 */
 "float depth01(float y) { return clamp((uSector - y / 8.0 - 15000.0) / 15000.0, 0.0, 1.0); }\n"
 "float surfLight(float d) { return mix(1.0, 0.16, pow(d, 1.4)); }\n"
 "uniform float uLong;\n"
 "uniform float uSelf;\n"
+"uniform float uSpawner;\n"   /* creatures, ships, items; else (uLong, uSelf: 0) weapons, effects */
 /* how much light survives a path through the water: clear near, then
    falling away towards the phone's old far plane (uSigma = 1 / reach) */
 "vec3 trans(float dist) {\n"
@@ -100,8 +107,11 @@ static const char *WATER =
 "vec3 dome(vec3 dir) {\n"
 "  float v = 0.5 - asin(clamp(dir.y, -1.0, 1.0)) / 3.14159265;\n"
    /* overlapping smooth ramps: no kink, so no visible horizon line */
-"  vec3 c = mix(ZENITH, uTint, smoothstep(0.0, 0.27, v));\n"
-"  c = mix(c, TEAL, smoothstep(0.2, 0.54, v));\n"
+   /* the tint band reaches down to where the original's dome shows it
+      (the top of the screen in level flight): the stations' orange, yellow
+      and red were lost in the teal */
+"  vec3 c = mix(ZENITH, uTint, smoothstep(0.0, 0.2, v));\n"
+"  c = mix(c, TEAL, smoothstep(0.34, 0.6, v));\n"
 "  c *= 1.0 - smoothstep(0.44, 0.88, v);\n"
 "  return c + TEAL * 0.035;\n"
 "}\n"
@@ -137,7 +147,14 @@ static const char *WATER =
 "  vec3 b = cross(uSunDir, a);\n"
 "  float ang = atan(dot(dir, b), dot(dir, a));\n"
 "  float n = noise(vec2(ang * 9.0, uTime * 0.07)) * noise(vec2(ang * 23.0 + 3.0, uTime * 0.11 + 5.0));\n"
-"  return smoothstep(0.12, 0.6, n) * smoothstep(-0.35, 0.95, dot(dir, uSunDir));\n"
+   /* the waves above: each ray is the light that came through one patch of
+      the moving surface (where dir meets it), so the rays brighten, split
+      and sweep as the swell and its caustics pass */
+"  vec2 sp = dir.xz / max(dir.y, 0.12) + uCamToWorld[3].xz / 40000.0;\n"
+"  float swell = 0.5 + 0.5 * sin(dot(sp, vec2(2.3, 1.1)) * 3.0 - uTime * 0.8);\n"
+"  float wave = caustic(sp * 0.9 + vec2(uTime * 0.035, uTime * 0.02), uTime * 0.45);\n"
+"  n *= 0.5 + 1.2 * pow(wave, 0.35) * (0.5 + 0.5 * swell);\n"
+"  return smoothstep(0.1, 0.55, n) * smoothstep(-0.35, 0.95, dot(dir, uSunDir));\n"
 "}\n"
 /* light from the sub's headlight, its engines and other ships' lamps at wp */
 "vec3 lamps(vec3 wp, vec3 N) {\n"
@@ -157,6 +174,13 @@ static const char *WATER =
 "    vec3 tl = uLights[k].xyz - wp; float dl = length(tl);\n"
 "    float lam = max(dot(N, tl / max(dl, 1.0)), 0.0) * 0.7 + 0.3;\n"
 "    acc += vec3(1.0, 0.82, 0.55) * 0.8 * lam / (1.0 + (dl / 1900.0) * (dl / 1900.0));\n"
+"  }\n"
+"  for (int k = 0; k < 16; k++) {\n"
+"    if (k >= uNumGlows) break;\n"
+"    vec3 tl = uGlowP[k].xyz - wp; float dl = max(length(tl), 1.0); float r = uGlowP[k].w;\n"
+"    float lam = max(dot(N, tl / dl), 0.0) * 0.8 + 0.2;\n"
+"    float att = (1.0 - smoothstep(r * 2.0, r * 4.0, dl)) / (1.0 + (dl / r) * (dl / r));\n"
+"    acc += uGlowC[k].rgb * lam * att * trans1(dl * 0.5);\n"
 "  }\n"
 "  return acc;\n"
 "}\n"
@@ -204,9 +228,13 @@ static const char *SCENE_FS =
 "  vec3 col = base.rgb;\n"
    /* sprites: the stations' flares and other glows are lights: they pierce
       the murk and feed the bloom */
-"  float env = uLong > 0.5 || uSelf > 0.5 ? 1.0 : spawnFade(dist);\n"
+   /* what spawns is gone into the murk before it does; weapons and effects
+      start from something already in sight */
+"  float env = uSpawner > 0.5 ? spawnFade(dist) : 1.0;\n"
+   /* weapons and effects are bright: they carry about twice as far */
+"  float reachK = uLong > 0.5 || uSelf > 0.5 || uSpawner > 0.5 ? 1.0 : 0.55;\n"
 "  if (uSprite != 0 && uKind != 0) {\n"
-"    vec3 T = trans(dist * 0.3) * env;\n"
+"    vec3 T = trans(dist * 0.3 * reachK) * env;\n"
      /* red flares burn deep red, like the warning lights on buildings */
 "    float lum = max(col.r, max(col.g, col.b));\n"
 "    float red = smoothstep(1.05, 1.5, col.r / (max(col.g, col.b) + 0.02));\n"
@@ -217,7 +245,7 @@ static const char *SCENE_FS =
 "  if (uKind == 2) {\n"
      /* additive: a light (plumes, glows, station beacons): it cuts through
         the murk far better than lit surfaces and adds no water colour */
-"    vec3 T = trans(dist * 0.45) * env;\n"
+"    vec3 T = trans(dist * 0.45 * reachK) * env;\n"
 "    gl_FragColor = vec4(col * T, base.a);\n"
 "    return;\n"
 "  }\n"
@@ -241,7 +269,7 @@ static const char *SCENE_FS =
 "    float bio = smoothstep(0.45, 0.9, d) * (0.6 + 0.4 * sin(uTime * 2.1 + wp.x * 0.003 + wp.z * 0.002));\n"
 "    col += vec3(0.1, 0.75, 1.0) * rim * bio * 0.9;\n"
 "  }\n"
-"  vec3 T = trans(dist);\n"
+"  vec3 T = trans(dist * (reachK < 1.0 ? 0.45 : 1.0));\n"
 "  T = mix(T, sqrt(T), emis) * env;\n"
 "  if (uVis == 1) { gl_FragColor = vec4(fract(dist / 25000.0), float(uKind) * 0.5, emis, 1.0); return; }\n"
 "  if (uVis == 2) { gl_FragColor = vec4(alb.rgb, 1.0); return; }\n"
@@ -264,7 +292,7 @@ static const char *BG_FS =
 "  vec3 cam = uCamToWorld[3].xyz;\n"
 "  float d = depth01(cam.y); float L = surfLight(d);\n"
 "  vec3 c = water(dir, cam.y);\n"
-"  c += uSunCol * shafts(dir) * 0.16 * L * L;\n"
+"  c += uSunCol * shafts(dir) * 0.12 * L * L;\n"
    /* the surface far above, rippling, for the shallows */
 "  float up = dir.y;\n"
 "  if (up > 0.0) {\n"
@@ -272,7 +300,7 @@ static const char *BG_FS =
 "    float win = smoothstep(0.62, 0.74, up);\n"
 "    vec2 wp2 = dir.xz / max(up, 0.05);\n"
 "    float wv = caustic(wp2 * 0.32 + uTime * 0.015, uTime * 0.55);\n"
-"    c += uSunCol * (0.2 + 0.7 * wv) * win * pow(L, 2.5) * 0.55;\n"
+"    c += uSunCol * (0.2 + 0.7 * wv) * win * pow(L, 2.5) * 0.42;\n"
 "    c *= 1.0 - (1.0 - win) * smoothstep(0.3, 0.62, up) * pow(L, 2.0) * 0.25;\n"
 "  }\n"
 "  if (up > 0.2) {\n"
@@ -405,6 +433,31 @@ static const char *SPARK_FS =
 "  float r = length(gl_PointCoord * 2.0 - 1.0);\n"
 "  float core = 1.0 - smoothstep(0.0, 0.35, r);\n"
 "  gl_FragColor = vec4(vCol.rgb * (0.6 + core), vCol.a * exp(-r * r * 4.0));\n"
+"}\n";
+
+/* The lights themselves (flares, lamps, explosions: they replace the game's
+   quads): a hot core, a halo of light scattered in the water, a faint star */
+static const char *GLOW_VS =
+"varying vec2 vUV; varying vec4 vCol; varying float vDist;\n"
+"uniform mat4 uWorldToEye; uniform mat4 uProj;\n"
+"void main() {\n"
+"  vUV = gl_MultiTexCoord0.xy;\n"
+"  vCol = gl_Color;\n"
+"  vec4 e = uWorldToEye * vec4(gl_Vertex.xyz, 1.0);\n"
+"  vDist = length(e.xyz);\n"
+"  gl_Position = uProj * e;\n"
+"}\n";
+static const char *GLOW_FS =
+"varying vec2 vUV; varying vec4 vCol; varying float vDist;\n"
+"void main() {\n"
+"  float r = length(vUV);\n"
+"  if (r > 1.0) discard;\n"
+"  float core = exp(-r * r * 90.0);\n"
+"  float glow = exp(-r * r * 14.0);\n"
+"  float halo = (1.0 - smoothstep(0.2, 1.0, r)) * 0.12;\n"
+"  float star = (exp(-abs(vUV.y) * 70.0) + exp(-abs(vUV.x) * 70.0)) * (1.0 - smoothstep(0.0, 0.7, r)) * 0.35;\n"
+"  vec3 c = vCol.rgb * (glow * 1.1 + halo + star) + mix(vCol.rgb, vec3(1.0), 0.7) * core * 1.6;\n"
+"  gl_FragColor = vec4(c * trans1(vDist * 0.3) * smoothstep(40.0, 200.0, vDist), 1.0);\n"
 "}\n";
 
 /* Shoals of small fish (simulated on the CPU, see drawFish): each fish is
@@ -563,6 +616,7 @@ static const char *POST_FS =
 "    float g = 900.0 / (h + 60.0);\n"
 "    c += vec3(1.0, 0.8, 0.5) * g * g * 0.012 * trans1(ld * 0.5) * vis * (uLights[k].w < 1.5 ? spawnFade(ld) : 1.0);\n"
 "  }\n"
+
    /* grade: a touch of contrast, the deep's blacks lifted towards blue,
       and the edges falling into the dark */
    /* highlights roll off softly into white (bloom takes them past 1) */
@@ -595,10 +649,10 @@ static const char *POST_FS =
 struct Prog {
     GLuint id;
     GLint uCamToWorld, uInvProj, uVP, uTime, uSector, uTint, uSunDir, uSunCol, uSigma;
-    GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf;
+    GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf, uSpawner, uGlowP, uGlowC, uNumGlows;
 };
 
-static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pSpark;
+static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pSpark, pGlow;
 static GLint fiWorldToEye, fiProj;
 static GLint buWorldToEye, buProj, buPx, buLife, buBub, buSeed;
 static GLint sTex0, sTex1, sEn0, sEn1, sMode0, sMode1, sFmt0, sFmt1, sKind, sSprite;
@@ -662,6 +716,10 @@ static int link(Prog *p, const char *vs1, const char *vs2, const char *fs) {
     p->uNumLights = glGetUniformLocation(id, "uNumLights");
     p->uLights = glGetUniformLocation(id, "uLights");
     p->uLong = glGetUniformLocation(id, "uLong");
+    p->uSpawner = glGetUniformLocation(id, "uSpawner");
+    p->uGlowP = glGetUniformLocation(id, "uGlowP");
+    p->uGlowC = glGetUniformLocation(id, "uGlowC");
+    p->uNumGlows = glGetUniformLocation(id, "uNumGlows");
     p->uSelf = glGetUniformLocation(id, "uSelf");
     return 1;
 }
@@ -678,6 +736,7 @@ static int buildPrograms() {
         || !link(&pPost, POST_VS, NULL, POST_FS)
         || !link(&pBub, WATER, BUBBLE_VS, BUBBLE_FS)
         || !link(&pSpark, WATER, SPARK_VS, SPARK_FS)
+        || !link(&pGlow, WATER, GLOW_VS, GLOW_FS)
         || !link(&pFish, WATER, FISH_VS, FISH_FS)) {
         rmBroken = 1;
         fprintf(stderr, "[remaster] disabled\n");
@@ -744,6 +803,330 @@ static void deriveFrame() {
     sigma[0] = k / 0.62f; sigma[1] = k; sigma[2] = k / 1.12f;
 }
 
+/* Glows: the game's flare sprites, explosions and additive glows, caught
+   as they are drawn; the ones that matter most light the next frame and
+   are drawn as lights by the post pass (the sprites themselves are not) */
+#define GLOW_MAX 128
+#define GLOW_USE 16
+struct Glow {
+    float p[3], r, c[3];
+    int drawn;                          /* drawn as a light (not a flame) */
+};
+static Glow glowNext[GLOW_MAX];
+static int glowNextN;
+static float glowUseP[GLOW_USE * 4], glowUseC[GLOW_USE * 4];
+static int glowUseN;
+static float sprEye[4], sprHalf;
+
+extern "C" void deep3d_rm_sprite_at(float ex, float ey, float ez, float clipW, float halfNdc) {
+    sprEye[0] = ex; sprEye[1] = ey; sprEye[2] = ez; sprEye[3] = clipW;
+    sprHalf = halfNdc;
+}
+
+static void addGlow(const float *eye, float r, const float *c, int drawn) {
+    if (glowNextN >= GLOW_MAX) {
+        return;
+    }
+    Glow *g = &glowNext[glowNextN++];
+    const float *m = F + F_CAM;
+    for (int j = 0; j < 3; j++) {
+        g->p[j] = m[j] * eye[0] + m[4 + j] * eye[1] + m[8 + j] * eye[2] + m[12 + j];
+        g->c[j] = c[j];
+    }
+    g->r = r;
+    g->drawn = drawn;
+}
+
+/* the glows that matter most (bright, big, near the camera) for lighting
+   and the post pass */
+static void chooseGlows() {
+    const float *cam = F + F_CAM + 12;
+    float score[GLOW_MAX];
+    for (int i = 0; i < glowNextN; i++) {
+        Glow *g = &glowNext[i];
+        float dx = g->p[0] - cam[0], dy = g->p[1] - cam[1], dz = g->p[2] - cam[2];
+        float d2 = dx * dx + dy * dy + dz * dz;
+        float lum = fmaxf(g->c[0], fmaxf(g->c[1], g->c[2]));
+        float reach = g->r * 12.0f;
+        score[i] = lum * reach * reach / (reach * reach + d2 * 0.05f);
+    }
+    glowUseN = 0;
+    for (int n = 0; n < GLOW_USE; n++) {
+        int best = -1;
+        for (int i = 0; i < glowNextN; i++) {
+            if (score[i] > 0 && (best < 0 || score[i] > score[best])) {
+                best = i;
+            }
+        }
+        if (best < 0) {
+            break;
+        }
+        score[best] = 0;
+        Glow *g = &glowNext[best];
+        memcpy(glowUseP + n * 4, g->p, sizeof(float) * 3);
+        glowUseP[n * 4 + 3] = g->r * 12.0f;    /* a light reaches 12x its core */
+        for (int j = 0; j < 3; j++) glowUseC[n * 4 + j] = g->c[j] * 2.2f;
+        glowUseC[n * 4 + 3] = 0;
+        glowUseN++;
+    }
+}
+
+/* the average colour of a (glow) texture, by its name and size */
+struct TexAvg {
+    GLuint name;
+    int w, h;
+    float c[3], a;
+};
+static TexAvg avgCache[256];
+
+static const TexAvg *texAverage(GLuint name) {
+    GLint w = 0, h = 0;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+    TexAvg *t = &avgCache[name & 255];
+    if (t->name == name && t->w == w && t->h == h) {
+        return t;
+    }
+    t->name = name; t->w = w; t->h = h;
+    t->c[0] = t->c[1] = t->c[2] = t->a = 0;
+    if (w <= 0 || h <= 0 || w * h > 512 * 512) {
+        return t;
+    }
+    unsigned char *buf = (unsigned char *) malloc((size_t) w * h * 4);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+    double sr = 0, sg = 0, sb = 0, sa = 0;
+    for (int i = 0; i < w * h; i++) {
+        double a = buf[i * 4 + 3] / 255.0;
+        sr += buf[i * 4] / 255.0 * a;
+        sg += buf[i * 4 + 1] / 255.0 * a;
+        sb += buf[i * 4 + 2] / 255.0 * a;
+        sa += a;
+    }
+    free(buf);
+    if (sa > 0) {
+        t->c[0] = (float) (sr / sa); t->c[1] = (float) (sg / sa); t->c[2] = (float) (sb / sa);
+    }
+    t->a = (float) (sa / (w * h));
+    return t;
+}
+
+/* The atlas a draw samples: its pixels (cached), and the average colour of
+   the region its texture coordinates cover - the game packs its effects
+   (flares, explosions, bubbles) into one texture */
+struct TexPix {
+    GLuint name;
+    int w, h;
+    unsigned char *px;
+};
+static TexPix pixCache[16];
+
+static const TexPix *texPixels(GLuint name) {
+    GLint w = 0, h = 0;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+    TexPix *t = &pixCache[name & 15];
+    if (t->name == name && t->w == w && t->h == h && t->px) {
+        return t;
+    }
+    free(t->px);
+    t->px = NULL;
+    t->name = name; t->w = w; t->h = h;
+    if (w <= 0 || h <= 0 || w * h > 1024 * 1024) {
+        return t;
+    }
+    t->px = (unsigned char *) malloc((size_t) w * h * 4);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, t->px);
+    const char *dump = getenv("DEEP3D_RM_ATLASDUMP");
+    if (dump) {
+        char path[512];
+        snprintf(path, sizeof path, "%s/atlas_%u_%dx%d.rgba", dump, name, w, h);
+        FILE *f = fopen(path, "wb");
+        if (f) { fwrite(t->px, 1, (size_t) w * h * 4, f); fclose(f); }
+    }
+    return t;
+}
+
+/* the draw's texture coordinates (unit 0, first n vertices) through the
+   texture matrix: their bounding box, 0..1 */
+static int drawUVBoxOn(int n, float *box);
+static int drawUVBox(int n, float *box) {
+    GLint ct = GL_TEXTURE0;
+    glGetIntegerv(GL_CLIENT_ACTIVE_TEXTURE, &ct);
+    glClientActiveTexture(GL_TEXTURE0);
+    int r = drawUVBoxOn(n, box);
+    glClientActiveTexture(ct);
+    return r;
+}
+static int drawUVBoxOn(int n, float *box) {
+    if (!glIsEnabled(GL_TEXTURE_COORD_ARRAY)) {
+        if (getenv("DEEP3D_RM_TEXLOG")) fprintf(stderr, "[uv] no texcoord array\n");
+        return 0;
+    }
+    GLint size = 0, type = 0, stride = 0, buf = 0;
+    GLvoid *ptr = NULL;
+    glGetIntegerv(GL_TEXTURE_COORD_ARRAY_SIZE, &size);
+    glGetIntegerv(GL_TEXTURE_COORD_ARRAY_TYPE, &type);
+    glGetIntegerv(GL_TEXTURE_COORD_ARRAY_STRIDE, &stride);
+    glGetIntegerv(GL_TEXTURE_COORD_ARRAY_BUFFER_BINDING, &buf);
+    glGetPointerv(GL_TEXTURE_COORD_ARRAY_POINTER, &ptr);
+    static int told;
+    if (getenv("DEEP3D_RM_TEXLOG") && told < 10) {
+        told++;
+        GLint ct = 0; glGetIntegerv(GL_CLIENT_ACTIVE_TEXTURE, &ct);
+        fprintf(stderr, "[uv] size %d type 0x%x stride %d buf %d ptr %p client 0x%x\n", size, type, stride, buf, ptr, ct);
+    }
+    if (buf != 0 || !ptr || size < 2) {
+        return 0;
+    }
+    int es = type == GL_BYTE ? 1 : type == GL_SHORT ? 2 : type == GL_FLOAT || type == GL_FIXED ? 4 : 0;
+    if (!es) {
+        return 0;
+    }
+    if (!stride) stride = es * size;
+    GLfloat tm[16];
+    glGetFloatv(GL_TEXTURE_MATRIX, tm);
+    box[0] = box[1] = 1e9f; box[2] = box[3] = -1e9f;
+    for (int i = 0; i < n; i++) {
+        const char *e = (const char *) ptr + (size_t) i * stride;
+        float v[2];
+        for (int k = 0; k < 2; k++) {
+            if (type == GL_BYTE) v[k] = ((const signed char *) e)[k];
+            else if (type == GL_SHORT) v[k] = ((const short *) e)[k];
+            else if (type == GL_FIXED) v[k] = ((const int *) e)[k] / 65536.0f;
+            else v[k] = ((const float *) e)[k];
+        }
+        float u = tm[0] * v[0] + tm[4] * v[1] + tm[12];
+        float t = tm[1] * v[0] + tm[5] * v[1] + tm[13];
+        box[0] = fminf(box[0], u); box[1] = fminf(box[1], t);
+        box[2] = fmaxf(box[2], u); box[3] = fmaxf(box[3], t);
+    }
+    return 1;
+}
+
+/* average colour (alpha-weighted) and coverage of a region of the atlas */
+static int regionAverage(const TexPix *t, const float *box, float *c, float *cover) {
+    if (!t->px) return 0;
+    int x0 = (int) floorf(fmaxf(0.0f, fminf(box[0], box[2])) * t->w), x1 = (int) ceilf(fminf(1.0f, fmaxf(box[0], box[2])) * t->w);
+    int y0 = (int) floorf(fmaxf(0.0f, fminf(box[1], box[3])) * t->h), y1 = (int) ceilf(fminf(1.0f, fmaxf(box[1], box[3])) * t->h);
+    if (x1 <= x0 || y1 <= y0) return 0;
+    double sr = 0, sg = 0, sb = 0, sa = 0;
+    for (int y = y0; y < y1; y++) {
+        for (int x = x0; x < x1; x++) {
+            const unsigned char *p = t->px + ((size_t) y * t->w + x) * 4;
+            double a = p[3] / 255.0;
+            sr += p[0] / 255.0 * a; sg += p[1] / 255.0 * a; sb += p[2] / 255.0 * a; sa += a;
+        }
+    }
+    int n = (x1 - x0) * (y1 - y0);
+    *cover = (float) (sa / n);
+    if (sa > 0) { c[0] = (float) (sr / sa); c[1] = (float) (sg / sa); c[2] = (float) (sb / sa); }
+    else c[0] = c[1] = c[2] = 0;
+    return 1;
+}
+
+/* Is a region of an atlas a light (a flare, a lamp, an explosion)? A
+   bright core well above the region's average; not a bubble (a ring,
+   clear in the middle), smoke or plankton. Cached by region. */
+struct RegionClass {
+    GLuint name;
+    short box[4];
+    int light;
+    float c[3], power;
+};
+static RegionClass regionCache[4096];
+
+static const RegionClass *classifyRegion(GLuint name, const float *box) {
+    short q[4];
+    for (int i = 0; i < 4; i++) q[i] = (short) floorf(box[i] * 512.0f + 0.5f);
+    unsigned h = name * 2654435761u ^ (unsigned) (q[0] * 73856093) ^ (unsigned) (q[1] * 19349663) ^ (unsigned) (q[2] * 83492791) ^ (unsigned) (q[3] * 2971215073u);
+    RegionClass *r = NULL;
+    for (int k = 0; k < 8; k++) {
+        RegionClass *e = &regionCache[(h + k) & 4095];
+        if (e->name == name && !memcmp(e->box, q, sizeof q)) {
+            return e;
+        }
+        if (!r && e->name == 0) {
+            r = e;
+        }
+    }
+    if (!r) {
+        r = &regionCache[h & 4095];
+    }
+    r->name = name;
+    memcpy(r->box, q, sizeof q);
+    r->light = 0;
+    const TexPix *t = texPixels(name);
+    float c[3], cover;
+    if (!regionAverage(t, box, c, &cover)) {
+        return r;
+    }
+    /* the middle third */
+    float mid[4] = {box[0] + (box[2] - box[0]) / 3, box[1] + (box[3] - box[1]) / 3,
+                    box[2] - (box[2] - box[0]) / 3, box[3] - (box[3] - box[1]) / 3};
+    float cc[3], ccover;
+    if (!regionAverage(t, mid, cc, &ccover)) {
+        return r;
+    }
+    float core = fmaxf(cc[0], fmaxf(cc[1], cc[2])) * ccover;
+    float all = fmaxf(c[0], fmaxf(c[1], c[2])) * cover;
+    r->light = core > 0.33f && core > all * 1.6f;
+    /* its colour: the region's, at full brightness */
+    float m = fmaxf(c[0], fmaxf(c[1], fmaxf(c[2], 1e-3f)));
+    for (int j = 0; j < 3; j++) r->c[j] = c[j] / m;
+    r->power = core;
+    if (getenv("DEEP3D_RM_TEXLOG")) {
+        fprintf(stderr, "[class] tex %u uv %.3f %.3f %.3f %.3f light %d col %.2f %.2f %.2f core %.2f all %.2f\n", name,
+                box[0], box[1], box[2], box[3], r->light, r->c[0], r->c[1], r->c[2], core, all);
+    }
+    return r;
+}
+
+/* the draw's first n vertices (client arrays) in eye space: their centre
+   and half extent */
+static int drawEyeBox(int n, float *centre, float *half, float *aspect) {
+    if (!glIsEnabled(GL_VERTEX_ARRAY)) return 0;
+    GLint size = 0, type = 0, stride = 0, buf = 0;
+    GLvoid *ptr = NULL;
+    glGetIntegerv(GL_VERTEX_ARRAY_SIZE, &size);
+    glGetIntegerv(GL_VERTEX_ARRAY_TYPE, &type);
+    glGetIntegerv(GL_VERTEX_ARRAY_STRIDE, &stride);
+    glGetIntegerv(GL_VERTEX_ARRAY_BUFFER_BINDING, &buf);
+    glGetPointerv(GL_VERTEX_ARRAY_POINTER, &ptr);
+    if (buf != 0 || !ptr || size < 3) return 0;
+    int es = type == GL_BYTE ? 1 : type == GL_SHORT ? 2 : type == GL_FLOAT || type == GL_FIXED ? 4 : 0;
+    if (!es) return 0;
+    if (!stride) stride = es * size;
+    GLfloat mv[16];
+    glGetFloatv(GL_MODELVIEW_MATRIX, mv);
+    float lo[3] = {1e30f, 1e30f, 1e30f}, hi[3] = {-1e30f, -1e30f, -1e30f};
+    float olo[3] = {1e30f, 1e30f, 1e30f}, ohi[3] = {-1e30f, -1e30f, -1e30f};
+    for (int i = 0; i < n; i++) {
+        const char *e = (const char *) ptr + (size_t) i * stride;
+        float v[3];
+        for (int k = 0; k < 3; k++) {
+            if (type == GL_BYTE) v[k] = ((const signed char *) e)[k];
+            else if (type == GL_SHORT) v[k] = ((const short *) e)[k];
+            else if (type == GL_FIXED) v[k] = ((const int *) e)[k] / 65536.0f;
+            else v[k] = ((const float *) e)[k];
+        }
+        for (int j = 0; j < 3; j++) {
+            float w = mv[j] * v[0] + mv[4 + j] * v[1] + mv[8 + j] * v[2] + mv[12 + j];
+            lo[j] = fminf(lo[j], w); hi[j] = fmaxf(hi[j], w);
+            olo[j] = fminf(olo[j], v[j]); ohi[j] = fmaxf(ohi[j], v[j]);
+        }
+    }
+    /* the quad's own shape: a flare is square, an engine's flame long */
+    float ext[3] = {ohi[0] - olo[0], ohi[1] - olo[1], ohi[2] - olo[2]};
+    float a = fmaxf(ext[0], fmaxf(ext[1], ext[2]));
+    float b = ext[0] + ext[1] + ext[2] - a - fminf(ext[0], fminf(ext[1], ext[2]));
+    *aspect = a / fmaxf(b, 1e-3f);
+    for (int j = 0; j < 3; j++) centre[j] = (lo[j] + hi[j]) * 0.5f;
+    *half = fmaxf(hi[0] - lo[0], fmaxf(hi[1] - lo[1], hi[2] - lo[2])) * 0.5f;
+    return 1;
+}
+
 static void setCommon(const Prog *p) {
     glUniformMatrix4fv(p->uCamToWorld, 1, GL_FALSE, F + F_CAM);
     glUniformMatrix4fv(p->uInvProj, 1, GL_FALSE, invProj);
@@ -760,7 +1143,11 @@ static void setCommon(const Prog *p) {
     glUniform1f(p->uBoost, F[F_BOOST]);
     glUniform1i(p->uNumLights, (int) F[F_NLIGHTS]);
     glUniform4fv(p->uLights, F_MAXLIGHTS, F + F_LIGHTS);
+    glUniform4fv(p->uGlowP, GLOW_USE, glowUseP);
+    glUniform4fv(p->uGlowC, GLOW_USE, glowUseC);
+    glUniform1i(p->uNumGlows, glowUseN);
     glUniform1f(p->uLong, rmStructure ? 1.0f : 0.0f);
+    glUniform1f(p->uSpawner, rmSpawner ? 1.0f : 0.0f);
     glUniform1f(p->uSelf, rmLayer >= 3 ? 1.0f : 0.0f);
 }
 
@@ -1348,6 +1735,7 @@ static int sceneBegin() {
     GLint active;
     glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
     int en[2], mode[2], fmt[2];
+    GLint name0 = 0;
     for (int u = 0; u < 2; u++) {
         glActiveTexture(GL_TEXTURE0 + u);
         en[u] = glIsEnabled(GL_TEXTURE_2D) ? 1 : 0;
@@ -1358,6 +1746,9 @@ static int sceneBegin() {
         if (en[u]) {
             glGetIntegerv(GL_TEXTURE_BINDING_2D, &name);
             fmt[u] = texFormat((GLuint) name);
+            if (u == 0) {
+                name0 = name;
+            }
             static int told;
             if (name != 0 && ((GLuint) name == texScene || (GLuint) name == texDepth || (GLuint) name == texBright)
                 && told < 20) {
@@ -1406,6 +1797,75 @@ static int sceneBegin() {
         fprintf(stderr, "[remaster] blend1 layer %d sprite %d tex %d ifmt 0x%x r%d l%d a%d fmt %d mode 0x%x atest %d colArr %d cur %.2f %.2f %.2f %.2f\n",
                 rmLayer, rmSprite, name, ifmt, r, l, a, fmt[0], texfn, atest, glIsEnabled(GL_COLOR_ARRAY), cur[0], cur[1], cur[2], cur[3]);
     }
+    /* glows: blended bright sprites (flares, explosions) and additive
+       meshes (engines, bolts) are lights; the sprites give way to the post
+       pass's lights (DEEP3D_RM_SPRITES=1 keeps them) */
+    static int alllog = getenv("DEEP3D_RM_TEXLOG") != NULL;
+    if (alllog && en[0] && name0) {
+        static GLuint seen[1024]; static int nseen;
+        GLuint key = (GLuint) name0 * 64 + rmSprite * 32 + kind * 8 + rmLayer;
+        int found = 0;
+        for (int i = 0; i < nseen; i++) found |= seen[i] == key;
+        if (!found && nseen < 1024) {
+            seen[nseen++] = key;
+            glActiveTexture(GL_TEXTURE0);
+            const TexAvg *avg = texAverage((GLuint) name0);
+            glActiveTexture(active);
+            fprintf(stderr, "[tex] %d %dx%d sprite %d kind %d layer %d avg %.2f %.2f %.2f a %.2f atest %d\n", name0, avg->w, avg->h,
+                    rmSprite, kind, rmLayer, avg->c[0], avg->c[1], avg->c[2], avg->a, glIsEnabled(GL_ALPHA_TEST));
+        }
+        float box[4], rc[3], cov;
+        if (kind != 0 && drawUVBox(4, box)) {
+            glActiveTexture(GL_TEXTURE0);
+            const TexPix *tp = texPixels((GLuint) name0);
+            glActiveTexture(active);
+            static float seenBox[256][5]; static int nb;
+            int dup = 0;
+            for (int i = 0; i < nb; i++) dup |= seenBox[i][0] == name0 && fabsf(seenBox[i][1] - box[0]) < 1e-3f && fabsf(seenBox[i][2] - box[1]) < 1e-3f
+                                                && fabsf(seenBox[i][3] - box[2]) < 1e-3f && fabsf(seenBox[i][4] - box[3]) < 1e-3f;
+            if (!dup && nb < 256 && regionAverage(tp, box, rc, &cov)) {
+                seenBox[nb][0] = name0; seenBox[nb][1] = box[0]; seenBox[nb][2] = box[1]; seenBox[nb][3] = box[2]; seenBox[nb][4] = box[3]; nb++;
+                GLfloat mv[16]; glGetFloatv(GL_MODELVIEW_MATRIX, mv);
+                fprintf(stderr, "[region] tex %d sprite %d kind %d layer %d uv %.3f %.3f %.3f %.3f col %.2f %.2f %.2f cover %.2f scale %.0f\n",
+                        name0, rmSprite, kind, rmLayer, box[0], box[1], box[2], box[3], rc[0], rc[1], rc[2], cov,
+                        sqrtf(mv[0] * mv[0] + mv[1] * mv[1] + mv[2] * mv[2]));
+            }
+        }
+    }
+    /* lights: a blended draw showing a light's region of an atlas (the
+       stations' flares, lamps, explosions, engine flames) - it lights its
+       surroundings, and is drawn as a light (drawGlows), not as the quad
+       (DEEP3D_RM_SPRITES=1 keeps the quads) */
+    if (kind != 0 && en[0] && name0 && rmLayer < 3) {
+        float box[4];
+        if (drawUVBox(4, box)) {
+            glActiveTexture(GL_TEXTURE0);
+            const RegionClass *rc = classifyRegion((GLuint) name0, box);
+            glActiveTexture(active);
+            float centre[3], half, aspect;
+            if (rc->light && drawEyeBox(4, centre, &half, &aspect) && half > 1.0f) {
+                GLfloat cur[4];
+                glGetFloatv(GL_CURRENT_COLOR, cur);
+                float c[3];
+                float k = rc->power * (kind == 2 ? 1.0f : fmaxf(cur[3], 0.35f));
+                for (int j = 0; j < 3; j++) c[j] = rc->c[j] * cur[j] * k;
+                /* a long quad (an engine's flame) keeps its shape: it only
+                   lights its surroundings, as a light the size of its width */
+                int flame = aspect > 1.8f;
+                addGlow(centre, flame ? half / aspect : half, c, !flame);
+                static int dlog = getenv("DEEP3D_RM_DROPLOG") != NULL;
+                if (dlog && (rmLayer > 0 || ((int) F[F_FRAME]) % 300 == 7)) {
+                    fprintf(stderr, "[drop] tex %d layer %d kind %d sprite %d uv %.3f %.3f %.3f %.3f half %.0f dist %.0f col %.2f %.2f %.2f\n",
+                            name0, rmLayer, kind, rmSprite, box[0], box[1], box[2], box[3], half,
+                            sqrtf(centre[0] * centre[0] + centre[1] * centre[1] + centre[2] * centre[2]), c[0], c[1], c[2]);
+                }
+                static int keep = getenv("DEEP3D_RM_SPRITES") != NULL;
+                if (!keep && !flame) {
+                    return -1;
+                }
+            }
+        }
+    }
     /* the stations' translucent parts stay the engine's own: shaded, one
        (at Gosu's hangar) turned into a solid block of water colour */
     if (kind == 1 && rmStructure && !rmSprite) {
@@ -1443,8 +1903,11 @@ static int sceneBegin() {
 
 extern "C" void deep3d_rm_draw_elements(GLenum mode, GLsizei count, GLenum type, const void *indices) {
     int on = sceneBegin();
+    if (on < 0) {
+        return;                         /* a glow: drawn as a light */
+    }
     glDrawElements(mode, count, type, indices);
-    if (on) {
+    if (on > 0) {
         glUseProgram(0);
     }
 }
@@ -1453,6 +1916,9 @@ extern "C" void deep3d_rm_draw_arrays(GLenum mode, GLint first, GLsizei count) {
     rmSprite = 1;
     int on = sceneBegin();
     rmSprite = 0;
+    if (on < 0) {
+        return;                         /* a glow: drawn as a light */
+    }
     glDrawArrays(mode, first, count);
     if (on) {
         glUseProgram(0);
@@ -1469,6 +1935,8 @@ extern "C" void deep3d_rm_pass_begin(void) {
     texFrame++;
     rmLayer = 0;
     rmStructure = 0;
+    rmSpawner = 0;
+    glowNextN = 0;
     haveProj = 0;
     if (!rmPass) {
         return;
@@ -1746,6 +2214,62 @@ static void drawSparks(const float *worldToEye) {
     popState(&s);
 }
 
+/* The frame's lights, as lights: camera-facing quads, 3x the core */
+static GLfloat glowQuad[GLOW_MAX * 4 * 3], glowQuadUV[GLOW_MAX * 4 * 2], glowQuadCol[GLOW_MAX * 4 * 4];
+
+static void drawGlows(const float *worldToEye) {
+    if (glowNextN == 0) {
+        return;
+    }
+    const float *m = F + F_CAM;
+    const float rt[3] = {m[0], m[1], m[2]}, up[3] = {m[4], m[5], m[6]};
+    static const float cu[4] = {-1, 1, 1, -1}, cv[4] = {-1, -1, 1, 1};
+    int n = 0;
+    for (int i = 0; i < glowNextN; i++) {
+        const Glow *g = &glowNext[i];
+        if (!g->drawn) {
+            continue;
+        }
+        float e = g->r * 3.0f;
+        int i4 = n++;
+        for (int k = 0; k < 4; k++) {
+            int o = i4 * 4 + k;
+            for (int j = 0; j < 3; j++) glowQuad[o * 3 + j] = g->p[j] + (rt[j] * cu[k] + up[j] * cv[k]) * e;
+            glowQuadUV[o * 2] = cu[k]; glowQuadUV[o * 2 + 1] = cv[k];
+            for (int j = 0; j < 3; j++) glowQuadCol[o * 4 + j] = g->c[j];
+            glowQuadCol[o * 4 + 3] = 1;
+        }
+    }
+    Saved s;
+    pushState(&s);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_CULL_FACE);
+    glUseProgram(pGlow.id);
+    setCommon(&pGlow);
+    glUniformMatrix4fv(glGetUniformLocation(pGlow.id, "uWorldToEye"), 1, GL_FALSE, worldToEye);
+    glUniformMatrix4fv(glGetUniformLocation(pGlow.id, "uProj"), 1, GL_FALSE, proj);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    for (int u = 1; u < 4; u++) {
+        glClientActiveTexture(GL_TEXTURE0 + u);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    glClientActiveTexture(GL_TEXTURE0);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glTexCoordPointer(2, GL_FLOAT, 0, glowQuadUV);
+    glEnableClientState(GL_COLOR_ARRAY);
+    glColorPointer(4, GL_FLOAT, 0, glowQuadCol);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, 0, glowQuad);
+    glDrawArrays(GL_QUADS, 0, n * 4);
+    popState(&s);
+}
+
 /* Post targets: texScene, texDepth, texBright (declared with the texture
    cache; framebuffers per pass) */
 static int postW = 0, postH = 0, postStencil = -1;
@@ -1924,6 +2448,7 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
     if (rmBroken || !rmDrawn || !haveProj || !programsReady) {
         return;
     }
+    chooseGlows();
     if (postFrame == (int) F[F_FRAME] || getenv("DEEP3D_RM_NOPOST")) {
         return;
     }
@@ -1940,6 +2465,13 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
         if (invert4(F + F_CAM, worldToEye)) {
             drawBubbles(worldToEye);
             drawSparks(worldToEye);
+        }
+    }
+    {
+        /* the lights replace the game's flare quads: always drawn */
+        float worldToEye[16];
+        if (invert4(F + F_CAM, worldToEye)) {
+            drawGlows(worldToEye);
         }
     }
     if (getenv("DEEP3D_RM_NOPOSTFX")) {
@@ -1963,8 +2495,9 @@ Java_javax_microedition_m3g_Platform__1remaster(JNIEnv *env, jclass, jfloatArray
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_javax_microedition_m3g_Platform__1remasterObject(JNIEnv *, jclass, jboolean structure) {
-    rmStructure = structure ? 1 : 0;
+Java_javax_microedition_m3g_Platform__1remasterObject(JNIEnv *, jclass, jint kind) {
+    rmStructure = kind == 1;
+    rmSpawner = kind == 2;
 }
 
 extern "C" JNIEXPORT void JNICALL

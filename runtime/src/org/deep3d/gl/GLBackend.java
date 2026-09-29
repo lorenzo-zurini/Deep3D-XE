@@ -613,6 +613,10 @@ public final class GLBackend {
         }
 
         Draw2D frame = recorders.get();
+        if (holdNext == Thread.currentThread()) {
+            holdNext = null;
+            frame.reset();
+        }
         if (MouseFlight.captured() && screenGraphics != null) {
             MouseFlight.draw(screenGraphics, virtWidth, virtHeight);
         }
@@ -680,18 +684,24 @@ public final class GLBackend {
     private static void renderFrame(Draw2D frame, Draw2D menu) {
         int rw = renderW;
         int rh = renderH;
+        boolean sized = frameTexW == rw && frameTexH == rh;
         ensureFrameTarget(rw, rh);
-        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, frameFbo);
-        glViewport(0, 0, rw, rh);
-        glDisable(GL_SCISSOR_TEST);
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
-        gl2d.beginFrame(virtWidth, virtHeight, rw, rh);
-        gl2d.replay(frame, 0, frame.opLen);
-        if (menu != null) {
-            gl2d.replay(menu, 0, menu.opLen);
+        /* A present with nothing drawn shows the last picture again, as the
+           phone's screen buffer did: while loading, the game presents from
+           two threads and only one of them draws (black frames flickered) */
+        if (frame.opLen > 0 || menu != null || !sized) {
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, frameFbo);
+            glViewport(0, 0, rw, rh);
+            glDisable(GL_SCISSOR_TEST);
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT);
+            gl2d.beginFrame(virtWidth, virtHeight, rw, rh);
+            gl2d.replay(frame, 0, frame.opLen);
+            if (menu != null) {
+                gl2d.replay(menu, 0, menu.opLen);
+            }
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, 0);
         }
-        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, 0);
 
         int w = fbWidth;
         int h = fbHeight;
@@ -843,7 +853,68 @@ public final class GLBackend {
     private static volatile File pipeShotFile;
     private static volatile boolean pipeShotPending;
 
+    private static volatile Thread holdNext;
+
+    /**
+     * The frame this thread is drawing is not shown: the last picture stays
+     * up (the game presents from more than one thread).
+     */
+    public static void holdFrame() {
+        holdNext = Thread.currentThread();
+    }
+
+    /* test bursts: every presented frame, quarter size, and its colour */
+    private static volatile File burstDir;
+    private static volatile String burstName;
+    private static volatile int burstLeft, burstIndex;
+
+    /** Tests: saves the next frames (quarter size) and logs their colour. */
+    public static void burst(File dir, String name, int frames) {
+        burstIndex = 0;
+        burstName = name;
+        burstDir = dir;
+        burstLeft = frames;
+    }
+
+    private static void checkBurst() {
+        if (burstLeft <= 0) {
+            return;
+        }
+        burstLeft--;
+        int w = fbWidth, h = fbHeight;
+        ByteBuffer buf = MemoryUtil.memAlloc(w * h * 4);
+        glReadBuffer(GL_BACK);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+        int sw = Math.max(1, w / 4), sh = Math.max(1, h / 4);
+        BufferedImage img = new BufferedImage(sw, sh, BufferedImage.TYPE_INT_RGB);
+        long sr = 0, sg = 0, sb = 0;
+        int orange = 0;
+        for (int y = 0; y < sh; y++) {
+            int srcRow = (h - 1 - y * 4) * w * 4;
+            for (int x = 0; x < sw; x++) {
+                int o = srcRow + x * 16;
+                int r = buf.get(o) & 0xFF, g = buf.get(o + 1) & 0xFF, b = buf.get(o + 2) & 0xFF;
+                img.setRGB(x, y, r << 16 | g << 8 | b);
+                sr += r; sg += g; sb += b;
+                if (r > 140 && r - b > 80 && g > 40 && g < r - 20) {
+                    orange++;
+                }
+            }
+        }
+        MemoryUtil.memFree(buf);
+        int n = sw * sh, i = burstIndex++;
+        System.out.printf("[burst] %s %d frame %d mean %d %d %d orange %.1f%%%n", burstName, i,
+                org.deep3d.Scenario.frame(), sr / n, sg / n, sb / n, 100.0 * orange / n);
+        try {
+            ImageIO.write(img, "png", new File(burstDir, String.format("%s_%04d.png", burstName, i)));
+        } catch (Exception e) {
+            System.err.println("[burst] " + e);
+        }
+    }
+
     private static void checkPipeShot() {
+        checkBurst();
         if (pipeShotPending) {
             pipeShotPending = false;
             int w = fbWidth;

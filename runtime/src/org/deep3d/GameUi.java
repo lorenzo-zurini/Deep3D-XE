@@ -272,6 +272,11 @@ public final class GameUi {
             applySelectTarget(active);
             applyMouse(active);
         }
+        if (walkTarget != null) {
+            // the mouse snaps: the frames stepping through the rows between
+            // are not shown, the screen goes straight to the one under it
+            org.deep3d.gl.GLBackend.holdFrame();
+        }
     }
 
     /** The control profile of the screen on show (null in flight). */
@@ -661,7 +666,7 @@ public final class GameUi {
                 selectedIdx = i;
             }
         }
-        if (target == null || selected == null || ++walkStuckFrames > 240) {
+        if (target == null || selected == null || ++walkStuckFrames > 90) {
             walkTarget = null;       // screen changed or selection never lands
             return;
         }
@@ -680,7 +685,7 @@ public final class GameUi {
         } else {
             code = targetIdx < selectedIdx ? UP : DOWN;
         }
-        Sequencer.pulse(code, 3, 4);
+        Sequencer.pulse(code, 1, 1);        // as fast as the game takes them
     }
 
     /**
@@ -765,6 +770,18 @@ public final class GameUi {
         String p = prefix.toLowerCase();
         for (Item it : visible) {
             if (it.text != null && it.text.toLowerCase().startsWith(p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Test hook: the mouse moves onto the row starting with the text. */
+    public static boolean hoverRow(String prefix) {
+        String p = prefix.toLowerCase();
+        for (Item it : visible) {
+            if (it.text != null && it.text.toLowerCase().startsWith(p)) {
+                mouseMoved(it.x + it.w / 2, it.y + it.h / 2);
                 return true;
             }
         }

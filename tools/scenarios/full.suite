@@ -12,3 +12,4 @@ art_remastered      art.scn       graphics.enhanced=true graphics.remastered=tru
 reach_remastered    reach.scn     graphics.enhanced=true graphics.remastered=true
 mouse_remastered    mouse.scn     graphics.enhanced=true graphics.remastered=true
 mouse_original      mouse.scn     graphics.enhanced=false
+lights_remastered   lights.scn    graphics.enhanced=true graphics.remastered=true

@@ -36,7 +36,11 @@ public final class class_11 {
    // $VF: renamed from: a (an) void
    public final void method_57(class_106 var1) {
       var1.method_883(this.field_117);
-      class_84.field_1117.drawImage(this.field_116, this.field_117.field_37, this.field_117.field_38, 3);
-      org.deep3d.MouseFlight.crosshair(this.field_117.field_37, this.field_117.field_38); // Deep3D-PC
+      // Deep3D-PC: pinned where it rests in level flight (the projected aim
+      // point jittered with every movement of the chase camera)
+      int var2 = class_84.field_1120 >> 1;
+      int var3 = class_84.field_1121 * 157 / 320;
+      class_84.field_1117.drawImage(this.field_116, var2, var3, 3);
+      org.deep3d.MouseFlight.crosshair(var2, var3);
    }
 }

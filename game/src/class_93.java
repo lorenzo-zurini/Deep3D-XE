@@ -146,6 +146,12 @@ public final class class_93 extends class_91 {
 
    // $VF: renamed from: c () void
    public final void method_809() {
+      class_4.deep3dKind = 2; // Deep3D-PC: an item (comes and goes)
+      this.deep3dRender();
+      class_4.deep3dKind = 0; // Deep3D-PC
+   }
+
+   private void deep3dRender() {
       if (super.field_1224 != 4) {
          if (super.field_1224 == 5) {
             class_84.field_1110.method_25(super.field_1226);

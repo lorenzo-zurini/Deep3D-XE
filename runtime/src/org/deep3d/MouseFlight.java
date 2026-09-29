@@ -13,9 +13,9 @@ import javax.microedition.lcdui.Graphics;
 public final class MouseFlight {
 
     /** The reticle's full deflection, as a fraction of the screen height. */
-    private static final float RADIUS = 0.26f;
+    private static final float RADIUS = 0.15f;
     /** Mouse travel (window pixels per window height) to reticle travel. */
-    private static final float SENSITIVITY = 0.9f;
+    private static final float SENSITIVITY = 1.3f;
     /** The pull below which the sub flies straight (of RADIUS). */
     private static final float DEADZONE = 0.1f;
 
@@ -46,7 +46,12 @@ public final class MouseFlight {
     }
 
     /** The game drew the sub's crosshair at x, y (virtual screen). */
+    private static final boolean LOG_CROSS = System.getenv("DEEP3D_LOG_CROSSHAIR") != null;
+
     public static void crosshair(int x, int y) {
+        if (LOG_CROSS) {
+            System.out.println("[cross] " + x + " " + y);
+        }
         crossX = x;
         crossY = y;
         crossNanos = System.nanoTime();

@@ -28,9 +28,9 @@ public class class_98 extends class_91 {
 
    // $VF: renamed from: c () void
    public void method_809() {
-      class_4.deep3dStructure = true; // Deep3D-PC
+      class_4.deep3dKind = 1; // Deep3D-PC: a structure
       class_84.field_1110.method_25(super.field_1226);
-      class_4.deep3dStructure = false; // Deep3D-PC
+      class_4.deep3dKind = 0; // Deep3D-PC
    }
 
    // $VF: renamed from: a (int, int, int) boolean

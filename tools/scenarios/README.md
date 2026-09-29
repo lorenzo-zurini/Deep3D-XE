@@ -9,6 +9,7 @@ on the way, so runs are reliable rather than timed.
     tools/scenarios/run.sh flight.scn out/flight_rm graphics.enhanced=true graphics.remastered=true
     tools/scenarios/suite.sh full.suite out/suite        # every run, then the report
     python3 tools/scenarios/report.py out/suite          # the report again
+    SAVES=saves tools/scenarios/run.sh cannon.scn out/c  # from copies of your saves
 
 `run.sh` uses your display (`HEADLESS=1`: a private Xvfb display with
 software GL); the game gets its own home (config, saves) in the output
@@ -39,6 +40,8 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `god on\|off`, `setf <class> <field> <value>` | cheats, game state (`setf class_21 field_209 12`: story step, cutscenes skippable) |
 | `mode original\|enhanced\|remastered`, `set <Config field> <value>` | graphics |
 | `depth <game depth>\|off` | Remastered: show any depth |
+| `burst <frames> <name>` | every presented frame from now (quarter size), with its mean colour in the log |
+| `hover <row text>` | the mouse onto a menu row |
 | `shot <name>` | a screenshot, logged to metrics.tsv with state, FPS and the sub's heading |
 | `pair <name>` | the same moment in Remastered and Enhanced (`<name>__alt`), without particles |
 | `describe` | log what the UI layer sees (rows, buttons, bar) |
@@ -69,6 +72,9 @@ still need eyes: the report shows pairs side by side.
   the deep's plankton wake, fish)
 - `reach.scn`: a creature and a ship held at growing distances; past
   the respawn distance (36000) nothing may show
+- `lights.scn`: the game's lights as lights (flares, engines, a fight)
+- `cannon.scn` (with `SAVES=saves`: your own autosave, copied): the cannon's
+  bolts, frame by frame
 - `mouse.scn`: mouse flight (the reticle only in flight; up climbs, the
   pull holds; metrics.tsv logs the sub's heading)
 - `fish.scn` with `DEEP3D_RM_FISHTEST=1`: every school in the sub's path
@@ -88,4 +94,8 @@ Environment variables for `run.sh` (`EXTRA_ENV="..."`):
 | `DEEP3D_RM_PLAIN=<kind>` | leave draws of a kind (0 opaque, 1 blended, 2 additive, 9 sprites, 99 all) to the engine |
 | `DEEP3D_RM_DEPTH=<game depth>` | show any depth |
 | `DEEP3D_RM_FISHTEST=1` | every fish school in the sub's path |
+| `DEEP3D_RM_SPRITES=1` | keep the game's flare quads (lights are still added) |
+| `DEEP3D_RM_TEXLOG=1`, `DEEP3D_RM_DROPLOG=1` | log textures / atlas regions and their light classification, the draws replaced by lights |
+| `DEEP3D_RM_ATLASDUMP=<dir>` | dump the atlases the light classification reads |
+| `DEEP3D_LOG_CROSSHAIR=1`, `DEEP3D_LOG_HITS=1` | log the crosshair's position, weapon hits |
 | `DEEP3D_RM_DEBUG=1` | log the frame data and draw states |

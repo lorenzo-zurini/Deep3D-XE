@@ -1,0 +1,43 @@
+# Lights: the stations' flares, ships' engines, explosions and bolts light
+# their surroundings (Remastered); shallow, deep and dark stations, and a
+# fight
+include prologue.scn
+teleport 0                  # Gosu, 50%
+until station 2400
+shot gosu_docked
+depart
+until flight 6000
+wait 30
+shot gosu_level
+teleport 19                 # Theux, 73%
+until station 2400
+shot theux_docked
+depart
+until flight 6000
+wait 30
+shot theux_level
+teleport 16                 # Wagoll, 99%
+until station 2400
+shot wagoll_docked
+depart
+until flight 6000
+wait 30
+shot wagoll_level
+pin creature 2600
+wait 10
+fire 4
+wait 6
+shot fight_1
+wait 6
+shot fight_2
+fire 4
+wait 8
+shot fight_3
+wait 8
+shot fight_4
+fire 4
+wait 10
+shot fight_5
+wait 12
+shot fight_6
+pin off

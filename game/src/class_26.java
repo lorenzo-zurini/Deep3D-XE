@@ -8,6 +8,7 @@ public final class class_26 {
    private static final int[][] field_264 = new int[][]{{-1100, 200, 1100}, {-951, 161, -1500}, {-823, 115, -4100}};
    // $VF: renamed from: a ax
    private class_108 field_265;
+   private boolean deep3dShown; // Deep3D-PC: the world has been on screen
    // $VF: renamed from: a ak
    private class_116 field_266;
    // $VF: renamed from: b ak
@@ -1686,6 +1687,12 @@ public final class class_26 {
       }
       this.deep3dRemaster(); // Deep3D-PC
       Deep3dDebug.worldFrames++;
+      if (!this.deep3dShown) {
+         // Deep3D-PC: a world's first frame lacks its skydome (the orange
+         // background fill flashed): the last picture stays up instead
+         this.deep3dShown = true;
+         org.deep3d.gl.GLBackend.holdFrame();
+      }
    }
 
    // $VF: renamed from: b (long) void
@@ -1740,6 +1747,12 @@ public final class class_26 {
       }
       this.deep3dRemaster(); // Deep3D-PC
       Deep3dDebug.worldFrames++;
+      if (!this.deep3dShown) {
+         // Deep3D-PC: a world's first frame lacks its skydome (the orange
+         // background fill flashed): the last picture stays up instead
+         this.deep3dShown = true;
+         org.deep3d.gl.GLBackend.holdFrame();
+      }
    }
 
    // $VF: renamed from: c (long) void

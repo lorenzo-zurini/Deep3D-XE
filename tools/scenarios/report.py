@@ -165,8 +165,10 @@ def pair_issues(main_png, alt_png):
     (wa, da), (wb, db) = neutral(main_png), neutral(alt_png)
     if wa - wb > 480 * 228 * 0.006:
         out.append('pair: %d more colourless white pixels than the other mode (texture lost?)' % (wa - wb))
-    # (not where the other mode's water is black: the deep's own dark water)
-    if da - db > 480 * 228 * 0.015 and blacks(alt_png) < 480 * 270 * 0.1:
+    # (not where the other mode's water is black, nor in Remastered's dark
+    # deep: its own dark water)
+    mean_main = ImageStat.Stat(Image.open(main_png).convert('L').resize((96, 54))).mean[0]
+    if da - db > 480 * 228 * 0.015 and blacks(alt_png) < 480 * 270 * 0.1 and mean_main > 40:
         out.append('pair: %d more colourless dark pixels than the other mode (texture lost?)' % (da - db))
     mi, at2 = largest_cluster(missing, 480, 270)
     if mi > 400:

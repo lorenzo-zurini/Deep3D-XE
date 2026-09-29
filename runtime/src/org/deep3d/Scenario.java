@@ -402,6 +402,14 @@ public final class Scenario {
                 }
                 MouseFlight.move(argf(s, 1, 0), argf(s, 2, 0), 1080);
                 return true;
+            case "hover":                   // hover <row text>: the mouse onto the row
+                if (!GameUi.hoverRow(String.join(" ", java.util.Arrays.copyOfRange(s, 1, s.length)))) {
+                    log("hover: no row " + s[1]);
+                }
+                return true;
+            case "burst":                   // burst <frames> <name>: every frame from now, quarter size
+                org.deep3d.gl.GLBackend.burst(out, s.length > 2 ? s[2] : "burst", arg(s, 1, 60));
+                return true;
             case "shot":                    // shot <name>
                 shot(s[1]);
                 return true;
@@ -492,6 +500,11 @@ public final class Scenario {
             return true;
         }
         return false;
+    }
+
+    /** The scenario's frame count (tests). */
+    public static int frame() {
+        return frame;
     }
 
     private static void shot(String name) {

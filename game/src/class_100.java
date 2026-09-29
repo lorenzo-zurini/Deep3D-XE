@@ -137,11 +137,11 @@ public final class class_100 extends class_99 {
 
    // $VF: renamed from: c () void
    public final void method_809() {
-      class_4.deep3dStructure = true; // Deep3D-PC
+      class_4.deep3dKind = 1; // Deep3D-PC: a structure
       for (int var1 = 0; var1 < this.field_1307.length; var1++) {
          class_84.field_1110.method_25(this.field_1307[var1]);
       }
-      class_4.deep3dStructure = false; // Deep3D-PC
+      class_4.deep3dKind = 0; // Deep3D-PC
    }
 
    // $VF: renamed from: a (x) x

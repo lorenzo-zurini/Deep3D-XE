@@ -43,12 +43,15 @@ official English text from the international release.
   items, and their lights and engine plumes) is gone into the murk
   before the distance where it comes and goes, so nothing pops in.
   Light follows each station's depth
-  (from sunlit shallows to the abyss), with caustics, god rays blocked
-  by the stations, the bright window of the surface overhead in the
-  shallows, sky light and a rim of water colour giving the pre-lit
-  models shape, the sub's headlight as a beam in the water, other ships'
-  lamps lighting their surroundings, station lights shining through the
-  murk with bloom, marine snow, bubble trails from the engines and a
+  (from sunlit shallows to the abyss), with caustics, god rays that
+  sweep and flicker with the waves passing overhead, blocked by the
+  stations, the bright window of the surface overhead in the shallows,
+  the sector's tint (orange, yellow, red...) glowing above, sky light
+  and a rim of water colour giving the pre-lit models shape, the sub's
+  headlight as a cone and a beam in the water. The game's lights are
+  real lights: the stations' flares, lamps, explosions and engine flames
+  light what is around them, drawn as glowing lights in place of the
+  flat flare sprites; marine snow, bubble trails from the engines and a
   subtle refraction wobble. Schools of fish (sardines, yellowtails,
   blue-green and orange reef fish; in the deep, dark ones with glowing
   spots) flock, mill into balls, dart about, flash silver as they turn,
@@ -71,7 +74,8 @@ official English text from the international release.
   controller with the same logic everywhere (A / Enter confirm, B / Esc
   back; see Controls). The phone softkey boxes are replaced by a command
   bar in the same style naming your actual keys or buttons, name entry
-  uses real typing, and help texts name your bindings.
+  uses real typing, and help texts name your bindings. The selection
+  snaps straight to the row under the mouse.
 - **Analogue steering** with a controller stick; no music on/off prompt
   (volume is in the options).
 - **Launches fullscreen at your display's resolution**; VSync toggle, FPS
@@ -95,8 +99,10 @@ official English text from the international release.
   cursor is captured only while flying (not in the intro, menus, stations
   or cutscenes; `input.mouse_flight=false` turns it off).
 - **Debug options** (Options > Debug): god mode (no damage from
-  radiation, pressure or weapons) and teleporting to one station of each
-  sector tint and depth band.
+  radiation, pressure or weapons, and no warnings for them) and
+  teleporting to one station of each sector tint and depth band.
+- **A steady targeting crosshair**: pinned where it rests in level
+  flight instead of jittering with the chase camera.
 - **Controller support** (Linux, zero dependencies) — standard gamepads via
   `/dev/input/js*`, hot-plugged. In flight: left stick / d-pad steer
   (analogue), A fires, Y docks, LB weapon, RB boost, LT auto-fire,

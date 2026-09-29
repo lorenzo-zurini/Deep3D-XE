@@ -133,7 +133,7 @@ public final class Remaster {
         if (pending && on()) {
             javax.microedition.m3g.Platform.remaster(data);
             worldPass = true;
-            structure = false;
+            kind = 0;
         } else {
             javax.microedition.m3g.Platform.remaster(null);
             worldPass = false;
@@ -141,17 +141,19 @@ public final class Remaster {
         pending = false;
     }
 
-    private static boolean structure;
+    private static int kind;
 
     /**
-     * The next node the game draws (class_6) belongs to a structure: those
-     * stay, and keep their long reach in the murk; everything else (what
-     * moves, comes and goes) is gone into the water before it respawns.
+     * What the next node the game draws (class_6) belongs to: 1 a
+     * structure (they stay, and keep their long reach in the murk), 2
+     * something that spawns (creatures, ships, items: gone into the water
+     * before they come and go), 0 anything else (the sub, weapons, effects:
+     * they carry like lights).
      */
-    public static void object(boolean isStructure) {
-        if (worldPass && isStructure != structure) {
-            structure = isStructure;
-            javax.microedition.m3g.Platform.remasterObject(isStructure);
+    public static void object(int k) {
+        if (worldPass && k != kind) {
+            kind = k;
+            javax.microedition.m3g.Platform.remasterObject(k);
         }
     }
 

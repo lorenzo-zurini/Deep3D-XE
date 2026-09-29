@@ -391,7 +391,8 @@ public final class class_69 {
    // $VF: renamed from: a (long, ba, boolean) void
    public static final void method_642(long var0, class_70 var2, boolean var3) {
       int var4;
-      if ((var4 = var2.field_1004) >= class_21.method_178().field_889 && var4 <= class_21.method_178().field_890) {
+      if ((var4 = var2.field_1004) >= class_21.method_178().field_889 && var4 <= class_21.method_178().field_890
+         || Deep3dDebug.godFor(var2.field_969)) { // Deep3D-PC: god mode: no warning either
          field_956 = false;
          field_937 = 0;
          field_941 = false;

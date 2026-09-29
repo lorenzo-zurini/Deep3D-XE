@@ -80,12 +80,12 @@ public class Platform {
 
 	private static native void _remasterLayer();
 
-	private static native void _remasterObject(boolean structure);
+	private static native void _remasterObject(int kind);
 
-	/** Deep3D-PC: what the next draws belong to (a structure, or not). */
-	public static void remasterObject(boolean structure) {
+	/** Deep3D-PC: what the next draws belong to (org.deep3d.Remaster.object). */
+	public static void remasterObject(int kind) {
 		if (libraryLoaded) {
-			_remasterObject(structure);
+			_remasterObject(kind);
 		}
 	}
 

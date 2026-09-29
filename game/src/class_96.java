@@ -504,6 +504,12 @@ public final class class_96 extends class_91 {
 
    // $VF: renamed from: c () void
    public final void method_809() {
+      class_4.deep3dKind = 2; // Deep3D-PC: a ship (comes and goes)
+      this.deep3dRender();
+      class_4.deep3dKind = 0; // Deep3D-PC
+   }
+
+   private void deep3dRender() {
       if (super.field_1224 != 4 && super.field_1224 != 3 || super.field_1239 && super.field_1225.field_375) {
          super.method_809();
          if (this.field_1269 != null) {

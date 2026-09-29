@@ -1,5 +1,6 @@
 // $VF: renamed from: n
 public final class class_9 {
+   private static final boolean DEEP3D_LOG = System.getenv("DEEP3D_LOG_HITS") != null; // Deep3D-PC: tests
    // $VF: renamed from: a short[][][]
    private static final short[][][] field_75 = new short[][][]{
       {{0, 0, 0}},
@@ -204,6 +205,7 @@ public final class class_9 {
                   int var5 = this.field_82.field_377.field_700 - this.field_80.field_39 + this.field_81.field_39;
                   int var6 = this.field_97 ? this.field_99 : (int)this.field_82.field_362;
                   if (var3 < var6 && var3 > -var6 && var4 < var6 && var4 > -var6 && var5 < var6 && var5 > -var6) {
+                     if (DEEP3D_LOG) System.out.println("[hit] target " + this.field_82 + " owner " + this.field_82.field_379 + " at " + this.field_80.field_37 + " " + this.field_80.field_38 + " " + this.field_80.field_39 + " life " + this.field_83[var2]);
                      this.field_82.method_342(this.field_84, this.field_101);
                      this.field_82.method_337(-this.field_81.field_37, -this.field_81.field_38, -this.field_81.field_39);
                      this.field_83[var2] = -1;
@@ -226,6 +228,7 @@ public final class class_9 {
       if (this.field_76 != null) {
          for (int var3 = 0; var3 < this.field_78.length; var3++) {
             if (this.field_83[var3] > 0 && this.field_76.method_262(this.field_78[var3], !this.field_95)) {
+               if (DEEP3D_LOG) System.out.println("[hit] world at " + this.field_78[var3].field_37 + " " + this.field_78[var3].field_38 + " " + this.field_78[var3].field_39 + " life " + this.field_83[var3]);
                this.field_83[var3] = -1;
                this.field_89.method_9(this.field_79[var3]);
                this.field_89.method_22();

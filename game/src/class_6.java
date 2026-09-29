@@ -4,17 +4,17 @@ public final class class_6 {
    public class_108[] field_54 = null;
    // $VF: renamed from: a int
    public int field_55 = 0;
-   // Deep3D-PC: which queued nodes belong to structures (Remastered)
-   private boolean[] deep3dStructure = new boolean[1];
+   // Deep3D-PC: what the queued nodes belong to (class_4.deep3dKind)
+   private int[] deep3dKind = new int[1];
 
    // Deep3D-PC: tags the node just queued
-   public final void deep3dTag(boolean structure) {
-      if (this.deep3dStructure.length < this.field_54.length) {
-         boolean[] var2 = new boolean[this.field_54.length];
-         System.arraycopy(this.deep3dStructure, 0, var2, 0, this.deep3dStructure.length);
-         this.deep3dStructure = var2;
+   public final void deep3dTag(int kind) {
+      if (this.deep3dKind.length < this.field_54.length) {
+         int[] var2 = new int[this.field_54.length];
+         System.arraycopy(this.deep3dKind, 0, var2, 0, this.deep3dKind.length);
+         this.deep3dKind = var2;
       }
-      this.deep3dStructure[this.field_55 - 1] = structure;
+      this.deep3dKind[this.field_55 - 1] = kind;
    }
 
    // $VF: renamed from: a (ax) void
@@ -50,14 +50,14 @@ public final class class_6 {
    // $VF: renamed from: b () void
    public final void method_35() {
       for (int var1 = 0; var1 < this.field_55; var1++) {
-         org.deep3d.Remaster.object(this.deep3dStructure[var1]); // Deep3D-PC
+         org.deep3d.Remaster.object(this.deep3dKind[var1]); // Deep3D-PC
          this.field_54[var1].method_887();
       }
 
       for (int var2 = 0; var2 < this.field_55; var2++) {
-         org.deep3d.Remaster.object(this.deep3dStructure[var2]); // Deep3D-PC
+         org.deep3d.Remaster.object(this.deep3dKind[var2]); // Deep3D-PC
          this.field_54[var2].method_888();
       }
-      org.deep3d.Remaster.object(false); // Deep3D-PC
+      org.deep3d.Remaster.object(0); // Deep3D-PC
    }
 }

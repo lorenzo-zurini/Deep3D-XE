@@ -10,8 +10,10 @@ public final class class_4 {
    private boolean[] field_43;
    // $VF: renamed from: a b
    private class_71 field_44;
-   // Deep3D-PC: a structure is being queued (Remastered: murk reach)
-   public static boolean deep3dStructure;
+   // Deep3D-PC: what is being queued (Remastered: how far it shows in the
+   // murk): 0 anything else (the sub, weapons, effects), 1 a structure, 2
+   // something that spawns (creatures, ships, items)
+   public static int deep3dKind;
 
    public class_4(class_71 var1) {
       this.field_42[0] = new class_6();
@@ -94,6 +96,6 @@ public final class class_4 {
    // $VF: renamed from: a (int, ax) void
    public final void method_30(int var1, class_108 var2) {
       this.field_42[var1].method_32(var2);
-      this.field_42[var1].deep3dTag(deep3dStructure); // Deep3D-PC
+      this.field_42[var1].deep3dTag(deep3dKind); // Deep3D-PC
    }
 }
