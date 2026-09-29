@@ -58,6 +58,7 @@ public final class Main {
 
         Input.init();
         Gamepad.init();
+        Scenario.init();
 
         boolean gl = "gl".equals(Config.renderer);
         if (gl) {

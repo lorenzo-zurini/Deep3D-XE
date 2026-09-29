@@ -1,0 +1,43 @@
+# The station's menus and the in-flight menus
+include prologue.scn
+autocalm off
+teleport 0
+until station 2400
+shot u_station
+describe
+select Hangar
+wait 60
+shot u_hangar
+describe
+back
+wait 60
+select Missions
+wait 60
+shot u_missions
+describe
+back
+wait 60
+select Map
+wait 60
+shot u_map
+describe
+back
+wait 60
+select Trade
+wait 60
+shot u_trade
+describe
+back
+wait 60
+select Status
+wait 60
+shot u_status
+describe
+back
+wait 60
+select System
+wait 60
+shot u_system
+describe
+back
+wait 60

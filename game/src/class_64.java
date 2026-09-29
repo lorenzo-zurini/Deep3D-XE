@@ -94,6 +94,7 @@ public final class class_64 extends class_61 {
       }
 
       this.field_804 = null;
+      this.field_794 = false; // Deep3D-PC: no popup left open without its object
       this.field_788 = null;
       if (this.field_799 != null) {
          this.field_799.method_271();

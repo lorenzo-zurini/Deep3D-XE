@@ -11,7 +11,7 @@ public class DeepMIDlet extends MIDlet implements Runnable {
    // $VF: renamed from: a boolean
    private boolean field_1528 = false;
    // $VF: renamed from: b boolean
-   private boolean field_1529 = false;
+   private volatile boolean field_1529 = false; // Deep3D-PC: volatile, read by the game thread
    // $VF: renamed from: a java.lang.Thread
    private Thread field_1530;
 
@@ -58,6 +58,11 @@ public class DeepMIDlet extends MIDlet implements Runnable {
    public void destroyApp(boolean var1) {
       try {
          this.field_1529 = true;
+         // Deep3D-PC: let the game thread finish its frame before the fonts
+         // and images go (the loop never stopped, and drew one more frame)
+         if (Thread.currentThread() != this.field_1530 && this.field_1530.isAlive()) {
+            this.field_1530.join(2000L);
+         }
          this.field_1526.method_950();
          this.notifyDestroyed();
       } catch (Exception var3) {
@@ -67,7 +72,7 @@ public class DeepMIDlet extends MIDlet implements Runnable {
    // $VF: renamed from: run () void
    public void run() {
       try {
-         while (true) {
+         while (!this.field_1529) { // Deep3D-PC: stops when destroyed
             switch (this.field_1525) {
                case 1:
                   if (class_84.field_1114 && !this.field_1529 && class_84.field_1115 != -1) {

@@ -19,6 +19,15 @@ public final class Cheats {
 
         /** A game is running (flight or station), so teleporting works. */
         boolean inGame();
+
+        /** "title", "station", "flight", "intro" or the scene's class. */
+        String scene();
+
+        /**
+         * Test scenarios: keep the nearest creature / ship ("off" to stop)
+         * in front of the camera at dist, offset dx right and dy up.
+         */
+        boolean pin(String what, int dist, int dx, int dy);
     }
 
     private static volatile Game game;

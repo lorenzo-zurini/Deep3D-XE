@@ -1,0 +1,69 @@
+# Flight: every way of moving and looking, weapons, things up close, menus
+include prologue.scn
+wait 60
+pair f_level
+steer 0 -1 50
+pair f_pitch_up
+steer 0 1 100
+pair f_pitch_down
+steer 0 -1 50
+steer 1 0 70
+shot f_turn_right
+steer -1 0 70
+shot f_turn_left
+boost 120
+wait 20
+shot f_boost
+wait 90
+shot f_after_boost
+fire 30
+wait 10
+shot f_fire
+wait 40
+shot f_harpoon
+button 4                    # LB: next weapon
+wait 30
+fire 30
+wait 10
+shot f_weapon2
+pin creature 600
+wait 8
+pair c_600
+pin creature 1500 -400 200
+wait 8
+pair c_1500
+pin creature 5000
+wait 8
+pair c_5000
+pin creature 15000
+wait 8
+shot c_15000
+pin creature 30000
+wait 8
+shot c_30000
+pin ship 1200
+wait 8
+pair s_1200
+pin ship 4000 800 300
+wait 8
+shot s_4000
+pin off
+autopilot
+wait 200
+shot f_autopilot
+autopilot
+key 27                      # Esc: the game's pause menu
+wait 40
+shot m_pause
+confirm                     # its Options -> the settings menu
+wait 40
+shot m_settings
+overlay enter
+wait 20
+shot m_display
+overlay back
+overlay back
+wait 30
+key 27
+wait 40
+shot f_resumed

@@ -644,6 +644,7 @@ public final class GLBackend {
         boolean pausedHere = false;
         while (Runtime.isGamePaused() && running) {
             pausedHere = true;
+            org.deep3d.Scenario.tick();     // test scenarios go on in menus
             Draw2D menu = null;
             if (Overlay.isOpen() && screenGraphics != null) {
                 menu = recorders.get();

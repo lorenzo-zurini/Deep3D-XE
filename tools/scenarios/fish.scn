@@ -1,0 +1,13 @@
+include prologue.scn
+teleport 10                 # Sula, 25%
+until station 2400
+depart
+until flight 6000
+wait 60
+shot a
+steer 0.7 0 90
+shot b
+steer -0.7 0.3 120
+shot c
+wait 200
+shot d

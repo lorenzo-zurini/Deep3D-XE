@@ -1,0 +1,4 @@
+# One station of every sector tint and depth band (Options > Debug's list):
+# docked, then flying there, level / up / down / boost / a creature
+include prologue.scn
+include station_visit.inc

@@ -1,0 +1,81 @@
+# Visual range: a creature and a ship held at growing distances; by the
+# respawn distance (36000) nothing may show (no pop-in)
+include prologue.scn
+teleport 10
+until station 2400
+depart
+until flight 6000
+wait 60
+pin off
+wait 4
+shot sula_none
+pin creature 16000
+wait 8
+shot sula_c_16000
+pin creature 24000
+wait 8
+shot sula_c_24000
+pin creature 28000
+wait 8
+shot sula_c_28000
+pin creature 32000
+wait 8
+shot sula_c_32000
+pin creature 36000
+wait 8
+shot sula_c_36000
+pin creature 40000
+wait 8
+shot sula_c_40000
+pin ship 16000
+wait 8
+shot sula_s_16000
+pin ship 24000
+wait 8
+shot sula_s_24000
+pin ship 32000
+wait 8
+shot sula_s_32000
+pin ship 36000
+wait 8
+shot sula_s_36000
+pin off
+teleport 16
+until station 2400
+depart
+until flight 6000
+wait 60
+pin off
+wait 4
+shot wagoll_none
+pin creature 16000
+wait 8
+shot wagoll_c_16000
+pin creature 24000
+wait 8
+shot wagoll_c_24000
+pin creature 28000
+wait 8
+shot wagoll_c_28000
+pin creature 32000
+wait 8
+shot wagoll_c_32000
+pin creature 36000
+wait 8
+shot wagoll_c_36000
+pin creature 40000
+wait 8
+shot wagoll_c_40000
+pin ship 16000
+wait 8
+shot wagoll_s_16000
+pin ship 24000
+wait 8
+shot wagoll_s_24000
+pin ship 32000
+wait 8
+shot wagoll_s_32000
+pin ship 36000
+wait 8
+shot wagoll_s_36000
+pin off

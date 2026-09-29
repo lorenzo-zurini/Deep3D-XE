@@ -1,0 +1,34 @@
+# The creative effects: stirred plankton and wake in the deep, radiation
+# (shallow) and pressure (deep) on screen, fish schools
+include prologue.scn
+teleport 17                 # Keera, 7%: radiation
+until station 2400
+depart
+until flight 6000
+wait 200
+shot keera_a
+steer 0.6 0.2 90
+shot keera_b
+wait 120
+shot keera_c
+teleport 10                 # Sula, 25%
+until station 2400
+depart
+until flight 6000
+wait 120
+shot sula_a
+steer -0.5 -0.3 90
+shot sula_b
+teleport 16                 # Wagoll, 99%: pressure, plankton
+until station 2400
+depart
+until flight 6000
+wait 120
+shot wagoll_a
+boost 120
+shot wagoll_boost
+wait 30
+steer 0.8 0 60
+shot wagoll_turn
+wait 120
+shot wagoll_b

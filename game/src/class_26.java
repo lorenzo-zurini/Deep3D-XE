@@ -1685,6 +1685,7 @@ public final class class_26 {
          }
       }
       this.deep3dRemaster(); // Deep3D-PC
+      Deep3dDebug.worldFrames++;
    }
 
    // $VF: renamed from: b (long) void
@@ -1738,6 +1739,7 @@ public final class class_26 {
          }
       }
       this.deep3dRemaster(); // Deep3D-PC
+      Deep3dDebug.worldFrames++;
    }
 
    // $VF: renamed from: c (long) void

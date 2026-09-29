@@ -80,6 +80,15 @@ public class Platform {
 
 	private static native void _remasterLayer();
 
+	private static native void _remasterObject(boolean structure);
+
+	/** Deep3D-PC: what the next draws belong to (a structure, or not). */
+	public static void remasterObject(boolean structure) {
+		if (libraryLoaded) {
+			_remasterObject(structure);
+		}
+	}
+
 	/** Deep3D-PC: the game's next render layer (Remastered pass). */
 	public static void remasterLayer() {
 		if (libraryLoaded) {

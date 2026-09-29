@@ -760,6 +760,17 @@ public final class GameUi {
     // Test pipe
     // ------------------------------------------------------------------
 
+    /** Test hook: a row starting with the text is on screen. */
+    public static boolean hasRow(String prefix) {
+        String p = prefix.toLowerCase();
+        for (Item it : visible) {
+            if (it.text != null && it.text.toLowerCase().startsWith(p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Test hook: walks the selection to the row starting with the text, then confirms. */
     public static void selectByText(String prefix) {
         selectTarget = prefix.toLowerCase();

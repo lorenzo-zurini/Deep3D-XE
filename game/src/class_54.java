@@ -33,7 +33,10 @@ public final class class_54 {
 
    // $VF: renamed from: a (int) void
    public final void method_441(int var1) {
-      if (this.field_595 != null) {
+      // Deep3D-PC: only to a scene that has started (a key pressed as the
+      // station hands over to flight reached the uninitialised flight
+      // scene: NullPointerException, the game thread died)
+      if (this.field_595 != null && this.field_595.method_553()) {
          this.field_595.method_550(var1);
       }
    }

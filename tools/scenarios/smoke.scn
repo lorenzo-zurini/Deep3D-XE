@@ -1,0 +1,25 @@
+# Smoke test: the title, a new game, flight, teleport, a creature and a ship up close
+until title 2400
+shot title
+newgame
+shot flight_start
+god on
+steer 0.6 0 60
+shot turned
+boost 90
+wait 100
+shot boosted
+teleport 16                 # Wagoll, 99%
+until station 1800
+shot station
+depart
+until flight 14000
+wait 120
+shot wagoll_flight
+pin creature 1500
+wait 10
+shot creature_close
+pin ship 2500
+wait 10
+shot ship_close
+pin off

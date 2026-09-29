@@ -20,14 +20,29 @@ public final class Remaster {
     public static final int FRAME = 28;       // frame number (one backdrop per frame)
     public static final int BOOST = 29;      // 0..1 booster
     public static final int NLIGHTS = 30;     // ship lights that follow
+    public static final int CLEAN = 31;       // tests: no particles, grain or wobble
     public static final int LIGHTS = 32;      // 8 x (x, y, z, kind)
     public static final int MAX_LIGHTS = 8;
-    public static final int SIZE = LIGHTS + MAX_LIGHTS * 4;
+    public static final int HAZARD = LIGHTS + MAX_LIGHTS * 4; // 2: radiation, pressure, 0..1
+    public static final int SIZE = HAZARD + 2;
 
     private static final float[] data = new float[SIZE];
     /* testing: DEEP3D_RM_DEPTH=<game depth> shows any station depth */
-    private static final int FORCE_DEPTH = Integer.getInteger("deep3d.rmdepth",
+    private static volatile int FORCE_DEPTH = Integer.getInteger("deep3d.rmdepth",
             System.getenv("DEEP3D_RM_DEPTH") != null ? Integer.parseInt(System.getenv("DEEP3D_RM_DEPTH")) : 0);
+
+    private static volatile boolean clean;
+    private static float radiation, pressure;
+
+    /** Test scenarios: frames without the random parts (for paired shots). */
+    public static void testClean(boolean on) {
+        clean = on;
+    }
+
+    /** Test scenarios: show any depth (0 = the station's own). */
+    public static void forceDepth(int depth) {
+        FORCE_DEPTH = depth;
+    }
     private static final long start = System.nanoTime();
     private static boolean pending;
     private static boolean worldPass;
@@ -64,6 +79,10 @@ public final class Remaster {
         data[SUB_ON] = 0;
         data[BOOST] = 0;
         data[FRAME] = ++frame;
+        data[CLEAN] = clean ? 1 : 0;
+        data[HAZARD] = clean ? 0 : radiation;
+        data[HAZARD + 1] = clean ? 0 : pressure;
+        radiation = pressure = 0;
         lights = 0;
         data[NLIGHTS] = 0;
         pending = true;
@@ -79,6 +98,16 @@ public final class Remaster {
         data[SUB_DIR + 2] = dz;
         data[SUB_ON] = 1;
         data[BOOST] = boost;
+    }
+
+    /**
+     * The hull outside its rated depth (the HUD's warning, class_69):
+     * radiation (too shallow) or pressure (too deep), 0..1, for the next
+     * frame. Not called: none.
+     */
+    public static void hazard(float rad, float pres) {
+        radiation = rad;
+        pressure = pres;
     }
 
     /** A light in the world (another ship's lamps, kind 1; a station's, 2). */
@@ -99,11 +128,26 @@ public final class Remaster {
         if (pending && on()) {
             javax.microedition.m3g.Platform.remaster(data);
             worldPass = true;
+            structure = false;
         } else {
             javax.microedition.m3g.Platform.remaster(null);
             worldPass = false;
         }
         pending = false;
+    }
+
+    private static boolean structure;
+
+    /**
+     * The next node the game draws (class_6) belongs to a structure: those
+     * stay, and keep their long reach in the murk; everything else (what
+     * moves, comes and goes) is gone into the water before it respawns.
+     */
+    public static void object(boolean isStructure) {
+        if (worldPass && isStructure != structure) {
+            structure = isStructure;
+            javax.microedition.m3g.Platform.remasterObject(isStructure);
+        }
     }
 
     /** The game moves on to its next render layer in this pass. */

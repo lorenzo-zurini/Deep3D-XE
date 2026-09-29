@@ -1,0 +1,15 @@
+# The deep's effects: plankton stirred by the sub, its glowing wake, pressure
+include prologue.scn
+teleport 16                 # Wagoll, 99%
+until station 2400
+depart
+until flight 6000
+wait 60
+steer 0.8 0 50
+shot a
+steer -0.8 0.3 50
+shot b
+boost 90
+shot boost
+steer 0.8 -0.3 60
+shot turn

@@ -1,0 +1,35 @@
+# Remaster pass 2 features: fish, boost blur, deep glow, Snell's window
+include prologue.scn
+teleport 17                 # Keera, 7%
+until station 2400
+depart
+until flight 6000
+wait 90
+pair k_level
+steer 0 -1 60
+pair k_down
+steer 0 -1 60
+shot k_down2
+steer 0 1 120
+steer 0 1 60
+shot k_up
+boost 150
+wait 60
+shot k_boost
+pin creature 900 200 100
+wait 8
+pair k_creature
+pin off
+teleport 16                 # Wagoll, 99%
+until station 2400
+depart
+until flight 6000
+wait 90
+shot w_level
+pin creature 1200 200 0
+wait 8
+pair w_creature
+pin ship 2500
+wait 8
+shot w_ship
+pin off

@@ -1,0 +1,8 @@
+# A new game, in flight: god mode, and story step 12 (station menus open,
+# cutscenes skippable)
+until title 2400
+shot title
+newgame
+god on
+setf class_21 field_209 12
+until flight 6000
