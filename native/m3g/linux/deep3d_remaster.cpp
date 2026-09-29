@@ -166,6 +166,7 @@ static const char *SCENE_FS =
 "uniform int uEn0, uEn1, uMode0, uMode1, uFmt0, uFmt1;\n"
 "uniform int uKind;\n"
 "uniform int uSprite;\n"
+"uniform int uVis;\n"
 "vec4 env(vec4 f, vec4 t, int mode, int fmt, vec4 cc) {\n"
 "  bool hasC = fmt == 1 || fmt == 3; bool hasA = fmt >= 2;\n"
 "  vec4 r = f;\n"
@@ -230,6 +231,8 @@ static const char *SCENE_FS =
 "  col += alb.rgb * lamps(wp, N) * (1.0 - uSelf);\n"
 "  vec3 T = trans(dist);\n"
 "  T = mix(T, sqrt(T), emis);\n"
+"  if (uVis == 1) { gl_FragColor = vec4(fract(dist / 25000.0), float(uKind) * 0.5, emis, 1.0); return; }\n"
+"  if (uVis == 2) { gl_FragColor = vec4(alb.rgb, 1.0); return; }\n"
 "  col = col * T + water(V, cam.y) * (1.0 - T);\n"
 "  gl_FragColor = vec4(col, base.a);\n"
 "}\n";
@@ -237,8 +240,8 @@ static const char *SCENE_FS =
 /* The water behind everything */
 static const char *BG_VS =
 "#version 120\n"
-"attribute vec2 aPos; varying vec2 vPos;\n"
-"void main() { vPos = aPos; gl_Position = vec4(aPos, 0.0, 1.0); }\n";
+"varying vec2 vPos;\n"
+"void main() { vPos = gl_Vertex.xy; gl_Position = vec4(gl_Vertex.xy, 0.0, 1.0); }\n";
 static const char *BG_FS =
 "varying vec2 vPos;\n"
 "void main() {\n"
@@ -260,10 +263,10 @@ static const char *BG_FS =
 
 /* Marine snow and plankton */
 static const char *SNOW_VS =
-"attribute vec4 aSeed;\n"
 "uniform mat4 uWorldToEye; uniform mat4 uProj; uniform float uBox; uniform float uPx;\n"
 "varying vec4 vCol;\n"
 "void main() {\n"
+"  vec4 aSeed = gl_Vertex;\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
 "  vec3 p = aSeed.xyz * uBox + vec3(uTime * 14.0, -uTime * 22.0, uTime * 9.0)\n"
 "         + vec3(sin(uTime * 0.31 + aSeed.w * 40.0), sin(uTime * 0.23 + aSeed.x * 30.0), cos(uTime * 0.27 + aSeed.y * 50.0)) * 45.0;\n"
@@ -294,11 +297,12 @@ static const char *SNOW_FS =
 
 /* Bubbles from the sub's engines: they rise, wobble, grow and burst */
 static const char *BUBBLE_VS =
-"attribute vec4 aBub;\n"      /* xyz: where it was released, w: when */
-"attribute float aSeed;\n"
+
 "uniform mat4 uWorldToEye; uniform mat4 uProj; uniform float uPx; uniform float uLife;\n"
 "varying vec4 vCol;\n"
 "void main() {\n"
+"  vec4 aBub = gl_Vertex;\n"             /* xyz: where it was released, w: when */
+"  float aSeed = gl_MultiTexCoord0.x;\n"
 "  float age = uTime - aBub.w;\n"
 "  float k = age / uLife;\n"
 "  vec3 wp = aBub.xyz + vec3(sin(age * 3.1 + aSeed * 20.0) * 18.0 * age, age * 110.0 + age * age * 25.0,\n"
@@ -329,8 +333,8 @@ static const char *BUBBLE_FS =
 /* Post: the pass's bright parts and the backdrop mask, half resolution */
 static const char *POST_VS =
 "#version 120\n"
-"attribute vec2 aPos; varying vec2 vUV;\n"
-"void main() { vUV = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }\n";
+"varying vec2 vUV;\n"
+"void main() { vUV = gl_Vertex.xy * 0.5 + 0.5; gl_Position = vec4(gl_Vertex.xy, 0.0, 1.0); }\n";
 static const char *BRIGHT_FS =
 "uniform sampler2D uScene; uniform sampler2D uDepth; uniform float uThresh;\n"
 "varying vec2 vUV;\n"
@@ -342,7 +346,7 @@ static const char *BRIGHT_FS =
 "}\n";
 static const char *POST_FS =
 "uniform sampler2D uScene; uniform sampler2D uDepth; uniform sampler2D uBright;\n"
-"uniform vec3 uSunUV; uniform float uBloom; uniform float uRays;\n"
+"uniform vec3 uSunUV; uniform float uBloom; uniform float uRays; uniform int uPV;\n"
 "varying vec2 vUV;\n"
 "void main() {\n"
 "  vec2 uv = vUV;\n"
@@ -352,6 +356,8 @@ static const char *POST_FS =
 "  vec3 b = texture2D(uBright, uv, 1.0).rgb * 0.30 + texture2D(uBright, uv, 2.5).rgb * 0.30\n"
 "         + texture2D(uBright, uv, 4.0).rgb * 0.35 + texture2D(uBright, uv, 5.5).rgb * 0.45;\n"
 "  c += b * uBloom;\n"
+"  vec3 dbg = vec3(max(b.r, max(b.g, b.b)) * uBloom, 0.0, 0.0);\n"
+"  vec3 c0 = c;\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
 "  float d = depth01(cam.y); float L = surfLight(d);\n"
    /* god rays: the backdrop's light smeared towards the sun, blocked by
@@ -362,6 +368,7 @@ static const char *POST_FS =
 "    vec2 q = uv; float rays = 0.0; float decay = 1.0;\n"
 "    for (int i = 0; i < 36; i++) { q += st; rays += texture2D(uBright, q, 1.5).a * decay; decay *= 0.955; }\n"
 "    c += uSunCol * rays / 36.0 * uRays * uSunUV.z * L * L;\n"
+"    dbg.g = rays / 36.0 * uRays * uSunUV.z * L * L;\n"
 "  }\n"
 "  float z = texture2D(uDepth, uv).r;\n"
 "  vec3 eyeFar = eyeAt(uv * uVP.zw + uVP.xy, z);\n"
@@ -407,6 +414,7 @@ static const char *POST_FS =
 "  c *= vig;\n"
 "  c += (hash(uv * 1200.0 + fract(uTime)) - 0.5) * 0.012;\n"
 "  if (any(notEqual(c, c))) c = texture2D(uScene, uv).rgb;\n"
+"  if (uPV == 1) c = vec3(dbg.r, dbg.g, max(0.0, dot(c - c0, vec3(0.33)) - dbg.g));\n"
 "  gl_FragColor = vec4(c, 1.0);\n"
 "}\n";
 
@@ -512,7 +520,6 @@ static int buildPrograms() {
     snProj = glGetUniformLocation(pSnow.id, "uProj");
     snBox = glGetUniformLocation(pSnow.id, "uBox");
     snPx = glGetUniformLocation(pSnow.id, "uPx");
-    snSeed = glGetAttribLocation(pSnow.id, "aSeed");
     brScene = glGetUniformLocation(pBright.id, "uScene");
     brDepth = glGetUniformLocation(pBright.id, "uDepth");
     brThresh = glGetUniformLocation(pBright.id, "uThresh");
@@ -526,8 +533,6 @@ static int buildPrograms() {
     buProj = glGetUniformLocation(pBub.id, "uProj");
     buPx = glGetUniformLocation(pBub.id, "uPx");
     buLife = glGetUniformLocation(pBub.id, "uLife");
-    buBub = glGetAttribLocation(pBub.id, "aBub");
-    buSeed = glGetAttribLocation(pBub.id, "aSeed");
     bgPos = glGetAttribLocation(pBg.id, "aPos");
     brPos = glGetAttribLocation(pBright.id, "aPos");
     poPos = glGetAttribLocation(pPost.id, "aPos");
@@ -625,6 +630,7 @@ static void captureProjection() {
 
 struct Saved {
     GLint program, activeTex, clientTex, arrayBuf, elemBuf, drawFb, readFb;
+    GLint tex[4];
 };
 
 static void pushState(Saved *s) {
@@ -635,6 +641,13 @@ static void pushState(Saved *s) {
     glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &s->elemBuf);
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &s->drawFb);
     glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &s->readFb);
+    /* the engine caches its texture bindings: every unit gets its own back
+       (a leaked post-pass texture showed up on the next frame's first face) */
+    for (int u = 0; u < 4; u++) {
+        glActiveTexture(GL_TEXTURE0 + u);
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &s->tex[u]);
+    }
+    glActiveTexture(s->activeTex);
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
     glMatrixMode(GL_TEXTURE); glPushMatrix();
@@ -654,6 +667,10 @@ static void popState(const Saved *s) {
     glBindFramebuffer(GL_READ_FRAMEBUFFER, s->readFb);
     glBindBuffer(GL_ARRAY_BUFFER, s->arrayBuf);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s->elemBuf);
+    for (int u = 0; u < 4; u++) {
+        glActiveTexture(GL_TEXTURE0 + u);
+        glBindTexture(GL_TEXTURE_2D, s->tex[u]);
+    }
     glActiveTexture(s->activeTex);
     glClientActiveTexture(s->clientTex);
     glUseProgram(s->program);
@@ -661,11 +678,19 @@ static void popState(const Saved *s) {
 
 static const GLfloat QUAD[8] = {-1, -1, 1, -1, -1, 1, 1, 1};
 
-static void drawQuad(GLint attr) {
-    glEnableVertexAttribArray(attr);
-    glVertexAttribPointer(attr, 2, GL_FLOAT, GL_FALSE, 0, QUAD);
+/* Conventional arrays only: generic attribute 0 aliases the vertex array
+   the engine caches, and leaked into its next frame (a patch of water on
+   a station). pushState / popState save and restore these exactly. */
+static void drawQuad(GLint) {
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+    for (int u = 0; u < 4; u++) {
+        glClientActiveTexture(GL_TEXTURE0 + u);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(2, GL_FLOAT, 0, QUAD);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glDisableVertexAttribArray(attr);
 }
 
 /* ------------------------------------------------------------------ */
@@ -795,9 +820,9 @@ static int sceneBegin() {
         fprintf(stderr, "[remaster] blend1 layer %d sprite %d tex %d ifmt 0x%x r%d l%d a%d fmt %d mode 0x%x atest %d colArr %d cur %.2f %.2f %.2f %.2f\n",
                 rmLayer, rmSprite, name, ifmt, r, l, a, fmt[0], texfn, atest, glIsEnabled(GL_COLOR_ARRAY), cur[0], cur[1], cur[2], cur[3]);
     }
-    /* additive glows (plumes, panels) and the stations' translucent parts
-       stay the engine's own: shaded, some flared into solid blocks */
-    if ((kind == 2 && !rmSprite) || (kind == 1 && rmLayer == 0 && !rmSprite)) {
+    /* the stations' translucent parts stay the engine's own: shaded, one
+       (at Gosu's hangar) turned into a solid block of water colour */
+    if (kind == 1 && rmLayer == 0 && !rmSprite) {
         return 0;
     }
     /* debugging: DEEP3D_RM_PLAIN=<kind> leaves those draws to the engine */
@@ -825,6 +850,8 @@ static int sceneBegin() {
     glUniform1i(sFmt1, fmt[1]);
     glUniform1i(sKind, kind);
     glUniform1i(sSprite, rmSprite);
+    static int vis = getenv("DEEP3D_RM_VIS") ? atoi(getenv("DEEP3D_RM_VIS")) : 0;
+    glUniform1i(glGetUniformLocation(pScene.id, "uVis"), vis);
     return 1;
 }
 
@@ -919,10 +946,15 @@ static void drawSnow() {
     glUniform1f(snBox, 6000.0f);
     /* point size scale: the projection's focal length in pixels */
     glUniform1f(snPx, proj[5] * vp[3] * 0.5f / 12.0f);
-    glEnableVertexAttribArray(snSeed);
-    glVertexAttribPointer(snSeed, 4, GL_FLOAT, GL_FALSE, 0, snowSeeds);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+    for (int u = 0; u < 4; u++) {
+        glClientActiveTexture(GL_TEXTURE0 + u);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(4, GL_FLOAT, 0, snowSeeds);
     glDrawArrays(GL_POINTS, 0, SNOW_COUNT);
-    glDisableVertexAttribArray(snSeed);
     glDisable(GL_POINT_SPRITE);
     glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
     popState(&s);
@@ -998,13 +1030,18 @@ static void drawBubbles(const float *worldToEye) {
     glUniformMatrix4fv(buProj, 1, GL_FALSE, proj);
     glUniform1f(buPx, proj[5] * vp[3] * 0.5f);
     glUniform1f(buLife, BUB_LIFE);
-    glEnableVertexAttribArray(buBub);
-    glVertexAttribPointer(buBub, 4, GL_FLOAT, GL_FALSE, 0, bubs);
-    glEnableVertexAttribArray(buSeed);
-    glVertexAttribPointer(buSeed, 1, GL_FLOAT, GL_FALSE, 0, bubSeed);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+    for (int u = 1; u < 4; u++) {
+        glClientActiveTexture(GL_TEXTURE0 + u);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+    glClientActiveTexture(GL_TEXTURE0);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glTexCoordPointer(1, GL_FLOAT, 0, bubSeed);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(4, GL_FLOAT, 0, bubs);
     glDrawArrays(GL_POINTS, 0, BUB_COUNT);
-    glDisableVertexAttribArray(buBub);
-    glDisableVertexAttribArray(buSeed);
     glDisable(GL_POINT_SPRITE);
     glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
     popState(&s);
@@ -1156,6 +1193,8 @@ static void post(int w, int h) {
     glUniform3fv(poSunUV, 1, sunUV);
     glUniform1f(poBloom, 0.4f + 0.35f * d);
     glUniform1f(poRays, 1.1f);
+    static int pv = getenv("DEEP3D_RM_POSTVIS") ? atoi(getenv("DEEP3D_RM_POSTVIS")) : 0;
+    glUniform1i(glGetUniformLocation(pPost.id, "uPV"), pv);
     drawQuad(poPos);
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -1175,13 +1214,18 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
         return;
     }
     postFrame = (int) F[F_FRAME];
-    drawSnow();
+    if (!getenv("DEEP3D_RM_NOSNOW")) {
+        drawSnow();
+    }
     emitBubbles();
-    {
+    if (!getenv("DEEP3D_RM_NOBUB")) {
         float worldToEye[16];
         if (invert4(F + F_CAM, worldToEye)) {
             drawBubbles(worldToEye);
         }
+    }
+    if (getenv("DEEP3D_RM_NOPOSTFX")) {
+        return;
     }
     post(w, h);
 }
