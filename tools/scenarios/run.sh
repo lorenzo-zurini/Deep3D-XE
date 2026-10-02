@@ -17,13 +17,18 @@ if [ -n "${SAVES:-}" ]; then rm -rf "$OUT/home/saves"; mkdir -p "$OUT/home/saves
 } > "$OUT/home/deep3d.cfg"
 DISP=${DISPLAY:-:0}
 if [ "${HEADLESS:-0}" = 1 ]; then
-  DISP=:$((70 + RANDOM % 20))
+  # a free display number (parallel runs must not share one)
+  for n in $(shuf -i 70-199); do
+    if [ ! -e /tmp/.X$n-lock ] && [ ! -e /tmp/.X11-unix/X$n ]; then DISP=:$n; break; fi
+  done
   Xvfb $DISP -screen 0 1920x1080x24 -nolisten tcp >/dev/null 2>&1 & XPID=$!
   sleep 1
 fi
 cd "$ROOT"
+GAME=("$ROOT/build/bin/Deep3D-XE")
+[ -x "${GAME[0]}" ] || "$ROOT/build.sh" > /dev/null
 env -u WAYLAND_DISPLAY DISPLAY=$DISP DEEP3D_HOME="$OUT/home" DEEP3D_SCENARIO="$SCN" DEEP3D_SCENARIO_OUT="$OUT" \
-  ${EXTRA_ENV:-} java --enable-native-access=ALL-UNNAMED -XX:+DisableExplicitGC -cp "build/classes:lib/*" org.deep3d.Main \
+  ${EXTRA_ENV:-} "${GAME[@]}" \
   > "$OUT/game.log" 2>&1 &
 PID=$!
 ( sleep "${TIMEOUT:-900}"; kill $PID 2>/dev/null; echo "[run] watchdog killed the game" >> "$OUT/game.log" ) & WD=$!

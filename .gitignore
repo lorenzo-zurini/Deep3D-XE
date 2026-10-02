@@ -10,6 +10,7 @@ out/
 # Save data
 saves/
 dist/
+/Deep3D-XE
 
 # Runtime-generated
 deep3d.cfg
@@ -25,3 +26,6 @@ core.*
 # Local test harness output
 /.test/
 __pycache__/
+
+# C++ build: the editor link to build/cpp
+/compile_commands.json

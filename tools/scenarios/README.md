@@ -11,11 +11,17 @@ on the way, so runs are reliable rather than timed.
     python3 tools/scenarios/report.py out/suite          # the report again
     SAVES=saves tools/scenarios/run.sh cannon.scn out/c  # from copies of your saves
 
-`run.sh` uses your display (`HEADLESS=1`: a private Xvfb display with
-software GL); the game gets its own home (config, saves) in the output
+`run.sh` runs `build/bin/Deep3D-XE` (building it if needed) on your
+display (`HEADLESS=1`: a private Xvfb display with software GL; add
+`EXTRA_ENV=DEEP3D_M3G_READBACK=1` to render the 3D on the GPU instead); the game gets its own home (config, saves) in the output
 directory, so your saves are never touched. The report
 (`<out>/report.html`) shows every shot, flags suspicious ones, and lists the
 log's problems.
+
+`detcheck.sh <scenario>` runs a scenario deterministically and compares
+the per-frame hash of the whole game state with `golden/<scenario>.det`
+(`UPDATE=1` makes the run the golden one). `golden/smoke.det` matched the
+original Java build frame for frame.
 
 ## Scenario commands
 

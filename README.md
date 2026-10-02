@@ -1,9 +1,10 @@
-# Deep3D-PC
+# Deep3D-XE
 
 A desktop (PC) port of **Deep — Submarine Odyssey** (Fishlabs, 2009), the
-J2ME mobile game. The original MIDP 2.0 midlet has been decompiled and
-recompiled against a purpose-built desktop runtime, so the game runs as a
-native Java application with full PC-game UX — no phone emulator involved.
+J2ME mobile game, in C++. The original MIDP 2.0 midlet was decompiled and
+translated to C++ (keeping Java's exact semantics), and runs on a
+purpose-built desktop runtime as one native program with full PC-game
+UX — no phone emulator, no Java.
 
 It is built from the **Nokia (JSR-184 / M3G) edition** of the game, the
 version that looked best on real phones (teal water gradient, full
@@ -14,7 +15,7 @@ official English text from the international release.
 
 ## PC features
 
-- **Hardware OpenGL renderer (LWJGL/GLFW)** — the whole frame is drawn by
+- **Hardware OpenGL renderer (GLFW)** — the whole frame is drawn by
   the GPU: the game's 2D output is recorded as a command stream and
   replayed as batched textured quads, and the 3D scenes are rendered by
   Nokia's JSR-184 reference engine running on desktop OpenGL. On X11 the
@@ -80,9 +81,6 @@ official English text from the international release.
   (volume is in the options).
 - **Launches fullscreen at your display's resolution**; VSync toggle, FPS
   limit (Off/30/60/120), FPS counter.
-- **Software 2D fallback** (`display.renderer=software` or the Renderer
-  option): Java2D presentation for systems where the OpenGL window fails
-  (3D still runs on the GPU, headless).
 - **Resizable window & fullscreen** (F11 / Alt+Enter), aspect-correct
   scaling, brightness control, FPS limit and FPS counter.
 - **Settings menu** (Options in the game's menus, F10 anywhere) — drawn by
@@ -110,22 +108,25 @@ official English text from the international release.
 - **Rebindable keyboard controls** with sensible PC defaults (WASD +
   arrows, Space fire, Enter confirm, E dock, Shift boost, Tab autopilot).
 - **Volume mixer** — master / music / effects sliders applied live.
-- **SoundFont support** — drop a `.sf2` next to the game and the MIDI
-  soundtrack uses it automatically.
+- **SoundFont support** — the MIDI soundtrack plays through FluidSynth
+  with the `.sf2` next to the game (`package.sh` puts the one the Java
+  build used there), else `~/.gervill/soundbank-emg.sf2` or a system one.
 - **F12 screenshots** to `screenshots/`.
 - **Plays straight from the original JARs** — nothing is extracted: game
   data, the English text and sounds are read from the two JARs in place
-  (sound effects are converted to WAV in memory). If the JARs are not next
+  (the phones' AMR sound effects are decoded in memory). If the JARs are not next
   to the game or in its `jars/` folder, a first-launch dialog asks for them
   once and remembers where they are.
-- **One-command packaging** — a portable folder or a self-contained app
-  image with a bundled Java runtime (`./package.sh`).
+- **A single executable** — `./package.sh` builds `Deep3D-XE`: put it
+  next to the game JARs and run it.
 
 ## Building and running
 
-You need a JDK (17 or newer), a C/C++ compiler with the EGL, GLX, X11 and
-zlib development headers (for the native 3D engine), and two original
-`Deep` v1.0.8 JARs (not included — the game data is copyrighted):
+You need CMake, Ninja, a C++20 compiler, the EGL, GLX, X11 and OpenGL
+development files, and the libraries GLFW, SDL3, FluidSynth, libzip,
+libpng, zlib and opencore-amr (Arch: `pacman -S cmake ninja glfw sdl3
+fluidsynth libzip libpng opencore-amr`), plus two original `Deep` v1.0.8
+JARs (not included — the game data is copyrighted):
 
 - the **Nokia / JSR-184 build** (contains `data/3d/*.m3g`), and
 - the **international build** (contains `data/lang/en/`), for the English
@@ -135,24 +136,25 @@ Put both JARs next to the game (any file names; they are recognised by
 their contents), then:
 
 ```sh
-./build.sh
-./run.sh [--fullscreen] [--res 480x640]
+./build.sh                         # -> build/bin/Deep3D-XE
+./run.sh [--fullscreen|--windowed]
 ```
 
-If the JARs are elsewhere, the first launch asks for them and remembers
-their paths in `deep3d.cfg`. Sound effects need `ffmpeg` on the PATH (the
-phones' AMR format has no Java decoder); without it they are silent and
-the music still plays.
+If the JARs are elsewhere, the first launch asks for them (with the
+desktop's file dialog) and remembers their paths in `deep3d.cfg`.
 
-To make a distributable build:
+To build the game as one executable file:
 
 ```sh
-./package.sh             # -> dist/deep3d (portable), dist/Deep3D (bundled JRE)
+./package.sh             # -> ./Deep3D-XE
 ```
 
-Save games go to `saves/` next to the game (override with
-`DEEP3D_SAVE_DIR`), settings to `deep3d.cfg` (override with
-`DEEP3D_CONFIG`), both anchored to the jar's folder when packaged.
+Double-click `Deep3D-XE` or run `./Deep3D-XE [--windowed]`. Keep it in a
+folder with the two game JARs; it puts its settings (`deep3d.cfg`),
+`saves/`, `screenshots/` and `logs/` in that folder. `DEEP3D_HOME`
+overrides that folder, and `DEEP3D_SAVE_DIR` and `DEEP3D_CONFIG` override
+the saves and the settings file. Settings and saves are compatible with
+the earlier Java build.
 
 ## Controls
 
@@ -193,21 +195,24 @@ display and graphics, audio, controls and the game's inverted pitch.
 ## Project layout
 
 ```
-runtime/src/   Desktop runtime:
-               - javax.microedition.{midlet,lcdui,lcdui.game,rms,media}
-                 reimplemented on Java2D / javax.sound
-               - javax.microedition.m3g: JSR-184 API bindings (Nokia, via
-                 J2ME Loader), adapted to desktop render targets
-               - org.deep3d: launcher, window, input, overlay menu, gamepad,
-                 config, first-run setup, Assets (data from the original
-                 JARs), GameClassLoader; org.deep3d.gl: the GPU backend
+cpp/game/      The game: its 126 classes decompiled from the Nokia JAR and
+               translated to C++ (class_N / field_N names from the
+               decompiler); PC hooks marked Deep3D-PC
+cpp/m3g/       The JSR-184 (M3G) API (Nokia's, via J2ME Loader, translated
+               likewise) and its Platform / Interface glue
+cpp/jrt/       The Java semantics the translated code relies on: objects,
+               references, arrays, strings, exceptions, java.lang/io/util
+cpp/jni/       A JNI stand-in: the engine's Java glue runs unchanged
+cpp/midp/      The MIDP APIs the game uses (lcdui, rms, media, midlet)
+cpp/deep3d/    The PC layer: settings, game data, window and GL backend,
+               input, the control scheme, settings menu, mouse flight,
+               Remastered hand-over, test scenarios, deterministic runs
 native/m3g/    Nokia's JSR-184 reference engine (C, from J2ME Loader) plus
-               the Linux layer: GLES 1.1 -> desktop GL shim, and EGL calls
-               served over GLX (window context sharing) or headless EGL
-game/src/      Game logic decompiled from the Nokia JAR (Vineflower,
-               deobfuscated member names), verified against the original
-               bytecode.
-tools/scenarios/ Scripted test play-throughs and their report
+               the Linux layer: GLES 1.1 -> desktop GL shim, EGL calls
+               served over GLX (window context sharing) or headless EGL,
+               and the Remastered renderer
+tools/scenarios/ Scripted test play-throughs, their report, and the
+               deterministic regression check
 build.sh / run.sh / package.sh
 ```
 
@@ -223,16 +228,26 @@ build.sh / run.sh / package.sh
   and two array locals got their array types back. The only functional
   change is desktop resource loading (the game looked its files up through
   `java.lang.Class`, which cannot see the class path on a desktop JVM).
-  Its `System.gc()` calls are neutralised by the launcher
-  (`-XX:+DisableExplicitGC`), and its reads of its (Russian) language
+  Its `System.gc()` calls do nothing (they stalled desktop JVMs), and its
+  reads of its (Russian) language
   folder are served with the English text, so neither needs a code change.
   On top of that clean baseline, the PC features are small hooks marked
   `Deep3D-PC` (grep for it): command bar and menu/mouse registration
   (class_67), keyboard typing (class_32), key names in texts (class_1),
   music prompt (class_62) and analogue steering (class_64/class_70).
+- **C++**: in 2026-10 the decompiled Java and the M3G API layer were
+  translated to C++ by a purpose-built translator working on javac's typed
+  syntax trees, keeping Java's semantics exactly: wrapping integer maths,
+  Java division, shifts and float-to-int conversions, left-to-right
+  evaluation where the order matters, exceptions, construction order,
+  array covariance (cpp/jrt). The C++ build was verified against the Java
+  build in deterministic runs, comparing the whole game state frame by
+  frame over the test suite (about 80,000 frames, identical), then the
+  Java was removed. Objects are reference counted, freed at the game
+  loop's safe point.
 - **Graphics (2D)**: MIDP `Graphics` calls are recorded as a command stream
   and replayed by the GPU at the window's native resolution (or drawn with
-  Java2D in the software fallback).
+  a software fallback).
 - **Graphics (3D)**: the Nokia build uses JSR-184 (M3G). The engine is
   Nokia's reference implementation as open-sourced for Symbian (EPL-1.0)
   and ported to Android by [J2ME Loader](https://github.com/nikita36078/J2ME-Loader);
@@ -245,12 +260,10 @@ build.sh / run.sh / package.sh
   clears only depth, so the water colour painted in 2D shows through the
   translucent skybox): the frame so far is rendered offscreen and handed
   to the engine as a shared texture.
-- **Sound**: MIDI music through `javax.sound.midi`; AMR sound effects are
-  converted to WAV in memory by ffmpeg and sniffed by container, silently
-  stubbed otherwise.
-- **Assets**: the game classes are loaded by `GameClassLoader`, which
-  answers their resource lookups from the two original JARs (the runtime
-  reads through the same `Assets` class). Data comes from the Nokia JAR;
+- **Sound**: SDL3 audio; MIDI music through FluidSynth, AMR sound effects
+  decoded with opencore-amr.
+- **Assets**: the game's resource lookups are answered from the two
+  original JARs (`Assets`). Data comes from the Nokia JAR;
   reads of `data/lang/ru/` and the font are served from the international
   JAR's English files. All data files are stored head/tail byte-swapped;
   the game's own loader unscrambles them.
@@ -270,33 +283,40 @@ missing structure). The game runs with its own config and saves.
 
 See `tools/scenarios/README.md`.
 
-### Headless testing
+### Deterministic regression check
 
-Set `DEEP3D_INPUT_PIPE=/path/to/fifo`: lines `p <midp-keycode>` /
-`r <midp-keycode>` press/release game keys, `ov <up|down|left|right|enter|
-back|toggle>` drives the pause overlay, `shot <file.png>` dumps the
-composed frame. `DEEP3D_DEBUG=1` logs key events.
+`DEEP3D_DET=1` runs the game deterministically (a virtual clock, seeded
+randoms, input delivered at frame starts) and logs a hash of the whole game
+state every frame. `tools/scenarios/detcheck.sh smoke` compares a run with
+`tools/scenarios/golden/smoke.det`, the run that matched the original Java
+build frame for frame: any change in the game's behaviour shows up with
+the first frame it happens in.
+
+Off-screen runs (`HEADLESS=1`) render under Xvfb's software GL; add
+`EXTRA_ENV=DEEP3D_M3G_READBACK=1` to render the 3D on the GPU instead.
 
 ## Known gaps
 
 - The camera-photo gimmick (`capture://video`) is stubbed out — the feature
   degrades gracefully in-game.
 - Controller rumble and non-Linux controller backends are not implemented
-  (the backend is isolated in `org.deep3d.Gamepad`).
+  (the backend is isolated in `Gamepad`, cpp/deep3d/input.cpp).
+- Reference cycles between game objects are never freed (no garbage
+  collector); the game's object graph is mostly static.
 - The zero-copy 3D path needs an X11 (or XWayland) GLX window; native
   Wayland falls back to reading each 3D pass back through the CPU.
 
 ## Legal
 
-- The **runtime** (`runtime/src`, excluding the vendored parts) is original
+- The **runtime** (`cpp/` except `cpp/game` and `cpp/m3g`) is original
   work, licensed under the MIT license (see `LICENSE`).
-- `native/m3g` and `runtime/src/javax/microedition/m3g` are Nokia's JSR-184
+- `native/m3g` and `cpp/m3g` (except `m3g_platform.*`) are Nokia's JSR-184
   implementation, © Nokia Corporation, **Eclipse Public License 1.0**, as
   adapted by J2ME Loader; the Deep3D-PC changes to them are under the same
   license.
-- `game/src` is **decompiled proprietary code** © Fishlabs Entertainment
+- `cpp/game` is **decompiled (and translated) proprietary code** © Fishlabs Entertainment
   GmbH (now Deca Games). It is provided for interoperability, preservation
   and study. It is *not* under an open-source license and may not be
   redistributed commercially. The game assets are not included in this
-  repository (and `dist/` output containing them must not be shared):
-  you must supply your own original JARs.
+  repository or in the `Deep3D-XE` executable: you must supply your own
+  original JARs.
