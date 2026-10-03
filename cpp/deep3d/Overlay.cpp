@@ -51,10 +51,7 @@ std::vector<Item> gCurrentItems;
 int32_t gPanelX = 0, gPanelW = 0;
 std::optional<std::array<int32_t, 4>> gBarLeft, gBarRight;
 
-int64_t millis() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
-        .count();
-}
+int64_t millis() { return Det::millis(); }   // System.currentTimeMillis (det: the virtual clock)
 
 void enter(Page p) {
     gPage = p;
@@ -184,6 +181,14 @@ std::vector<Item> buildItems() {
             items.push_back(Item::choice("Brightness", [] { return std::to_string(Config::brightness) + "%"; }, [](int d) {
                 Config::brightness = std::max(50, std::min(150, Config::brightness + d * 10));
             }));
+            // this session renders with OpenGL
+            items.push_back(Item::choice(
+                "Renderer",
+                [] {
+                    bool glChosen = Config::renderer == "gl";
+                    return std::string(glChosen ? "OpenGL" : "Software") + (!glChosen ? " (restart)" : "");
+                },
+                [](int) { Config::renderer = Config::renderer == "gl" ? "software" : "gl"; }));
             break;
         case Page::AUDIO:
             items.push_back(Item::level("Volume", [] { return Config::masterVolume; }, [](int32_t v) {
@@ -409,7 +414,6 @@ void Overlay::showToast(const std::string& message) {
         gToast = message;
         gToastUntil = millis() + 2500;
     }
-    printf("[toast] %s\n", message.c_str());
     Runtime::repaintWindow();
 }
 
@@ -500,6 +504,177 @@ void Overlay::mouseWheel(int32_t rotation) {
     Runtime::repaintWindow();
 }
 
+// ---------------------------------------------------------------------
+// The window-resolution layer, as the Java build drew it with Java2D
+// ---------------------------------------------------------------------
+
+namespace {
+
+/* Java2D on an INT_ARGB image (no antialiasing, default stroke) */
+struct Canvas {
+    uint32_t* px;
+    int32_t w, h;
+
+    /** fillRect, SrcOver (IntArgbSrcOverMaskFill without a mask). */
+    void fillRect(int32_t x, int32_t y, int32_t rw, int32_t rh, uint32_t argb) {
+        if (rw <= 0 || rh <= 0) return;
+        int32_t x0 = std::max(0, x), y0 = std::max(0, y);
+        int32_t x1 = int32_t(std::min<int64_t>(w, int64_t(x) + rw)), y1 = int32_t(std::min<int64_t>(h, int64_t(y) + rh));
+        uint32_t srcA = argb >> 24;
+        for (int32_t yy = y0; yy < y1; yy++) {
+            for (int32_t xx = x0; xx < x1; xx++) {
+                uint32_t& d = px[size_t(yy) * w + xx];
+                d = srcA == 255 ? argb : srcOver(d, argb);
+            }
+        }
+    }
+    /** drawRect: the outline of a (w+1) x (h+1) box. */
+    void drawRect(int32_t x, int32_t y, int32_t rw, int32_t rh, uint32_t argb) {
+        if (rw < 0 || rh < 0) return;
+        if (rh == 0 || rw == 0) {
+            fillRect(x, y, rw + 1, rh + 1, argb);
+            return;
+        }
+        fillRect(x, y, rw, 1, argb);
+        fillRect(x + rw, y, 1, rh, argb);
+        fillRect(x + 1, y + rh, rw, 1, argb);
+        fillRect(x, y + 1, 1, rh, argb);
+    }
+    /** drawLine, both ends included (the layer only draws horizontal ones). */
+    void drawHLine(int32_t x1, int32_t x2, int32_t y, uint32_t argb) {
+        if (x2 < x1) std::swap(x1, x2);
+        fillRect(x1, y, x2 - x1 + 1, 1, argb);
+    }
+
+    static uint32_t srcOver(uint32_t d, uint32_t s) {
+        static const AlphaTables& t = alphaTables();
+        uint32_t srcA = s >> 24;
+        if (srcA == 0) return d;
+        uint32_t srcR = t.mul8[srcA][(s >> 16) & 255], srcG = t.mul8[srcA][(s >> 8) & 255], srcB = t.mul8[srcA][s & 255];
+        uint32_t dstA = t.mul8[255 - srcA][d >> 24];
+        uint32_t resA = srcA + dstA;
+        uint32_t resR = (d >> 16) & 255, resG = (d >> 8) & 255, resB = d & 255;
+        if (dstA != 255) {
+            resR = t.mul8[dstA][resR];
+            resG = t.mul8[dstA][resG];
+            resB = t.mul8[dstA][resB];
+        }
+        resR += srcR;
+        resG += srcG;
+        resB += srcB;
+        if (resA && resA < 255) {
+            resR = t.div8[resA][resR];
+            resG = t.div8[resA][resG];
+            resB = t.div8[resA][resB];
+        }
+        return resA << 24 | resR << 16 | resG << 8 | resB;
+    }
+};
+
+/* Palette of the game's UI toolkit (class_67) */
+constexpr uint32_t DEEP_ACCENT = 0xFF4993B8u, DEEP_PANEL = 0xFF1E3B4Au, DEEP_BOX = 0xFF23516Eu, DEEP_DARK = 0xFF0F1F26u;
+
+std::u16string u16(const std::string& s) { return String::fromUtf8(s)->s; }
+
+int32_t drawChip(Canvas& g, GameFont* fw, GameFont* fg, int32_t S, int32_t x, int32_t y, int32_t h,
+                 const std::u16string& key, const std::u16string& label, bool right) {
+    int32_t kw = key.empty() ? 0 : fg->width(key, S) + 7 * S;
+    int32_t cw = kw + fw->width(label, S) + 9 * S;
+    int32_t cx = right ? x - cw : x;
+    g.fillRect(cx, y, cw, h, DEEP_BOX);
+    g.drawRect(cx, y, cw, h, DEEP_ACCENT);
+    if (kw > 0) fg->draw(g.px, g.w, g.h, key, cx + 4 * S, y, S);
+    fw->draw(g.px, g.w, g.h, label, cx + 4 * S + kw, y, S);
+    return cw;
+}
+
+/* The same layout as the toolkit's menu, drawn with a copy of the game's font */
+void renderGameStyle(Canvas& g, int32_t w, int32_t h, int32_t S) {
+    g.fillRect(0, 0, w, h, 0x88000000u);
+    GameFont* fw = GameFont::white();
+    GameFont* fg = GameFont::gray();
+    int32_t lh = fw->height(S) + 2 * S;
+    std::vector<Item> items = buildItems();
+    gCurrentItems = items;
+    int32_t n = int32_t(items.size());
+    std::vector<std::u16string> rows(static_cast<size_t>(n));
+    std::u16string title = u16(pageTitle());
+    int32_t pw = std::max(114 * S, fw->width(title, S) + 24 * S);
+    for (int32_t i = 0; i < n; i++) {
+        rows[size_t(i)] = u16(rowText(items[size_t(i)]));
+        pw = std::max(pw, fw->width(rows[size_t(i)], S) + 24 * S);
+    }
+    pw = std::min(pw, w - 8 * S);
+    int32_t barH = 10 * S;
+    int32_t barTop = h - barH - 5 * S;
+    int32_t visible = std::max(1, std::min(n, jrt::div(barTop - 8 * S, lh) - 2));
+    if (gSelected < gScroll) gScroll = gSelected;
+    if (gSelected >= gScroll + visible) gScroll = gSelected - visible + 1;
+    gScroll = std::max(0, std::min(gScroll, n - visible));
+    int32_t ph = (visible + 2) * lh;
+    int32_t px = jrt::div(w - pw, 2);
+    int32_t py = std::max(4 * S, jrt::div(barTop - ph, 2));
+
+    g.fillRect(px, py, pw, ph, DEEP_PANEL);
+    g.fillRect(px, py, pw, 8 * S, DEEP_BOX);
+    g.drawRect(px, py, pw, ph, DEEP_ACCENT);
+    g.drawHLine(px, px + pw, py + 8 * S, DEEP_ACCENT);
+    g.fillRect(px, py, fw->width(title, S) + 4 * S, 8 * S, DEEP_ACCENT);
+    fw->draw(g.px, g.w, g.h, title, px + 2 * S, py - S, S);
+
+    gRowBounds.assign(size_t(n), {0, 0});
+    for (int32_t i = gScroll; i < n && i - gScroll < visible; i++) {
+        int32_t y = py + 12 * S + (i - gScroll) * lh;
+        gRowBounds[size_t(i)] = {y, lh};
+        std::u16string text = fw->elide(rows[size_t(i)], S, pw - 12 * S);
+        if (i == gSelected) {
+            for (int32_t ly = 2; ly <= 10; ly += 2) g.fillRect(px, y + ly * S, pw, S, DEEP_ACCENT);
+            g.fillRect(px + 9 * S, y + 2 * S, fw->width(text, S) + 3 * S, 8 * S, DEEP_ACCENT);
+            fw->draw(g.px, g.w, g.h, text, px + 10 * S, y + S, S);
+        } else {
+            fg->draw(g.px, g.w, g.h, text, px + 10 * S, y + S, S);
+        }
+    }
+    gPanelX = px;
+    gPanelW = pw;
+
+    int32_t by = h - 3 * S - barH;
+    g.fillRect(0, by - 2 * S, w, barH + 5 * S, DEEP_DARK);
+    g.drawHLine(0, w, by - 2 * S, DEEP_ACCENT);
+    std::u16string lk = u16(GameUi::actionKeyName(GameUi::ACT_CONFIRM));
+    std::u16string rk = u16(GameUi::actionKeyName(GameUi::ACT_BACK));
+    int32_t lw = drawChip(g, fw, fg, S, 2 * S, by, barH, lk, u"OK", false);
+    int32_t rw = drawChip(g, fw, fg, S, w - 2 * S, by, barH, rk, gPage == Page::ROOT ? u"Resume" : u"Back", true);
+    gBarLeft = std::array<int32_t, 4>{2 * S, by, lw, barH};
+    gBarRight = std::array<int32_t, 4>{w - 2 * S - rw, by, rw, barH};
+}
+
+void renderGameToast(Canvas& g, int32_t w, int32_t h, int32_t S) {
+    if (gToast.empty() || millis() > gToastUntil) return;
+    GameFont* fw = GameFont::white();
+    std::u16string toast = u16(gToast);
+    int32_t fh = fw->height(S);
+    int32_t tw = fw->width(toast, S) + 6 * S;
+    int32_t th = fh + 4 * S;
+    int32_t x = jrt::div(w - tw, 2);
+    int32_t y = h - th - 6 * S;
+    g.fillRect(x, y, tw, th, DEEP_PANEL);
+    g.drawRect(x, y, tw, th, DEEP_ACCENT);
+    fw->draw(g.px, g.w, g.h, toast, x + 3 * S, y + 2 * S, S);
+}
+
+}  // namespace
+
+void Overlay::render(uint32_t* canvas, int32_t w, int32_t h) {
+    std::lock_guard<std::recursive_mutex> l(gLock);
+    if (!GameFont::available()) return;
+    int32_t S = std::max(2, java::lang::Math::round(float(h) / 320.0f));
+    bool toolkit = MenuToolkit::get() != nullptr && (gFromGameMenu || gl::GLBackend::isActive());
+    Canvas g{canvas, w, h};
+    if (gOpen && !toolkit) renderGameStyle(g, w, h, S);
+    renderGameToast(g, w, h, S);
+}
+
 bool Overlay::drawMenu(Ref<Graphics> g) {
     std::lock_guard<std::recursive_mutex> l(gLock);
     return !gFromGameMenu && draw(g, -1);
@@ -518,7 +693,6 @@ namespace {
 std::mutex gFontLock;
 GameFont* gWhite = nullptr;
 GameFont* gGray = nullptr;
-bool gFontTried = false;
 
 /** The head/tail byte swap all Deep resources are stored with. */
 void unscramble(std::vector<uint8_t>& d) {
@@ -529,9 +703,9 @@ void unscramble(std::vector<uint8_t>& d) {
 }  // namespace
 
 void GameFont::load() {
+    // as Java: tried again on every use until it loads
     std::lock_guard<std::mutex> g(gFontLock);
-    if (gFontTried) return;
-    gFontTried = true;
+    if (gWhite || gGray) return;
     auto data = Assets::read("/data/interface/font_deep_white.png");
     if (!data) return;
     unscramble(*data);
@@ -587,27 +761,32 @@ bool GameFont::available() {
     return gWhite != nullptr;
 }
 
-int32_t GameFont::width(const std::string& text, int32_t scale) const {
+namespace {
+int glyphIndex(char16_t c) {
+    int i = int(c) - 32;
+    return i >= 0 && i < 224 ? i : 0;
+}
+}  // namespace
+
+int32_t GameFont::width(const std::u16string& text, int32_t scale) const {
     int32_t w = 0;
-    for (unsigned char c : text) {
-        int i = c - 32;
-        w += widths[i >= 0 && i < 224 ? i : 0] + 1;
-    }
+    for (char16_t c : text) w += widths[glyphIndex(c)] + 1;
     return w * scale;
 }
 
-std::string GameFont::elide(const std::string& text, int32_t scale, int32_t maxWidth) const {
+std::u16string GameFont::elide(const std::u16string& text, int32_t scale, int32_t maxWidth) const {
     if (width(text, scale) <= maxWidth) return text;
     size_t len = text.size();
-    while (len > 1 && width(text.substr(0, len) + "...", scale) > maxWidth) len--;
-    return text.substr(0, len) + "...";
+    while (len > 1 && width(text.substr(0, len) + u"...", scale) > maxWidth) len--;
+    return text.substr(0, len) + u"...";
 }
 
-void GameFont::draw(uint32_t* canvas, int32_t cw, int32_t ch, const std::string& text, int32_t x, int32_t y,
+/* Java drew each glyph with drawImage (nearest neighbour, SrcOver); the
+   sheet's alpha is 0 or 255, so that is a copy of the opaque pixels. */
+void GameFont::draw(uint32_t* canvas, int32_t cw, int32_t ch, const std::u16string& text, int32_t x, int32_t y,
                     int32_t scale) const {
-    for (unsigned char c : text) {
-        int idx = c - 32;
-        if (idx < 0 || idx >= 224) idx = 0;
+    for (char16_t c : text) {
+        int idx = glyphIndex(c);
         int gw = widths[idx];
         int sx = (idx % 16) * cellW, sy = (idx / 16) * cellH;
         for (int gy = 0; gy < cellH; gy++) {

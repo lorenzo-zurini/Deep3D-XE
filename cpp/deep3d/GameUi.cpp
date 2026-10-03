@@ -112,17 +112,10 @@ void frame() {
 }
 }  // namespace sequencer
 
-std::string lower(std::string s) {
-    for (auto& c : s) c = char(tolower((unsigned char)c));
-    return s;
-}
+// String.toLowerCase / String.trim, as the Java build matched texts
+std::string lower(const std::string& s) { return String::fromUtf8(s)->toLowerCase()->utf8(); }
 
-std::string trim(const std::string& s) {
-    size_t b = s.find_first_not_of(" \t\r\n");
-    if (b == std::string::npos) return "";
-    size_t e = s.find_last_not_of(" \t\r\n");
-    return s.substr(b, e - b + 1);
-}
+std::string trim(const std::string& s) { return javaTrim(s); }
 
 void add(Kind kind, std::optional<std::string> text, int32_t x, int32_t y, int32_t w, int32_t h, bool selected,
          bool selectable, int32_t code) {
@@ -718,22 +711,98 @@ void GameUi::padTextReset() { gPadLetter = -1; }
 
 // ---- phone keys in the game's texts ----
 
+namespace {
+
+/* Java's KEY_MENTION, "(?i)(press(?:ing)?\s+(?:key\s+)?|key\s+)(0|1|3|5|7|9|\*|#|fire)\b",
+   matched as java.util.regex does: (?i) folds ASCII only, \s is
+   [ \t\n\x0B\f\r], \b's word characters are isLetterOrDigit and '_'. With
+   this pattern the backtracking is deterministic (whitespace runs are
+   maximal; the optional parts cannot shift a match), so this is exact. */
+char16_t asciiLower(char16_t c) { return c >= u'A' && c <= u'Z' ? char16_t(c + 32) : c; }
+
+bool word(const std::u16string& t, size_t i) {
+    char16_t c = t[i];
+    return c == u'_' || java::lang::Character::isLetterOrDigit(c);
+}
+
+bool literal(const std::u16string& t, size_t& p, const char16_t* lit) {
+    size_t q = p;
+    for (; *lit; lit++, q++) {
+        if (q >= t.size() || asciiLower(t[q]) != *lit) return false;
+    }
+    p = q;
+    return true;
+}
+
+bool spaces(const std::u16string& t, size_t& p) {
+    size_t q = p;
+    while (q < t.size() && (t[q] == u' ' || t[q] == u'\t' || t[q] == u'\n' || t[q] == u'\x0B' || t[q] == u'\f' ||
+                            t[q] == u'\r'))
+        q++;
+    if (q == p) return false;
+    p = q;
+    return true;
+}
+
+/** Group 2 at p and the \b after it: its end, or npos. */
+size_t keyGroup(const std::u16string& t, size_t p) {
+    static const char16_t* alts[] = {u"0", u"1", u"3", u"5", u"7", u"9", u"*", u"#", u"fire"};
+    for (const char16_t* a : alts) {
+        size_t q = p;
+        if (!literal(t, q, a)) continue;
+        bool left = q > 0 && word(t, q - 1), right = q < t.size() && word(t, q);
+        if (left != right) return q;
+    }
+    return std::u16string::npos;
+}
+
+/** A match starting at p: {end of group 1, end of the match}, or nothing. */
+std::optional<std::pair<size_t, size_t>> matchAt(const std::u16string& t, size_t p) {
+    size_t q = p;
+    if (literal(t, q, u"press")) {
+        size_t r = q;
+        literal(t, r, u"ing");
+        if (spaces(t, r)) {
+            size_t k = r;
+            if (literal(t, k, u"key") && spaces(t, k)) {
+                size_t e = keyGroup(t, k);
+                if (e != std::u16string::npos) return std::make_pair(k, e);
+            }
+            size_t e = keyGroup(t, r);
+            if (e != std::u16string::npos) return std::make_pair(r, e);
+        }
+    }
+    q = p;
+    if (literal(t, q, u"key") && spaces(t, q)) {
+        size_t e = keyGroup(t, q);
+        if (e != std::u16string::npos) return std::make_pair(q, e);
+    }
+    return std::nullopt;
+}
+
+}  // namespace
+
 Ref<String> GameUi::filterText(Ref<String> text) {
     if (!text || text->isEmpty()) return text;
-    static const std::regex keyMention("(press(?:ing)?\\s+(?:key\\s+)?|key\\s+)(0|1|3|5|7|9|\\*|#|fire)\\b",
-                                       std::regex::icase);
-    std::string s = text->utf8();
-    std::smatch m;
-    if (!std::regex_search(s, m, keyMention)) return text;
-    std::string out;
-    auto begin = s.cbegin();
-    while (std::regex_search(begin, s.cend(), m, keyMention)) {
-        out.append(begin, m[0].first);
-        out += m[1].str() + phoneKeyName(m[2].str());
-        begin = m[0].second;
+    const std::u16string& t = text->s;
+    std::u16string out;
+    size_t from = 0;
+    bool found = false;
+    for (size_t p = 0; p < t.size();) {
+        auto m = matchAt(t, p);
+        if (!m) {
+            p++;
+            continue;
+        }
+        found = true;
+        out.append(t, from, p - from);
+        out += t.substr(p, m->first - p);
+        out += String::fromUtf8(phoneKeyName(String::of(t.substr(m->first, m->second - m->first))->utf8()))->s;
+        from = p = m->second;
     }
-    out.append(begin, s.cend());
-    return jstr(out);
+    if (!found) return text;
+    out.append(t, from, std::u16string::npos);
+    return String::of(out);
 }
 
 std::string GameUi::phoneKeyName(const std::string& phoneKey) {

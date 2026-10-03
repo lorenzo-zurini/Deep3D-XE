@@ -17,12 +17,16 @@
 #include "m3g.h"
 
 #include <png.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include <fontconfig/fontconfig.h>
 
 #include <chrono>
 #include <cmath>
 #include <ctime>
 #include <deque>
 #include <mutex>
+#include <set>
 #include <thread>
 
 namespace org::deep3d::gl {
@@ -42,6 +46,55 @@ int64_t nanos() {
         .count();
 }
 int64_t millis() { return nanos() / 1000000; }
+
+bool writePngRgba(const std::string& path, const uint32_t* argb, int32_t w, int32_t h);
+
+/* Debug (Java: GL2D): DEEP3D_SKIP_OPS=n,m leaves those 2D ops out of the
+   replay; DEEP3D_DUMP_TEX=dir writes each image texture as it is uploaded */
+int32_t opArgLen(int32_t op) {
+    switch (op) {
+        case Draw2D::OP_M3G: case Draw2D::OP_M3G_TEX: return 12;
+        case Draw2D::OP_COLOR: return 1;
+        case Draw2D::OP_FILL_RECT: case Draw2D::OP_DRAW_RECT: case Draw2D::OP_LINE: case Draw2D::OP_CLIP:
+        case Draw2D::OP_IMAGE: return 4;
+        case Draw2D::OP_TRIANGLE: return 6;
+        case Draw2D::OP_ARC: return 7;
+        case Draw2D::OP_REGION: return 9;
+        case Draw2D::OP_RGB: return 8;
+        default: return 1;
+    }
+}
+
+const std::set<int32_t>& skipOps() {
+    static const std::set<int32_t> ops = [] {
+        std::set<int32_t> o;
+        const char* skip = getenv("DEEP3D_SKIP_OPS");
+        if (!skip) return o;
+        std::string v = skip;
+        size_t pos = 0;
+        while (true) {
+            size_t c = v.find(',', pos);
+            std::string t = v.substr(pos, c == std::string::npos ? std::string::npos : c - pos);
+            auto n = javaParseInt(javaTrim(t));
+            if (!n) {
+                // Java: GL2D's static initialiser failed, so GL did
+                fprintf(stderr, "[gl] init failed: DEEP3D_SKIP_OPS: For input string: \"%s\"\n", javaTrim(t).c_str());
+                Runtime::halt(1);
+            }
+            o.insert(*n);
+            if (c == std::string::npos) break;
+            pos = c + 1;
+        }
+        return o;
+    }();
+    return ops;
+}
+
+std::string identityName(const void* p) {
+    char b[24];
+    snprintf(b, sizeof b, "%u", unsigned(reinterpret_cast<uintptr_t>(p) >> 4));
+    return b;
+}
 
 // ---------------------------------------------------------------------
 // Shaders
@@ -185,8 +238,13 @@ public:
     void replay(const Draw2D& d) {
         const std::vector<int32_t>& o = d.ops;
         size_t i = 0;
+        const std::set<int32_t>& skip = skipOps();
         while (i < o.size()) {
             int32_t op = o[i++];
+            if (!skip.empty() && skip.count(op)) {
+                i += size_t(opArgLen(op));
+                continue;
+            }
             switch (op) {
                 case Draw2D::OP_COLOR:
                     color = 0xFF000000u | rgbToAbgr(o[i]);
@@ -224,18 +282,21 @@ public:
                     break;
                 case Draw2D::OP_IMAGE: {
                     auto* img = static_cast<Image*>(d.objects[size_t(o[i])].get());
+                    if (!img) jrt::throwNPE();
                     image(img, o[i + 1], o[i + 2], o[i + 3]);
                     i += 4;
                     break;
                 }
                 case Draw2D::OP_REGION: {
                     auto* img = static_cast<Image*>(d.objects[size_t(o[i])].get());
+                    if (!img) jrt::throwNPE();
                     region(img, o[i + 1], o[i + 2], o[i + 3], o[i + 4], o[i + 5], o[i + 6], o[i + 7], o[i + 8]);
                     i += 9;
                     break;
                 }
                 case Draw2D::OP_RGB: {
                     auto& data = d.objects[size_t(o[i])];
+                    if (!data) jrt::throwNPE();
                     rgb(data, o[i + 1], o[i + 2], o[i + 3], o[i + 4], o[i + 5], o[i + 6], o[i + 7] != 0);
                     i += 8;
                     break;
@@ -355,12 +416,35 @@ public:
         Tex& t = it->second.second;
         if (t.version != img->version) dirty = true;
         if (dirty) {
+            if (const char* dir = getenv("DEEP3D_DUMP_TEX")) {
+                writePngRgba(std::string(dir) + "/tex_" + identityName(img) + "_" + std::to_string(img->width) + "x" +
+                                 std::to_string(img->height) + ".png",
+                             img->argb.data(), img->width, img->height);
+            }
             t.w = img->width;
             t.h = img->height;
             t.version = img->version;
             upload(t.id, img->argb.data(), 0, img->width, img->width, img->height, false);
         }
         return t;
+    }
+
+    /** Debug: every cached image texture, read back from GL, to dir. */
+    void dumpTextures(const std::string& dir) {
+        for (auto& [img, entry] : imageTex) {
+            Tex& t = entry.second;
+            std::vector<uint8_t> rgba(size_t(t.w) * t.h * 4);
+            glBindTexture(GL_TEXTURE_2D, t.id);
+            glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+            std::vector<uint32_t> argb(size_t(t.w) * t.h);
+            for (size_t k = 0; k < argb.size(); k++) {
+                const uint8_t* q = &rgba[k * 4];
+                argb[k] = uint32_t(q[3]) << 24 | uint32_t(q[0]) << 16 | uint32_t(q[1]) << 8 | q[2];
+            }
+            writePngRgba(dir + "/gltex_" + identityName(img) + "_" + std::to_string(t.w) + "x" + std::to_string(t.h) +
+                             ".png",
+                         argb.data(), t.w, t.h);
+        }
     }
 
     void upload(GLuint tex, const uint32_t* argb, int32_t offset, int32_t scan, int32_t w, int32_t h, bool opaque) {
@@ -764,8 +848,7 @@ char16_t keyChar(int k, int mods) {
         char16_t c = char16_t(u'a' + (k - GLFW_KEY_A));
         return shift ? char16_t(c - 32) : c;
     }
-    if (k == GLFW_KEY_3 && shift) return u'#';
-    if (k == GLFW_KEY_8 && shift) return u'*';
+    // (Java's shifted 3 and 8 cases came after its digit test: never reached)
     if (k >= GLFW_KEY_0 && k <= GLFW_KEY_9) return char16_t(u'0' + (k - GLFW_KEY_0));
     if (k >= GLFW_KEY_KP_0 && k <= GLFW_KEY_KP_9) return char16_t(u'0' + (k - GLFW_KEY_KP_0));
     switch (k) {
@@ -922,15 +1005,92 @@ void ensureFrameTarget(int32_t w, int32_t h) {
     }
 }
 
+/* The FPS counter as the Java build drew it: AWT's Dialog bold, which is
+   fontconfig's "sans:bold" face, antialiased; FreeType's default (TrueType)
+   hinting, whole-pixel advances, and Java2D's antialiased-text blend into
+   an INT_ARGB image (GlyphListAABlend4ByteArgb). */
+class AwtText {
+public:
+    static AwtText& get() {
+        static AwtText t;
+        return t;
+    }
+
+    void drawString(uint32_t* px, int32_t w, int32_t h, const std::string& text, int32_t x, int32_t y, int32_t size,
+                    uint32_t argb) {
+        if (!face) return;
+        FT_Set_Char_Size(face, 0, FT_F26Dot6(size) * 64, 72, 72);
+        const AlphaTables& t = alphaTables();
+        uint32_t sa = argb >> 24, sr = t.mul8[sa][(argb >> 16) & 255], sg = t.mul8[sa][(argb >> 8) & 255],
+                 sb = t.mul8[sa][argb & 255];
+        int32_t pen = x;
+        for (unsigned char c : text) {
+            if (FT_Load_Glyph(face, FT_Get_Char_Index(face, c), FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP) != 0) continue;
+            if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL) != 0) continue;
+            const FT_Bitmap& bm = face->glyph->bitmap;
+            int32_t gx = pen + face->glyph->bitmap_left, gy = y - face->glyph->bitmap_top;
+            for (unsigned r = 0; r < bm.rows; r++) {
+                for (unsigned col = 0; col < bm.width; col++) {
+                    int32_t X = gx + int32_t(col), Y = gy + int32_t(r);
+                    if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
+                    uint32_t mix = bm.buffer[int(r) * bm.pitch + int(col)];
+                    if (!mix) continue;
+                    uint32_t& d = px[size_t(Y) * w + X];
+                    if (mix == 255) {
+                        d = argb;
+                        continue;
+                    }
+                    uint32_t da = t.mul8[255 - mix][d >> 24];
+                    uint32_t ra = da + t.mul8[mix][sa];
+                    uint32_t rr = t.mul8[da][(d >> 16) & 255] + t.mul8[mix][sr];
+                    uint32_t rg = t.mul8[da][(d >> 8) & 255] + t.mul8[mix][sg];
+                    uint32_t rb = t.mul8[da][d & 255] + t.mul8[mix][sb];
+                    if (ra && ra < 255) {
+                        rr = t.div8[ra][rr];
+                        rg = t.div8[ra][rg];
+                        rb = t.div8[ra][rb];
+                    }
+                    d = ra << 24 | rr << 16 | rg << 8 | rb;
+                }
+            }
+            pen += int32_t(face->glyph->advance.x >> 6);
+        }
+    }
+
+private:
+    FT_Library lib = nullptr;
+    FT_Face face = nullptr;
+
+    AwtText() {
+        if (!FcInit() || FT_Init_FreeType(&lib) != 0) return;
+        FcPattern* p = FcNameParse(reinterpret_cast<const FcChar8*>("sans:bold"));
+        FcConfigSubstitute(nullptr, p, FcMatchPattern);
+        FcDefaultSubstitute(p);
+        FcResult res;
+        FcPattern* m = FcFontMatch(nullptr, p, &res);
+        FcChar8* file = nullptr;
+        int index = 0;
+        if (m && FcPatternGetString(m, FC_FILE, 0, &file) == FcResultMatch) {
+            FcPatternGetInteger(m, FC_INDEX, 0, &index);
+            if (FT_New_Face(lib, reinterpret_cast<const char*>(file), index, &face) != 0) face = nullptr;
+        }
+        if (m) FcPatternDestroy(m);
+        FcPatternDestroy(p);
+        if (!face) fprintf(stderr, "[gl] no sans bold font: the FPS counter is not drawn\n");
+    }
+};
+
+/* GLBackend.renderOverlayLayer: Overlay.render and the FPS counter at window
+   resolution, in a texture over the frame */
 void renderOverlayLayer(int32_t w, int32_t h) {
-    bool toast = Overlay::hasToast();
-    if (!toast && !Config::showFps) return;
-    int64_t now = millis();
+    bool wantLayer = Overlay::isOpen() || Overlay::hasToast() || Config::showFps;
+    if (!wantLayer) return;
+    int64_t now = Det::millis();
     if (Config::showFps && now - gLastFpsStamp >= 500) {
         gLastFpsStamp = now;
         gOverlayDirty = true;
     }
-    if (toast) gOverlayDirty = true;   // toasts fade by time
+    if (Overlay::hasToast()) gOverlayDirty = true;   // toasts fade by time
     if (gOverlayW != w || gOverlayH != h) {
         gOverlayPixels.assign(size_t(w) * h, 0);
         gOverlayW = w;
@@ -939,27 +1099,12 @@ void renderOverlayLayer(int32_t w, int32_t h) {
     }
     if (gOverlayDirty.exchange(false)) {
         std::fill(gOverlayPixels.begin(), gOverlayPixels.end(), 0);
-        GameFont* fw = GameFont::white();
-        int32_t S = std::max(2, int32_t(std::lround(h / 320.0f)));
-        auto fill = [&](int32_t x, int32_t y, int32_t rw, int32_t rh, uint32_t c) {
-            for (int32_t yy = std::max(0, y); yy < std::min(h, y + rh); yy++)
-                for (int32_t xx = std::max(0, x); xx < std::min(w, x + rw); xx++) gOverlayPixels[size_t(yy) * w + xx] = c;
-        };
-        if (fw && toast) {
-            std::string text = Overlay::toastText();
-            int32_t fh = fw->height(S);
-            int32_t tw = fw->width(text, S) + 6 * S, th = fh + 4 * S;
-            int32_t x = (w - tw) / 2, y = h - th - 6 * S;
-            fill(x, y, tw, th, 0xFF1E3B4A);
-            fill(x, y, tw, S, 0xFF4993B8);
-            fill(x, y + th - S, tw, S, 0xFF4993B8);
-            fill(x, y, S, th, 0xFF4993B8);
-            fill(x + tw - S, y, S, th, 0xFF4993B8);
-            fw->draw(gOverlayPixels.data(), w, h, text, x + 3 * S, y + 2 * S, S);
-        }
-        if (fw && Config::showFps) {
+        Overlay::render(gOverlayPixels.data(), w, h);
+        if (Config::showFps) {
+            int32_t size = std::max(12, h / 50);
             std::string fps = std::to_string(Runtime::getDisplayFps()) + " FPS";
-            fw->draw(gOverlayPixels.data(), w, h, fps, 8, h - fw->height(S) - 8, S);
+            AwtText::get().drawString(gOverlayPixels.data(), w, h, fps, 9, h - 8, size, 0xFF000000u);
+            AwtText::get().drawString(gOverlayPixels.data(), w, h, fps, 8, h - 9, size, 0xFF53C8EFu);
         }
         if (gOverlayTex == 0) glGenTextures(1, &gOverlayTex);
         gl2d->upload(gOverlayTex, gOverlayPixels.data(), 0, w, w, h, false);
@@ -1035,17 +1180,99 @@ bool writePng(const std::string& path, const uint8_t* rgb, int32_t w, int32_t h)
     return true;
 }
 
+bool writePngRgba(const std::string& path, const uint32_t* argb, int32_t w, int32_t h) {
+    FILE* f = fopen(path.c_str(), "wb");
+    if (!f) return false;
+    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+    png_infop info = png_create_info_struct(png);
+    if (setjmp(png_jmpbuf(png))) {
+        png_destroy_write_struct(&png, &info);
+        fclose(f);
+        return false;
+    }
+    png_init_io(png, f);
+    png_set_IHDR(png, info, uint32_t(w), uint32_t(h), 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+                 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    png_write_info(png, info);
+    std::vector<uint8_t> row(size_t(w) * 4);
+    for (int32_t y = 0; y < h; y++) {
+        for (int32_t x = 0; x < w; x++) {
+            uint32_t p = argb[size_t(y) * w + x];
+            row[size_t(x) * 4] = uint8_t(p >> 16);
+            row[size_t(x) * 4 + 1] = uint8_t(p >> 8);
+            row[size_t(x) * 4 + 2] = uint8_t(p);
+            row[size_t(x) * 4 + 3] = uint8_t(p >> 24);
+        }
+        png_write_row(png, row.data());
+    }
+    png_write_end(png, nullptr);
+    png_destroy_write_struct(&png, &info);
+    fclose(f);
+    return true;
+}
+
+/* Debug (the input pipe's dump2d): the frame's 2D ops, and with
+   DEEP3D_DUMP_TEX every cached texture */
+std::atomic<bool> gDump2dNext{false};
+
+int32_t opLength(int32_t op) {
+    switch (op) {
+        case Draw2D::OP_COLOR: return 2;
+        case Draw2D::OP_FILL_RECT: case Draw2D::OP_DRAW_RECT: case Draw2D::OP_LINE: case Draw2D::OP_CLIP: return 5;
+        case Draw2D::OP_TRIANGLE: return 7;
+        case Draw2D::OP_ARC: return 8;
+        case Draw2D::OP_IMAGE: return 5;
+        case Draw2D::OP_REGION: return 10;
+        case Draw2D::OP_RGB: return 9;
+        case Draw2D::OP_M3G: case Draw2D::OP_M3G_TEX: return 13;
+        default: {
+            Ref<java::lang::IllegalStateException> e(new java::lang::IllegalStateException());
+            e->message = String::fromUtf8("op " + std::to_string(op));
+            jrt::throwJava(e);
+        }
+    }
+}
+
+void dump2d(const Draw2D& d) {
+    if (const char* dir = getenv("DEEP3D_DUMP_TEX")) {
+        if (gl2d) gl2d->dumpTextures(dir);
+    }
+    std::string sb = "[2d] thread=" + java::lang::Thread::currentThread()->getName()->utf8() + "\n";
+    size_t i = 0;
+    while (i < d.ops.size()) {
+        int32_t op = d.ops[i];
+        int32_t n = opLength(op);
+        sb += "  op" + std::to_string(op) + "(";
+        for (int32_t k = 1; k < n; k++) sb += std::to_string(d.ops[i + size_t(k)]) + (k < n - 1 ? "," : "");
+        sb += ")";
+        if (op == Draw2D::OP_IMAGE || op == Draw2D::OP_REGION || op == Draw2D::OP_RGB) {
+            auto* im = dynamic_cast<Image*>(d.objects[size_t(d.ops[i + 1])].get());
+            if (im) sb += " img#" + identityName(im) + " " + std::to_string(im->width) + "x" + std::to_string(im->height);
+        }
+        sb += "\n";
+        i += size_t(n);
+    }
+    printf("%s", sb.c_str());
+}
+
 void captureScreenshot() {
     int32_t w = GLBackend::fbWidth, h = GLBackend::fbHeight;
     auto rgb = readBack(w, h);
-    time_t now = time(nullptr);
+    // deep_yyyyMMdd_HHmmss_SSS.png, local wall-clock time (SimpleDateFormat)
+    auto wall = std::chrono::system_clock::now();
+    time_t now = std::chrono::system_clock::to_time_t(wall);
+    int ms = int(std::chrono::duration_cast<std::chrono::milliseconds>(wall.time_since_epoch()).count() % 1000);
     char stamp[64];
     strftime(stamp, sizeof stamp, "%Y%m%d_%H%M%S", localtime(&now));
-    std::string out = AppDirs::dir("screenshots") + "/deep_" + stamp + "_" + std::to_string(millis() % 1000) + ".png";
+    char msText[8];
+    snprintf(msText, sizeof msText, "%03d", ms);
+    std::string out = AppDirs::dir("screenshots") + "/deep_" + stamp + "_" + msText + ".png";
+    errno = 0;
     if (writePng(out, rgb.data(), w, h)) {
         Overlay::showToast("Screenshot saved: " + out);
     } else {
-        Overlay::showToast("Screenshot failed");
+        // as Java's FileNotFoundException message: "<path> (<reason>)"
+        Overlay::showToast("Screenshot failed: " + out + " (" + (errno ? strerror(errno) : "write error") + ")");
     }
 }
 
@@ -1301,10 +1528,13 @@ void GLBackend::readUnderlay(int32_t w, int32_t h, Ref<java::nio::ByteBuffer> ou
     releaseContext();
 }
 
+void GLBackend::requestDump2d() { gDump2dNext = true; }
+
 void GLBackend::endFrame() {
     std::lock_guard<std::recursive_mutex> lock(gGlLock);
     try {
         claimContext();
+        if (gDump2dNext.exchange(false)) dump2d(tRecorder);
         Draw2D& frame = tRecorder;
         std::thread::id* hold = gHoldNext.load();
         if (hold && *hold == std::this_thread::get_id()) {
@@ -1313,6 +1543,7 @@ void GLBackend::endFrame() {
             frame.reset();
         }
         if (MouseFlight::captured()) MouseFlight::draw(screenGraphics(), virtWidth, virtHeight);
+        Det::present(frame);
         renderFrame(frame, nullptr);
         if (gScreenshotRequested.exchange(false)) captureScreenshot();
         checkPipeShot();

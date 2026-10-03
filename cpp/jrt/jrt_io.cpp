@@ -126,22 +126,38 @@ Ref<String> DataInputStream::readUTF() {
     int32_t n = readUnsignedShort();
     auto bytes = jrt::newArray<int8_t>(n);
     readFully(bytes);
-    // modified UTF-8
+    // modified UTF-8, checked as java.io.DataInputStream does
+    auto bad = [](const std::string& m) {
+        Ref<UTFDataFormatException> e(new UTFDataFormatException());
+        e->message = String::fromUtf8(m);
+        throwJava(e);
+    };
     std::u16string o;
-    for (int32_t i = 0; i < n;) {
-        uint32_t c = uint8_t(bytes->data[i]);
-        if (c < 0x80) {
-            o.push_back(char16_t(c));
-            i++;
-        } else if ((c >> 5) == 6 && i + 1 < n) {
-            o.push_back(char16_t(((c & 0x1F) << 6) | (bytes->data[i + 1] & 0x3F)));
-            i += 2;
-        } else if ((c >> 4) == 14 && i + 2 < n) {
-            o.push_back(char16_t(((c & 0x0F) << 12) | ((bytes->data[i + 1] & 0x3F) << 6) | (bytes->data[i + 2] & 0x3F)));
-            i += 3;
-        } else {
-            Ref<UTFDataFormatException> e(new UTFDataFormatException());
-            throwJava(e);
+    for (int32_t count = 0; count < n;) {
+        uint32_t c = uint8_t(bytes->data[count]);
+        switch (c >> 4) {
+            case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
+                count++;
+                o.push_back(char16_t(c));
+                break;
+            case 12: case 13: {
+                count += 2;
+                if (count > n) bad("malformed input: partial character at end");
+                uint32_t c2 = uint8_t(bytes->data[count - 1]);
+                if ((c2 & 0xC0) != 0x80) bad("malformed input around byte " + std::to_string(count));
+                o.push_back(char16_t(((c & 0x1F) << 6) | (c2 & 0x3F)));
+                break;
+            }
+            case 14: {
+                count += 3;
+                if (count > n) bad("malformed input: partial character at end");
+                uint32_t c2 = uint8_t(bytes->data[count - 2]), c3 = uint8_t(bytes->data[count - 1]);
+                if ((c2 & 0xC0) != 0x80 || (c3 & 0xC0) != 0x80) bad("malformed input around byte " + std::to_string(count - 1));
+                o.push_back(char16_t(((c & 0x0F) << 12) | ((c2 & 0x3F) << 6) | (c3 & 0x3F)));
+                break;
+            }
+            default:
+                bad("malformed input around byte " + std::to_string(count));
         }
     }
     return String::of(o);
@@ -425,6 +441,7 @@ int32_t Hashtable::find(const Ref<Object>& key) {
     return -1;
 }
 Ref<Object> Hashtable::get(Ref<Object> key) {
+    if (!key) jrt::throwNPE();
     int32_t i = find(key);
     return i < 0 ? nullptr : entries[size_t(i)].second;
 }
@@ -440,22 +457,16 @@ Ref<Object> Hashtable::put(Ref<Object> key, Ref<Object> value) {
     return nullptr;
 }
 Ref<Object> Hashtable::remove(Ref<Object> key) {
+    if (!key) jrt::throwNPE();
     int32_t i = find(key);
     if (i < 0) return nullptr;
     Ref<Object> old = entries[size_t(i)].second;
     entries.erase(entries.begin() + i);
     return old;
 }
-bool Hashtable::containsKey(Ref<Object> key) { return find(key) >= 0; }
-Ref<Enumeration> Hashtable::keys() {
-    Ref<ListEnumeration> e(new ListEnumeration());
-    for (auto& kv : entries) e->items.push_back(kv.first);
-    return e;
-}
-Ref<Enumeration> Hashtable::elements() {
-    Ref<ListEnumeration> e(new ListEnumeration());
-    for (auto& kv : entries) e->items.push_back(kv.second);
-    return e;
+bool Hashtable::containsKey(Ref<Object> key) {
+    if (!key) jrt::throwNPE();
+    return find(key) >= 0;
 }
 
 }  // namespace java::util

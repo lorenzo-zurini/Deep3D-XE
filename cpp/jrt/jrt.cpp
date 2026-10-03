@@ -1,6 +1,7 @@
 // jrt: object lifetime, exceptions, monitors, java.lang.
 #include "jrt.h"
 #include "jrt_io.h"
+#include "jrt_unicode.h"
 
 #include <algorithm>
 #include <chrono>
@@ -10,6 +11,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <vector>
+#include <unistd.h>
 
 namespace jrt {
 
@@ -109,7 +111,7 @@ void throwNegativeArraySize(int32_t n) {
     throwNew<java::lang::NegativeArraySizeException>(u16(std::to_string(n)));
 }
 
-void throwArrayStore() { throwNew<java::lang::RuntimeException>(u"ArrayStoreException"); }
+void throwArrayStore() { throwNew<java::lang::ArrayStoreException>(u""); }
 
 void throwJava(const Ref<java::lang::Throwable>& t) {
     if (!t) throwNPE();
@@ -303,6 +305,8 @@ const char* Object::className() const {
     char* dn = abi::__cxa_demangle(typeid(*this).name(), nullptr, nullptr, &st);
     name = dn ? dn : typeid(*this).name();
     free(dn);
+    // Java's binary name: java::lang::Foo -> java.lang.Foo
+    for (size_t i; (i = name.find("::")) != std::string::npos;) name.replace(i, 2, ".");
     return name.c_str();
 }
 
@@ -336,19 +340,52 @@ void Object::notifyAll() { jrt::monitorOf(this)->notifyAll(); }
 
 Ref<String> String::of(std::u16string v) { return Ref<String>(new String(std::move(v))); }
 
+/* UTF-8 as Java decodes it: well-formed sequences per Unicode table 3-7,
+   and each maximal ill-formed subpart becomes one U+FFFD. */
 Ref<String> String::fromUtf8(const std::string& v) {
     std::u16string o;
-    for (size_t i = 0; i < v.size();) {
-        unsigned char c = (unsigned char)v[i];
-        uint32_t cp;
-        int n;
-        if (c < 0x80) { cp = c; n = 1; }
-        else if ((c >> 5) == 6 && i + 1 < v.size()) { cp = ((c & 0x1F) << 6) | (v[i + 1] & 0x3F); n = 2; }
-        else if ((c >> 4) == 14 && i + 2 < v.size()) { cp = ((c & 0x0F) << 12) | ((v[i + 1] & 0x3F) << 6) | (v[i + 2] & 0x3F); n = 3; }
-        else if ((c >> 3) == 30 && i + 3 < v.size()) {
-            cp = ((c & 0x07) << 18) | ((v[i + 1] & 0x3F) << 12) | ((v[i + 2] & 0x3F) << 6) | (v[i + 3] & 0x3F);
-            n = 4;
-        } else { cp = 0xFFFD; n = 1; }
+    o.reserve(v.size());
+    size_t n = v.size();
+    auto at = [&](size_t i) { return uint32_t((unsigned char)v[i]); };
+    for (size_t i = 0; i < n;) {
+        uint32_t c = at(i);
+        if (c < 0x80) {
+            o.push_back(char16_t(c));
+            i++;
+            continue;
+        }
+        int need;
+        uint32_t lo = 0x80, hi = 0xBF, cp;
+        if (c >= 0xC2 && c <= 0xDF) { need = 1; cp = c & 0x1F; }
+        else if (c >= 0xE0 && c <= 0xEF) {
+            need = 2; cp = c & 0x0F;
+            if (c == 0xE0) lo = 0xA0;
+            if (c == 0xED) hi = 0x9F;
+        } else if (c >= 0xF0 && c <= 0xF4) {
+            need = 3; cp = c & 0x07;
+            if (c == 0xF0) lo = 0x90;
+            if (c == 0xF4) hi = 0x8F;
+        } else {
+            o.push_back(u'\xFFFD');
+            i++;
+            continue;
+        }
+        size_t k = i + 1;
+        bool ok = true;
+        for (int m = 0; m < need; m++, k++) {
+            if (k >= n || at(k) < lo || at(k) > hi) {
+                ok = false;
+                break;
+            }
+            cp = (cp << 6) | (at(k) & 0x3F);
+            lo = 0x80;
+            hi = 0xBF;
+        }
+        if (!ok) {
+            o.push_back(u'\xFFFD');
+            i = k;
+            continue;
+        }
         if (cp >= 0x10000) {
             cp -= 0x10000;
             o.push_back(char16_t(0xD800 + (cp >> 10)));
@@ -356,7 +393,7 @@ Ref<String> String::fromUtf8(const std::string& v) {
         } else {
             o.push_back(char16_t(cp));
         }
-        i += size_t(n);
+        i = k;
     }
     return of(std::move(o));
 }
@@ -365,9 +402,11 @@ std::string String::utf8() const {
     std::string o;
     for (size_t i = 0; i < s.size(); i++) {
         uint32_t c = s[i];
-        if (c >= 0xD800 && c < 0xDC00 && i + 1 < s.size()) {
+        if (c >= 0xD800 && c < 0xDC00 && i + 1 < s.size() && s[i + 1] >= 0xDC00 && s[i + 1] < 0xE000) {
             c = 0x10000 + ((c - 0xD800) << 10) + (s[i + 1] - 0xDC00);
             i++;
+        } else if (c >= 0xD800 && c < 0xE000) {
+            c = u'?';   // an unpaired surrogate, as Java's encoder writes it
         }
         if (c < 0x80) o.push_back(char(c));
         else if (c < 0x800) { o.push_back(char(0xC0 | (c >> 6))); o.push_back(char(0x80 | (c & 0x3F))); }
@@ -434,6 +473,8 @@ char16_t String::charAt(int32_t i) {
 Ref<String> String::substring(int32_t b) { return substring(b, int32_t(s.size())); }
 Ref<String> String::substring(int32_t b, int32_t e) {
     if (b < 0 || e > int32_t(s.size()) || b > e) sioobe(b < 0 ? b : e);
+    if (b == 0 && e == int32_t(s.size())) return Ref<String>(this);
+    if (b == e) return JRT_LIT(u"");
     return of(s.substr(size_t(b), size_t(e - b)));
 }
 int32_t String::indexOf(int32_t ch) { return indexOf(ch, 0); }
@@ -474,17 +515,16 @@ Ref<String> String::trim() {
     while (b < e && s[b] <= u' ') b++;
     while (e > b && s[e - 1] <= u' ') e--;
     if (b == 0 && e == s.size()) return Ref<String>(this);
+    if (b == e) return JRT_LIT(u"");
     return of(s.substr(b, e - b));
 }
 Ref<String> String::toUpperCase() {
-    std::u16string o = s;
-    for (auto& c : o) c = Character::toUpperCase(c);
-    return of(o);
+    std::u16string o = jrt::unicode::toUpperCase(s);
+    return o == s ? Ref<String>(this) : of(o);
 }
 Ref<String> String::toLowerCase() {
-    std::u16string o = s;
-    for (auto& c : o) c = Character::toLowerCase(c);
-    return of(o);
+    std::u16string o = jrt::unicode::toLowerCase(s);
+    return o == s ? Ref<String>(this) : of(o);
 }
 Ref<String> String::replace(char16_t a, char16_t b) {
     std::u16string o = s;
@@ -495,8 +535,15 @@ Ref<String> String::replace(char16_t a, char16_t b) {
 Ref<String> String::concat(Ref<String> o) { return of(s + o->s); }
 bool String::equalsIgnoreCase(Ref<String> o) {
     if (!o || o->s.size() != s.size()) return false;
-    for (size_t i = 0; i < s.size(); i++)
-        if (Character::toUpperCase(s[i]) != Character::toUpperCase(o->s[i])) return false;
+    if (o.get() == this) return true;
+    for (size_t i = 0; i < s.size(); i++) {
+        char16_t a = s[i], b = o->s[i];
+        if (a == b) continue;
+        char16_t ua = Character::toUpperCase(a), ub = Character::toUpperCase(b);
+        if (ua == ub) continue;
+        if (Character::toLowerCase(ua) == Character::toLowerCase(ub)) continue;
+        return false;
+    }
     return true;
 }
 int32_t String::compareTo(Ref<String> o) {
@@ -625,40 +672,60 @@ void StringBuffer::setLength(int32_t n) {
 // Numbers
 // ---------------------------------------------------------------------
 
-[[noreturn]] static void numberFormat(Ref<String> s) {
+/* NumberFormatException.forInputString (and parseInt's null message) */
+[[noreturn]] static void numberFormat(Ref<String> s, int32_t radix = 10) {
     Ref<NumberFormatException> e(new NumberFormatException());
-    e->message = jrt::concat(JRT_LIT(u"For input string: \""), s, JRT_LIT(u"\""));
+    if (!s) e->message = JRT_LIT(u"Cannot parse null string: null");
+    else if (radix == 10) e->message = jrt::concat(JRT_LIT(u"For input string: \""), s, JRT_LIT(u"\""));
+    else e->message = jrt::concat(JRT_LIT(u"For input string: \""), s, JRT_LIT(u"\" under radix "), radix);
     jrt::throwJava(e);
 }
 
 static int64_t parseIntegral(Ref<String> str, int32_t radix, int64_t lo, int64_t hi) {
-    if (!str) numberFormat(str);
+    if (!str) numberFormat(str, radix);
     const std::u16string& s = str->s;
-    if (s.empty()) numberFormat(str);
+    if (s.empty()) numberFormat(str, radix);
     size_t i = 0;
     bool neg = false;
     if (s[0] == u'-' || s[0] == u'+') {
         neg = s[0] == u'-';
         i = 1;
-        if (s.size() == 1) numberFormat(str);
+        if (s.size() == 1) numberFormat(str, radix);
     }
     // accumulate negatively (like Java) so MIN_VALUE parses
     int64_t v = 0;
     for (; i < s.size(); i++) {
         int32_t d = Character::digit(s[i], radix);
-        if (d < 0) numberFormat(str);
-        if (v < (lo + d) / radix) numberFormat(str);
+        if (d < 0) numberFormat(str, radix);
+        if (v < (lo + d) / radix) numberFormat(str, radix);
         v = v * radix - d;
-        if (v < lo) numberFormat(str);
+        if (v < lo) numberFormat(str, radix);
     }
     if (!neg) {
-        if (v < -hi) numberFormat(str);
+        if (v < -hi) numberFormat(str, radix);
         v = -v;
     }
     return v;
 }
 
-Ref<Integer> Integer::valueOf(int32_t v) { return jrt::New<Integer>(v); }
+// valueOf caches like Java's (-128..127; Character 0..127; Boolean TRUE/FALSE),
+// so == on boxes compares as in Java. The caches live forever.
+template <class T, class V>
+Ref<T> cachedBox(V v, int lo, int hi) {
+    static Ref<T>* cache = [lo, hi] {
+        auto* c = new Ref<T>[size_t(hi - lo + 1)];
+        for (int i = lo; i <= hi; i++) {
+            c[i - lo] = Ref<T>(new T());
+            c[i - lo]->value = V(i);
+        }
+        return c;
+    }();
+    if (int64_t(v) >= lo && int64_t(v) <= hi) return cache[int64_t(v) - lo];
+    Ref<T> r(new T());
+    r->value = v;
+    return r;
+}
+Ref<Integer> Integer::valueOf(int32_t v) { return cachedBox<Integer>(v, -128, 127); }
 Ref<Integer> Integer::valueOf(Ref<String> s) { return valueOf(parseInt(s)); }
 int32_t Integer::parseInt(Ref<String> s) { return parseInt(s, 10); }
 int32_t Integer::parseInt(Ref<String> s, int32_t radix) {
@@ -699,7 +766,7 @@ bool Integer::equals(Ref<Object> o) {
 }
 Ref<String> Integer::toString() { return jrt::concat(value); }
 
-Ref<Long> Long::valueOf(int64_t v) { return jrt::New<Long>(v); }
+Ref<Long> Long::valueOf(int64_t v) { return cachedBox<Long>(v, -128, 127); }
 int64_t Long::parseLong(Ref<String> s) {
     return parseIntegral(s, 10, std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max());
 }
@@ -709,32 +776,30 @@ bool Long::equals(Ref<Object> o) {
 }
 Ref<String> Long::toString() { return jrt::concat(value); }
 
-Ref<Short> Short::valueOf(int16_t v) {
-    Ref<Short> r(new Short());
-    r->value = v;
-    return r;
+Ref<Short> Short::valueOf(int16_t v) { return cachedBox<Short>(v, -128, 127); }
+/* Short/Byte.parseX: Integer.parseInt, then the range check */
+[[noreturn]] static void outOfRange(Ref<String> s) {
+    Ref<NumberFormatException> e(new NumberFormatException());
+    e->message = jrt::concat(JRT_LIT(u"Value out of range. Value:\""), s, JRT_LIT(u"\" Radix:10"));
+    jrt::throwJava(e);
 }
-int16_t Short::parseShort(Ref<String> s) { return int16_t(parseIntegral(s, 10, -32768, 32767)); }
+int16_t Short::parseShort(Ref<String> s) {
+    int32_t v = Integer::parseInt(s, 10);
+    if (v < -32768 || v > 32767) outOfRange(s);
+    return int16_t(v);
+}
 
-Ref<Byte> Byte::valueOf(int8_t v) {
-    Ref<Byte> r(new Byte());
-    r->value = v;
-    return r;
+Ref<Byte> Byte::valueOf(int8_t v) { return cachedBox<Byte>(v, -128, 127); }
+int8_t Byte::parseByte(Ref<String> s) {
+    int32_t v = Integer::parseInt(s, 10);
+    if (v < -128 || v > 127) outOfRange(s);
+    return int8_t(v);
 }
-int8_t Byte::parseByte(Ref<String> s) { return int8_t(parseIntegral(s, 10, -128, 127)); }
 
 Ref<Float> Float::valueOf(float v) {
     Ref<Float> r(new Float());
     r->value = v;
     return r;
-}
-float Float::parseFloat(Ref<String> s) {
-    std::string u = s->trim()->utf8();
-    float v = 0;
-    auto r = std::from_chars(u.data() + (!u.empty() && u[0] == '+' ? 1 : 0), u.data() + u.size(), v);
-    if (r.ec != std::errc() || (r.ptr != u.data() + u.size() && !(r.ptr + 1 == u.data() + u.size() && (*r.ptr == 'f' || *r.ptr == 'F' || *r.ptr == 'd' || *r.ptr == 'D'))))
-        numberFormat(s);
-    return v;
 }
 int32_t Float::floatToIntBits(float v) {
     if (v != v) return 0x7fc00000;
@@ -751,18 +816,16 @@ float Float::intBitsToFloat(int32_t v) {
     return f;
 }
 Ref<String> Float::toString() { return jrt::concat(value); }
+Ref<String> Double::toString() { return jrt::concat(value); }
+Ref<String> Short::toString() { return jrt::concat(int32_t(value)); }
+Ref<String> Byte::toString() { return jrt::concat(int32_t(value)); }
+Ref<String> Boolean::toString() { return value ? JRT_LIT(u"true") : JRT_LIT(u"false"); }
+Ref<String> Character::toString() { return String::of(std::u16string(1, value)); }
 
 Ref<Double> Double::valueOf(double v) {
     Ref<Double> r(new Double());
     r->value = v;
     return r;
-}
-double Double::parseDouble(Ref<String> s) {
-    std::string u = s->trim()->utf8();
-    double v = 0;
-    auto r = std::from_chars(u.data() + (!u.empty() && u[0] == '+' ? 1 : 0), u.data() + u.size(), v);
-    if (r.ec != std::errc()) numberFormat(s);
-    return v;
 }
 int64_t Double::doubleToLongBits(double v) {
     if (v != v) return 0x7ff8000000000000LL;
@@ -776,46 +839,18 @@ double Double::longBitsToDouble(int64_t v) {
     return d;
 }
 
-Ref<Boolean> Boolean::valueOf(bool v) {
-    Ref<Boolean> r(new Boolean());
-    r->value = v;
-    return r;
-}
+Ref<Boolean> Boolean::valueOf(bool v) { return cachedBox<Boolean>(v, 0, 1); }
 
-Ref<Character> Character::valueOf(char16_t v) {
-    Ref<Character> r(new Character());
-    r->value = v;
-    return r;
-}
-bool Character::isDigit(char16_t c) { return c >= u'0' && c <= u'9'; }
-bool Character::isLetter(char16_t c) {
-    return (c >= u'a' && c <= u'z') || (c >= u'A' && c <= u'Z') || (c >= 0xC0 && c != 0xD7 && c != 0xF7 && c < 0x2000);
-}
-bool Character::isLetterOrDigit(char16_t c) { return isDigit(c) || isLetter(c); }
-bool Character::isWhitespace(char16_t c) { return c == u' ' || (c >= 9 && c <= 13) || (c >= 0x1C && c <= 0x1F); }
-bool Character::isUpperCase(char16_t c) { return toLowerCase(c) != c; }
-bool Character::isLowerCase(char16_t c) { return toUpperCase(c) != c; }
-char16_t Character::toUpperCase(char16_t c) {
-    if (c >= u'a' && c <= u'z') return char16_t(c - 32);
-    if (c >= 0xE0 && c <= 0xFE && c != 0xF7) return char16_t(c - 32);
-    if (c >= 0x430 && c <= 0x44F) return char16_t(c - 32);    // Cyrillic
-    if (c >= 0x450 && c <= 0x45F) return char16_t(c - 80);
-    return c;
-}
-char16_t Character::toLowerCase(char16_t c) {
-    if (c >= u'A' && c <= u'Z') return char16_t(c + 32);
-    if (c >= 0xC0 && c <= 0xDE && c != 0xD7) return char16_t(c + 32);
-    if (c >= 0x410 && c <= 0x42F) return char16_t(c + 32);
-    if (c >= 0x400 && c <= 0x40F) return char16_t(c + 80);
-    return c;
-}
-int32_t Character::digit(char16_t c, int32_t radix) {
-    int32_t d = -1;
-    if (c >= u'0' && c <= u'9') d = c - u'0';
-    else if (c >= u'a' && c <= u'z') d = c - u'a' + 10;
-    else if (c >= u'A' && c <= u'Z') d = c - u'A' + 10;
-    return d < radix ? d : -1;
-}
+Ref<Character> Character::valueOf(char16_t v) { return cachedBox<Character>(v, 0, 127); }
+bool Character::isDigit(char16_t c) { return jrt::unicode::isDigit(c); }
+bool Character::isLetter(char16_t c) { return jrt::unicode::isLetter(c); }
+bool Character::isLetterOrDigit(char16_t c) { return jrt::unicode::isLetterOrDigit(c); }
+bool Character::isWhitespace(char16_t c) { return jrt::unicode::isWhitespace(c); }
+bool Character::isUpperCase(char16_t c) { return jrt::unicode::isUpperCase(c); }
+bool Character::isLowerCase(char16_t c) { return jrt::unicode::isLowerCase(c); }
+char16_t Character::toUpperCase(char16_t c) { return jrt::unicode::toUpperCase(c); }
+char16_t Character::toLowerCase(char16_t c) { return jrt::unicode::toLowerCase(c); }
+int32_t Character::digit(char16_t c, int32_t radix) { return jrt::unicode::digit(c, radix); }
 
 // ---------------------------------------------------------------------
 // Math (Java's min/max NaN and signed-zero rules)
@@ -841,23 +876,198 @@ double Math::max(double a, double b) {
     if (a == 0 && b == 0) return std::signbit(a) ? b : a;
     return a >= b ? a : b;
 }
-double Math::sin(double v) { return std::sin(v); }
-double Math::cos(double v) { return std::cos(v); }
-double Math::tan(double v) { return std::tan(v); }
-double Math::asin(double v) { return std::asin(v); }
-double Math::acos(double v) { return std::acos(v); }
-double Math::atan(double v) { return std::atan(v); }
-double Math::atan2(double y, double x) { return std::atan2(y, x); }
-double Math::pow(double a, double b) { return std::pow(a, b); }
-double Math::exp(double v) { return std::exp(v); }
-double Math::log(double v) { return std::log(v); }
-int32_t Math::round(float v) {
-    if (v != v) return 0;
-    return jrt::f2i(std::floor(v + 0.5f));
+namespace {
+int32_t hiWord(double x) { uint64_t b; memcpy(&b, &x, 8); return int32_t(b >> 32); }
+uint32_t loWord(double x) { uint64_t b; memcpy(&b, &x, 8); return uint32_t(b); }
+
+/* Math.tan is a HotSpot intrinsic whose last bit differs from glibc's for
+   some inputs. The game only takes tan of k*PI/2048 and k*PI/4096 (field of
+   view); for those the JDK's results (OpenJDK 27, x86-64) where glibc
+   differs, |k| <= 8192: */
+const uint64_t kTanFix[][2] = {
+    {0x3FB2106CA4910069ULL, 0x3FB2181D6CE53175ULL},
+    {0x3FCF839C24A97C8BULL, 0x3FD01555F41BC929ULL},
+    {0x3FD69487CDB54084ULL, 0x3FD790F53CB492ADULL},
+    {0x3FDC5F5CBA20F6E8ULL, 0x3FDE63D50272EF97ULL},
+    {0x3FE1990B3AC0BC93ULL, 0x3FE39DCAF1F3EF5EULL},
+    {0x3FE400CBC85142E4ULL, 0x3FE7179C6B64AFFBULL},
+    {0x3FF3BBAE55298768ULL, 0x4006CC6E906C04BBULL},
+    {0x3FF7C868147D83ACULL, 0x4027A62D8F0713F9ULL},
+    {0x3FFA4C6EDCCCD6AFULL, 0xC02B665761659531ULL},
+    {0x3FFE68DDD9357D90ULL, 0xC0075EEA99530047ULL},
+    {0x40007CBACF977955ULL, 0xBFFDFD3C26CD692FULL},
+    {0x4000CB4500FECE62ULL, 0xBFFB678E7733141FULL},
+    {0x4001E6034C72CD5DULL, 0xBFF4573E0139EA1BULL},
+    {0x40047376D301B9F2ULL, 0xBFE53464B32B57E5ULL},
+    {0x40059F7C7B3FA7CCULL, 0xBFDE07A258AD0C95ULL},
+    {0x40069F86ABAA1E57ULL, 0xBFD4C3265473AEDDULL},
+    {0x40073C9B0E78C871ULL, 0xBFCEEAC359280E75ULL},
+    {0x40081D3AC4B9E9C4ULL, 0xBFC062B9CB41C49DULL},
+    {0x400860C6182C60FDULL, 0xBFB8390FCF0758CDULL},
+    {0x4008625837E1A540ULL, 0xBFB8065993B3D341ULL},
+    {0x4009EFC18E061B49ULL, 0x3FB9CF06D28556F1ULL},
+    {0x400A042D2A3A92AEULL, 0x3FBC63CE377FC7FDULL},
+    {0x400A1BBD05D99298ULL, 0x3FBF6011BF2C58ABULL},
+    {0x400D26DA750DD40EULL, 0x3FE194A51D926815ULL},
+    {0x400D7888E5DFB1A1ULL, 0x3FE347C0A91C254DULL},
+    {0x400DA93ABCD2F5B8ULL, 0x3FE455263CC2146BULL},
+    {0x400DB4399AC7D38CULL, 0x3FE49319B2C728A6ULL},
+    {0x400E464F1FA19FD2ULL, 0x3FE7F63CB6322609ULL},
+    {0x400EA620ADD2E3BEULL, 0x3FEA629AFA3EDEB5ULL},
+    {0x400EBC1E69BC9F65ULL, 0x3FEAF7B30E714A78ULL},
+    {0x400F04601C4EE367ULL, 0x3FECF55BFE9493B5ULL},
+    {0x4011CCE1511E8930ULL, 0x400DCBA315B30F4DULL},
+    {0x401287CE0E61443FULL, 0x4029051334B8220DULL},
+    {0x40155D83478274D6ULL, 0xBFF5FE6459C4F827ULL},
+    {0x40156626F5E76C45ULL, 0xBFF59BADCF33CB5EULL},
+    {0x401567B9159CB088ULL, 0xBFF589F9035D333DULL},
+    {0x40174D195B68152FULL, 0xBFDF8A7CE35C8721ULL},
+    {0x401A0C07C8C4E7FCULL, 0x3FCDC6C31310B573ULL},
+    {0x401AECA77F06094FULL, 0x3FDEC06F0D71F237ULL},
+    {0x401B9196805F08B7ULL, 0x3FE6513DACA07251ULL},
+    {0x401D7BAD254A3A26ULL, 0x3FFE7E83AFF0C9C9ULL},
+    {0x40204C08F8A4353EULL, 0xC00A5F59E90600D1ULL},
+    {0x4020A4C8F825C5FDULL, 0xBFFFAA5DF8E6A273ULL},
+    {0x4022B6EDC59F4414ULL, 0xBFB14E177C05800FULL},
+    {0x4022D97C7F3321D2ULL, 0xBCBA79394C9E8A0AULL},
+    {0x4025D4E4B152B8ACULL, 0x4029051334B82247ULL},
+    {0x4025FDBBE9BBA775ULL, 0x432093C3B4AEBEB1ULL},
+    {0x40271231B65A9565ULL, 0xBFFAB1C35D8A74F3ULL},
+    {0x4027ACEAE999591BULL, 0xBFEC8F234A479A10ULL},
+    {0x4028486D2CB2BEF2ULL, 0xBFDCF56611D47235ULL},
+    {0x4028EC931E311C38ULL, 0xBFBACD0207170511ULL},
+    {0xBFB2106CA4910069ULL, 0xBFB2181D6CE53175ULL},
+    {0xBFCF839C24A97C8BULL, 0xBFD01555F41BC929ULL},
+    {0xBFD69487CDB54084ULL, 0xBFD790F53CB492ADULL},
+    {0xBFDC5F5CBA20F6E8ULL, 0xBFDE63D50272EF97ULL},
+    {0xBFE1990B3AC0BC93ULL, 0xBFE39DCAF1F3EF5EULL},
+    {0xBFE400CBC85142E4ULL, 0xBFE7179C6B64AFFBULL},
+    {0xBFF3BBAE55298768ULL, 0xC006CC6E906C04BBULL},
+    {0xBFF7C868147D83ACULL, 0xC027A62D8F0713F9ULL},
+    {0xBFFA4C6EDCCCD6AFULL, 0x402B665761659531ULL},
+    {0xBFFE68DDD9357D90ULL, 0x40075EEA99530047ULL},
+    {0xC0007CBACF977955ULL, 0x3FFDFD3C26CD692FULL},
+    {0xC000CB4500FECE62ULL, 0x3FFB678E7733141FULL},
+    {0xC001E6034C72CD5DULL, 0x3FF4573E0139EA1BULL},
+    {0xC0047376D301B9F2ULL, 0x3FE53464B32B57E5ULL},
+    {0xC0059F7C7B3FA7CCULL, 0x3FDE07A258AD0C95ULL},
+    {0xC0069F86ABAA1E57ULL, 0x3FD4C3265473AEDDULL},
+    {0xC0073C9B0E78C871ULL, 0x3FCEEAC359280E75ULL},
+    {0xC0081D3AC4B9E9C4ULL, 0x3FC062B9CB41C49DULL},
+    {0xC00860C6182C60FDULL, 0x3FB8390FCF0758CDULL},
+    {0xC008625837E1A540ULL, 0x3FB8065993B3D341ULL},
+    {0xC009EFC18E061B49ULL, 0xBFB9CF06D28556F1ULL},
+    {0xC00A042D2A3A92AEULL, 0xBFBC63CE377FC7FDULL},
+    {0xC00A1BBD05D99298ULL, 0xBFBF6011BF2C58ABULL},
+    {0xC00D26DA750DD40EULL, 0xBFE194A51D926815ULL},
+    {0xC00D7888E5DFB1A1ULL, 0xBFE347C0A91C254DULL},
+    {0xC00DA93ABCD2F5B8ULL, 0xBFE455263CC2146BULL},
+    {0xC00DB4399AC7D38CULL, 0xBFE49319B2C728A6ULL},
+    {0xC00E464F1FA19FD2ULL, 0xBFE7F63CB6322609ULL},
+    {0xC00EA620ADD2E3BEULL, 0xBFEA629AFA3EDEB5ULL},
+    {0xC00EBC1E69BC9F65ULL, 0xBFEAF7B30E714A78ULL},
+    {0xC00F04601C4EE367ULL, 0xBFECF55BFE9493B5ULL},
+    {0xC011CCE1511E8930ULL, 0xC00DCBA315B30F4DULL},
+    {0xC01287CE0E61443FULL, 0xC029051334B8220DULL},
+    {0xC0155D83478274D6ULL, 0x3FF5FE6459C4F827ULL},
+    {0xC0156626F5E76C45ULL, 0x3FF59BADCF33CB5EULL},
+    {0xC01567B9159CB088ULL, 0x3FF589F9035D333DULL},
+    {0xC0174D195B68152FULL, 0x3FDF8A7CE35C8721ULL},
+    {0xC01A0C07C8C4E7FCULL, 0xBFCDC6C31310B573ULL},
+    {0xC01AECA77F06094FULL, 0xBFDEC06F0D71F237ULL},
+    {0xC01B9196805F08B7ULL, 0xBFE6513DACA07251ULL},
+    {0xC01D7BAD254A3A26ULL, 0xBFFE7E83AFF0C9C9ULL},
+    {0xC0204C08F8A4353EULL, 0x400A5F59E90600D1ULL},
+    {0xC020A4C8F825C5FDULL, 0x3FFFAA5DF8E6A273ULL},
+    {0xC022B6EDC59F4414ULL, 0x3FB14E177C05800FULL},
+    {0xC022D97C7F3321D2ULL, 0x3CBA79394C9E8A0AULL},
+    {0xC025D4E4B152B8ACULL, 0xC029051334B82247ULL},
+    {0xC025FDBBE9BBA775ULL, 0xC32093C3B4AEBEB1ULL},
+    {0xC0271231B65A9565ULL, 0x3FFAB1C35D8A74F3ULL},
+    {0xC027ACEAE999591BULL, 0x3FEC8F234A479A10ULL},
+    {0xC028486D2CB2BEF2ULL, 0x3FDCF56611D47235ULL},
+    {0xC028EC931E311C38ULL, 0x3FBACD0207170511ULL},
+};
+}  // namespace
+
+double Math::tan(double v) {
+    uint64_t bits;
+    memcpy(&bits, &v, 8);
+    size_t lo = 0, hi = sizeof(kTanFix) / sizeof(kTanFix[0]);
+    while (lo < hi) {
+        size_t mid = (lo + hi) / 2;
+        if (bits < kTanFix[mid][0]) hi = mid;
+        else if (bits > kTanFix[mid][0]) lo = mid + 1;
+        else {
+            double r;
+            memcpy(&r, &kTanFix[mid][1], 8);
+            return r;
+        }
+    }
+    return std::tan(v);
 }
-int64_t Math::round(double v) {
-    if (v != v) return 0;
-    return jrt::f2l(std::floor(v + 0.5));
+
+// fdlibm's s_atan.c, which Java's Math.atan is (StrictMath.atan)
+double Math::atan(double x) {
+    static const double atanhi[] = {4.63647609000806093515e-01, 7.85398163397448278999e-01,
+                                    9.82793723247329054082e-01, 1.57079632679489655800e+00};
+    static const double atanlo[] = {2.26987774529616870924e-17, 3.06161699786838301793e-17,
+                                    1.39033110312309984516e-17, 6.12323399573676603587e-17};
+    static const double aT[] = {3.33333333333329318027e-01, -1.99999999998764832476e-01,
+                                1.42857142725034663711e-01, -1.11111104054623557880e-01,
+                                9.09088713343650656196e-02, -7.69187620504482999495e-02,
+                                6.66107313738753120669e-02, -5.83357013379057348645e-02,
+                                4.97687799461593236017e-02, -3.65315727442169155270e-02,
+                                1.62858201153657823623e-02};
+    const double one = 1.0, huge = 1.0e300;
+    int32_t hx = hiWord(x), ix = hx & 0x7fffffff, id;
+    if (ix >= 0x44100000) {
+        if (ix > 0x7ff00000 || (ix == 0x7ff00000 && loWord(x) != 0)) return x + x;
+        return hx > 0 ? atanhi[3] + atanlo[3] : -atanhi[3] - atanlo[3];
+    }
+    if (ix < 0x3fdc0000) {
+        if (ix < 0x3e200000 && huge + x > one) return x;
+        id = -1;
+    } else {
+        x = std::fabs(x);
+        if (ix < 0x3ff30000) {
+            if (ix < 0x3fe60000) { id = 0; x = (2.0 * x - one) / (2.0 + x); }
+            else { id = 1; x = (x - one) / (x + one); }
+        } else {
+            if (ix < 0x40038000) { id = 2; x = (x - 1.5) / (one + 1.5 * x); }
+            else { id = 3; x = -1.0 / x; }
+        }
+    }
+    double z = x * x, w = z * z;
+    double s1 = z * (aT[0] + w * (aT[2] + w * (aT[4] + w * (aT[6] + w * (aT[8] + w * aT[10])))));
+    double s2 = w * (aT[1] + w * (aT[3] + w * (aT[5] + w * (aT[7] + w * aT[9]))));
+    if (id < 0) return x - x * (s1 + s2);
+    z = atanhi[id] - ((x * (s1 + s2) - atanlo[id]) - x);
+    return hx < 0 ? -z : z;
+}
+
+// Java's exact Math.round (not floor(x + 0.5))
+int32_t Math::round(float a) {
+    int32_t bits;
+    memcpy(&bits, &a, 4);
+    int32_t shift = (24 - 2 + 127) - ((bits & 0x7F800000) >> 23);
+    if ((shift & -32) == 0) {
+        int32_t r = (bits & 0x007FFFFF) | 0x00800000;
+        if (bits < 0) r = -r;
+        return ((r >> shift) + 1) >> 1;
+    }
+    return jrt::f2i(a);
+}
+int64_t Math::round(double a) {
+    int64_t bits;
+    memcpy(&bits, &a, 8);
+    int64_t shift = (53 - 2 + 1023) - ((bits & 0x7FF0000000000000LL) >> 52);
+    if ((shift & -64) == 0) {
+        int64_t r = (bits & 0x000FFFFFFFFFFFFFLL) | 0x0010000000000000LL;
+        if (bits < 0) r = -r;
+        return ((r >> shift) + 1) >> 1;
+    }
+    return jrt::f2l(a);
 }
 double Math::random() {
     static Ref<java::util::Random> r = jrt::New<java::util::Random>();
@@ -897,7 +1107,8 @@ void Thread::start() {
         try {
             self->run();
         } catch (const jrt::Thrown& t) {
-            fprintf(stderr, "Exception in thread: ");
+            // the Java build's default handler (Diagnostics)
+            fprintf(stderr, "[diag] uncaught exception in %s\n", self->getName()->utf8().c_str());
             t.t->printStackTrace();
         }
         self->alive = false;
@@ -930,9 +1141,18 @@ Ref<Thread> Thread::currentThread() {
         tCurrent = new Thread();
         jrt::retain(tCurrent);
         tCurrent->alive = true;
+        tCurrent->name = gettid() == getpid() ? JRT_LIT(u"main")
+                                               : String::fromUtf8("native-" + std::to_string(gettid()));
     }
     return Ref<Thread>(tCurrent);
 }
+
+Ref<String> Thread::nextName() {
+    static std::atomic<int32_t> n{0};
+    return jrt::concat(JRT_LIT(u"Thread-"), int32_t(n++));
+}
+
+Ref<String> Thread::getName() { return name ? name : JRT_LIT(u"Thread-?"); }
 
 // ---------------------------------------------------------------------
 // System, Runtime
@@ -965,13 +1185,10 @@ void System::exit(int32_t code) {
     fflush(stderr);
     _Exit(code);
 }
+/* The Java build ran on a desktop JDK, which has none of the phone's
+   properties (microedition.*, supports.*): the game gets null for all. */
 Ref<String> System::getProperty(Ref<String> key) {
-    std::string k = key->utf8();
-    if (k == "microedition.platform") return JRT_LIT(u"Deep3D-PC");
-    if (k == "microedition.profiles") return JRT_LIT(u"MIDP-2.0");
-    if (k == "microedition.configuration") return JRT_LIT(u"CLDC-1.1");
-    if (k == "microedition.m3g.version") return JRT_LIT(u"1.1");
-    if (k == "microedition.locale") return JRT_LIT(u"en");
+    if (!key) jrt::throwNPE();
     return nullptr;
 }
 Ref<String> System::getenv(Ref<String> key) {

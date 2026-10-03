@@ -109,8 +109,10 @@ official English text from the international release.
   arrows, Space fire, Enter confirm, E dock, Shift boost, Tab autopilot).
 - **Volume mixer** — master / music / effects sliders applied live.
 - **SoundFont support** — the MIDI soundtrack plays through FluidSynth
-  with the `.sf2` next to the game (`package.sh` puts the one the Java
-  build used there), else `~/.gervill/soundbank-emg.sf2` or a system one.
+  with an `.sf2` placed next to the game, else the system's `default.sf2`
+  (`/usr/share/soundfonts/`, `/usr/share/sounds/sf2/`), else Java's
+  Gervill bank (`~/.gervill/soundbank-emg.sf2`, written from the copy
+  built into the executable when missing).
 - **F12 screenshots** to `screenshots/`.
 - **Plays straight from the original JARs** — nothing is extracted: game
   data, the English text and sounds are read from the two JARs in place

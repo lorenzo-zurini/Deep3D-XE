@@ -34,6 +34,13 @@ namespace {
     jrt::throwJava(e);
 }
 
+/* java.util.ArrayList's index check (the Java build's Form) */
+[[noreturn]] void outOfBounds(int32_t index, size_t size) {
+    Ref<java::lang::IndexOutOfBoundsException> e(new java::lang::IndexOutOfBoundsException());
+    e->message = String::fromUtf8("Index " + std::to_string(index) + " out of bounds for length " + std::to_string(size));
+    jrt::throwJava(e);
+}
+
 [[noreturn]] void illegalArgument(const std::string& msg) {
     Ref<java::lang::IllegalArgumentException> e(new java::lang::IllegalArgumentException());
     e->message = String::fromUtf8(msg);
@@ -66,6 +73,19 @@ void spriteTransform(int32_t t, int32_t w, int32_t h, int32_t x, int32_t y, int3
         case 7: ox = h - 1 - y; oy = w - 1 - x; break;      // MIRROR_ROT90
         default: illegalArgument("bad transform");
     }
+}
+
+// The Java build turned every decoded image into INT_ARGB by drawing it
+// (SrcOver) onto a transparent one, and so did createImage(Image) and the
+// region copy.
+// A non-premultiplied ARGB pixel drawn with SrcOver onto a transparent one.
+uint32_t overTransparent(uint32_t p) {
+    static const org::deep3d::AlphaTables& m = org::deep3d::alphaTables();
+    uint32_t a = p >> 24;
+    if (a == 0) return 0;
+    if (a == 255) return p;
+    auto c = [&](int s) { return uint32_t(m.div8[a][m.mul8[a][(p >> s) & 0xFF]]) << s; };
+    return a << 24 | c(16) | c(8) | c(0);
 }
 
 }  // namespace
@@ -109,7 +129,7 @@ Ref<Image> Image::decode(const uint8_t* data, size_t len) {
     img->argb.resize(size_t(w) * h);
     for (size_t i = 0; i < img->argb.size(); i++) {
         const uint8_t* p = &rgba[i * 4];
-        img->argb[i] = uint32_t(p[3]) << 24 | uint32_t(p[0]) << 16 | uint32_t(p[1]) << 8 | p[2];
+        img->argb[i] = overTransparent(uint32_t(p[3]) << 24 | uint32_t(p[0]) << 16 | uint32_t(p[1]) << 8 | p[2]);
     }
     return img;
 }
@@ -136,6 +156,10 @@ Ref<Image> Image::createImage(Ref<Array<int8_t>> data, int32_t offset, int32_t l
     if (offset < 0 || len < 0 || int64_t(offset) + len > data->length) jrt::throwAIOOBE(offset, data->length);
     Ref<Image> img = decode(reinterpret_cast<const uint8_t*>(data->data + offset), size_t(len));
     if (!img) illegalArgument("undecodable image data");
+    org::deep3d::Det::event("decode " + std::to_string(len) + " " +
+                            org::deep3d::Det::hex(org::deep3d::Det::hashBytes(org::deep3d::Det::FNV, data->data + offset, size_t(len))) +
+                            " -> " + std::to_string(img->width) + "x" + std::to_string(img->height) + " " +
+                            org::deep3d::Det::hex(img->detHash()));
     return img;
 }
 
@@ -155,7 +179,8 @@ Ref<Image> Image::createImage(Ref<Image> source) {
     Ref<Image> img(new Image());
     img->width = source->width;
     img->height = source->height;
-    img->argb = source->argb;
+    img->argb.resize(source->argb.size());
+    for (size_t i = 0; i < img->argb.size(); i++) img->argb[i] = overTransparent(source->argb[i]);
     return img;
 }
 
@@ -173,7 +198,7 @@ Ref<Image> Image::createImage(Ref<Image> source, int32_t x, int32_t y, int32_t w
         for (int32_t sx = 0; sx < w; sx++) {
             int32_t ox, oy;
             spriteTransform(transform, w, h, sx, sy, ox, oy);
-            img->argb[size_t(oy) * dw + ox] = source->argb[size_t(y + sy) * source->width + x + sx];
+            img->argb[size_t(oy) * dw + ox] = overTransparent(source->argb[size_t(y + sy) * source->width + x + sx]);
         }
     }
     return img;
@@ -193,6 +218,13 @@ Ref<Image> Image::createRGBImage(Ref<Array<int32_t>> rgb, int32_t w, int32_t h, 
     return img;
 }
 
+uint64_t Image::detHash() {
+    if (detHashV == 0) {
+        detHashV = org::deep3d::Det::hashInts(org::deep3d::Det::FNV, reinterpret_cast<const int32_t*>(argb.data()), argb.size());
+    }
+    return detHashV;
+}
+
 Ref<Graphics> Image::getGraphics() {
     // the game never draws into images; nothing to draw with off the screen
     Ref<java::lang::IllegalStateException> e(new java::lang::IllegalStateException());
@@ -202,7 +234,12 @@ Ref<Graphics> Image::getGraphics() {
 
 void Image::getRGB(Ref<Array<int32_t>> out, int32_t offset, int32_t scan, int32_t x, int32_t y, int32_t w,
                    int32_t h) {
-    if (x < 0 || y < 0 || x + w > width || y + h > height) illegalArgument("region outside the image");
+    // BufferedImage.getRGB
+    if (x < 0 || y < 0 || x + w > width || y + h > height) {
+        Ref<java::lang::ArrayIndexOutOfBoundsException> e(new java::lang::ArrayIndexOutOfBoundsException());
+        e->message = JRT_LIT(u"Coordinate out of bounds!");
+        jrt::throwJava(e);
+    }
     for (int32_t j = 0; j < h; j++) {
         for (int32_t i = 0; i < w; i++) {
             out->at(offset + j * scan + i) = int32_t(argb[size_t(y + j) * width + x + i]);
@@ -273,21 +310,21 @@ void Graphics::fillArc(int32_t x, int32_t y, int32_t w, int32_t h, int32_t start
 }
 
 void Graphics::drawImage(Ref<Image> img, int32_t x, int32_t y, int32_t anchor) {
-    if (!img) jrt::throwNPE();
+    // a null is recorded: it fails when the frame is drawn (flushGraphics), as in Java
     Draw2D& d = GLBackend::recorder();
     d.op({Draw2D::OP_IMAGE, d.obj(img), x, y, anchor});
 }
 
 void Graphics::drawRegion(Ref<Image> src, int32_t xSrc, int32_t ySrc, int32_t w, int32_t h, int32_t transform,
                           int32_t xDest, int32_t yDest, int32_t anchor) {
-    if (!src) jrt::throwNPE();
+    // a null is recorded: it fails when the frame is drawn (flushGraphics), as in Java
     Draw2D& d = GLBackend::recorder();
     d.op({Draw2D::OP_REGION, d.obj(src), xSrc, ySrc, w, h, transform, xDest, yDest, anchor});
 }
 
 void Graphics::drawRGB(Ref<Array<int32_t>> rgb, int32_t offset, int32_t scanlength, int32_t x, int32_t y,
                        int32_t w, int32_t h, bool processAlpha) {
-    if (!rgb) jrt::throwNPE();
+    // a null is recorded: it fails when the frame is drawn (flushGraphics), as in Java
     Draw2D& d = GLBackend::recorder();
     d.op({Draw2D::OP_RGB, d.obj(rgb), offset, scanlength, x, y, w, h, processAlpha ? 1 : 0});
 }
@@ -373,13 +410,13 @@ void Form::set(int32_t index, Ref<Item> item) {
     if (index == int32_t(items.size())) {
         items.push_back(item);
     } else {
-        if (uint32_t(index) >= items.size()) jrt::throwAIOOBE(index, int32_t(items.size()));
+        if (uint32_t(index) >= items.size()) outOfBounds(index, items.size());
         items[size_t(index)] = item;
     }
 }
 
 Ref<Item> Form::get(int32_t index) {
-    if (uint32_t(index) >= items.size()) jrt::throwAIOOBE(index, int32_t(items.size()));
+    if (uint32_t(index) >= items.size()) outOfBounds(index, items.size());
     return items[size_t(index)];
 }
 
@@ -427,3 +464,26 @@ Ref<Connection> Connector::open(Ref<String> name) {
 }
 
 }  // namespace javax::microedition::io
+
+namespace org::deep3d {
+
+const AlphaTables& alphaTables() {
+    static const AlphaTables* t = [] {
+        auto* a = new AlphaTables();
+        for (uint32_t i = 0; i < 256; i++) a->mul8[0][i] = a->mul8[i][0] = a->div8[0][i] = 0;
+        for (uint32_t i = 1; i < 256; i++) {
+            uint32_t inc = i * 0x010101u, val = inc + (1u << 23);
+            for (uint32_t j = 1; j < 256; j++, val += inc) a->mul8[i][j] = uint8_t(val >> 24);
+        }
+        for (uint32_t i = 1; i < 256; i++) {
+            uint32_t inc = ((0xFFu << 24) + i / 2) / i, val = 1u << 23;
+            uint32_t j = 0;
+            for (; j < i; j++, val += inc) a->div8[i][j] = uint8_t(val >> 24);
+            for (; j < 256; j++) a->div8[i][j] = 255;
+        }
+        return a;
+    }();
+    return *t;
+}
+
+}  // namespace org::deep3d

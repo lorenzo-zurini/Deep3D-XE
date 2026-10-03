@@ -1,8 +1,7 @@
 // javax.microedition.media for the C++ build (Java: Manager, BasePlayer,
 // WavPlayer, MidiPlayer, SilentPlayer, AudioSettings): sound effects (WAV,
 // the AMR effects converted by Assets) are SDL audio streams; music (MIDI)
-// is FluidSynth, with the soundbank the Java build's synthesizer uses
-// (Gervill's, cached in ~/.gervill) unless an .sf2 sits next to the game.
+// is FluidSynth, with the soundbank the Java build's synthesizer used.
 #include "midp.h"
 #include "deep3d/deep3d.h"
 
@@ -124,23 +123,63 @@ class SilentPlayer : public BasePlayer, public virtual control::VolumeControl {
 public:
     int32_t level = 100;
     bool muted = false;
+    static inline int32_t players = 0;
+    const int32_t detId = players++;
+
+    void ev(const std::string& e) { org::deep3d::Det::event("p" + std::to_string(detId) + " " + e); }
+
+    void realize() override {
+        ev("realize");
+        BasePlayer::realize();
+    }
+    void prefetch() override {
+        ev("prefetch");
+        BasePlayer::prefetch();
+    }
+    void deallocate() override {
+        ev("deallocate");
+        BasePlayer::deallocate();
+    }
+    void setLoopCount(int32_t count) override {
+        ev("loops " + std::to_string(count));
+        BasePlayer::setLoopCount(count);
+    }
+    void addPlayerListener(Ref<PlayerListener> l) override {
+        ev("listener");
+        BasePlayer::addPlayerListener(l);
+    }
     void start() override {
+        ev("start");
         prefetch();
         state = STARTED;
         state = PREFETCHED;     // "finishes" at once: callers treat it as a fire-and-forget effect
     }
     void stop() override {
+        ev("stop");
         if (state == STARTED) state = PREFETCHED;
     }
-    void close() override { state = CLOSED; }
-    int64_t setMediaTime(int64_t now) override { return now; }
+    void close() override {
+        ev("close");
+        state = CLOSED;
+    }
+    int64_t setMediaTime(int64_t now) override {
+        ev("time " + std::to_string(now));
+        return now;
+    }
     Ref<Control> getControl(Ref<String> type) override {
+        ev("control " + (type ? type->utf8() : std::string("null")));
         if (type && type->utf8().find("VolumeControl") != std::string::npos) return Ref<Control>(this);
         return nullptr;
     }
-    int32_t setLevel(int32_t l) override { return level = l; }
+    int32_t setLevel(int32_t l) override {
+        ev("level " + std::to_string(l));
+        return level = l;
+    }
     int32_t getLevel() override { return level; }
-    void setMute(bool m) override { muted = m; }
+    void setMute(bool m) override {
+        ev(std::string("mute ") + (m ? "true" : "false"));
+        muted = m;
+    }
     bool isMuted() override { return muted; }
 };
 
@@ -153,6 +192,7 @@ public:
     SDL_AudioStream* stream = nullptr;
     std::mutex lock;
     size_t pos = 0;
+    size_t played = 0;          // bytes since the last setMediaTime (a Clip's frame position)
     int32_t loopsLeft = 0;      // -1 forever
     bool playing = false;
     int32_t level = 100;
@@ -203,6 +243,7 @@ public:
             size_t n = std::min<size_t>(size_t(additional), w->pcm.size() - w->pos);
             SDL_PutAudioStreamData(s, w->pcm.data() + w->pos, int(n));
             w->pos += n;
+            w->played += n;
             additional -= int(n);
         }
     }
@@ -233,8 +274,8 @@ public:
         {
             std::lock_guard<std::mutex> g(lock);
             // Java Clip.loop(n) then start(): from where it stopped, n extra loops
+            // at the end it stays there: only the extra loops play (as a Clip)
             loopsLeft = loopCount < 0 ? -1 : std::max(0, loopCount - 1);
-            if (pos >= pcm.size()) pos = 0;
             playing = true;
         }
         state = STARTED;
@@ -268,14 +309,18 @@ public:
     int64_t setMediaTime(int64_t now) override {
         std::lock_guard<std::mutex> g(lock);
         size_t frameBytes = size_t(spec.channels) * (spec.format == SDL_AUDIO_U8 ? 1 : 2);
-        if (frameBytes && spec.freq) pos = std::min(pcm.size(), size_t(now * spec.freq / 1000000) * frameBytes);
+        if (frameBytes && spec.freq) {
+            pos = std::min(pcm.size(), size_t(now * spec.freq / 1000000) * frameBytes);
+            played = pos;
+        }
         return now;
     }
 
     int64_t getMediaTime() override {
         size_t frameBytes = size_t(spec.channels) * (spec.format == SDL_AUDIO_U8 ? 1 : 2);
         if (!frameBytes || !spec.freq) return TIME_UNKNOWN;
-        return int64_t(pos / frameBytes) * 1000000 / spec.freq;
+        std::lock_guard<std::mutex> g(lock);
+        return int64_t(played / frameBytes) * 1000000 / spec.freq;
     }
 
     Ref<Control> getControl(Ref<String> type) override {
@@ -308,137 +353,196 @@ public:
 // Music: FluidSynth
 // ---------------------------------------------------------------------
 
-std::mutex gSynthLock;
-fluid_settings_t* gSettings = nullptr;
-fluid_synth_t* gSynth = nullptr;
-SDL_AudioStream* gSynthStream = nullptr;
-bool gSynthTried = false;
+/* The soundbank, chosen as the Java build did: an .sf2 next to the game
+   (its MidiPlayer's custom bank), else Gervill's default bank: the
+   default.sf2 of the system's soundfont folders, else the bank it generated
+   in ~/.gervill, which Java makes when missing: the same file is built in
+   here (gervill_emg.S) and written there the same way. */
+extern "C" const uint8_t deep3d_gervill_emg[];
+extern "C" const uint8_t deep3d_gervill_emg_end[];
 
-std::string findSoundbank() {
-    // next to the game first (as the Java build), then the soundbank Java's
-    // synthesizer made for itself, then the system's
+std::mutex gBankLock;
+std::string gBank;
+bool gBankChosen = false;
+
+std::string soundbank() {
+    std::lock_guard<std::mutex> g(gBankLock);
+    if (gBankChosen) return gBank;
+    gBankChosen = true;
     std::error_code ec;
     for (auto& e : fs::directory_iterator(org::deep3d::AppDirs::base(), ec)) {
         std::string n = e.path().filename().string();
         for (auto& c : n) c = char(tolower(c));
-        if (n.size() > 4 && n.compare(n.size() - 4, 4, ".sf2") == 0) return e.path().string();
+        if (n.size() > 4 && (n.compare(n.size() - 4, 4, ".sf2") == 0 || n.compare(n.size() - 4, 4, ".dls") == 0)) {
+            if (fluid_is_soundfont(e.path().c_str())) {
+                printf("[audio] using soundbank %s\n", e.path().filename().c_str());
+                return gBank = e.path().string();
+            }
+            break;   // Java took the first one; one it cannot use leaves the default bank
+        }
+    }
+    for (const char* d : {"/usr/share/soundfonts/", "/usr/local/share/soundfonts/", "/usr/share/sounds/sf2/",
+                          "/usr/local/share/sounds/sf2/"}) {
+        std::string p = std::string(d) + "default.sf2";
+        if (fs::is_directory(d, ec) && fs::is_regular_file(p, ec)) return gBank = p;
     }
     const char* home = getenv("HOME");
-    std::vector<std::string> paths;
-    if (home) paths.push_back(std::string(home) + "/.gervill/soundbank-emg.sf2");
-    for (const char* p : {"/usr/share/soundfonts/default.sf2", "/usr/share/soundfonts/FluidR3_GM.sf2",
-                          "/usr/share/sounds/sf2/FluidR3_GM.sf2", "/usr/share/soundfonts/freepats-general-midi.sf2"})
-        paths.push_back(p);
-    for (auto& p : paths)
-        if (fs::is_regular_file(p, ec)) return p;
-    return "";
-}
-
-void SDLCALL renderSynth(void*, SDL_AudioStream* s, int additional, int) {
-    std::lock_guard<std::mutex> g(gSynthLock);
-    int frames = additional / int(sizeof(float) * 2);
-    if (frames <= 0) frames = 256;
-    std::vector<float> buf(size_t(frames) * 2);
-    fluid_synth_write_float(gSynth, frames, buf.data(), 0, 2, buf.data(), 1, 2);
-    SDL_PutAudioStreamData(s, buf.data(), int(buf.size() * sizeof(float)));
-}
-
-bool synth() {
-    std::lock_guard<std::mutex> g(gSynthLock);
-    if (gSynthTried) return gSynth != nullptr;
-    gSynthTried = true;
-    if (!audio()) return false;
-    std::string bank = findSoundbank();
-    if (bank.empty()) {
-        fprintf(stderr, "[audio] no soundbank (.sf2): music is silent\n");
-        return false;
+    std::string emg = std::string(home ? home : ".") + "/.gervill/soundbank-emg.sf2";
+    if (fs::is_regular_file(emg, ec)) return gBank = emg;
+    fs::create_directories(fs::path(emg).parent_path(), ec);
+    if (FILE* f = fopen(emg.c_str(), "wb")) {
+        size_t n = size_t(deep3d_gervill_emg_end - deep3d_gervill_emg);
+        bool ok = fwrite(deep3d_gervill_emg, 1, n, f) == n;
+        ok = fclose(f) == 0 && ok;
+        if (ok) return gBank = emg;
     }
-    fluid_set_log_function(FLUID_WARN, nullptr, nullptr);
-    fluid_set_log_function(FLUID_INFO, nullptr, nullptr);
-    fluid_set_log_function(FLUID_DBG, nullptr, nullptr);
-    gSettings = new_fluid_settings();
-    fluid_settings_setnum(gSettings, "synth.sample-rate", gDeviceSpec.freq);
-    fluid_settings_setnum(gSettings, "synth.gain", 0.5);
-    gSynth = new_fluid_synth(gSettings);
-    if (fluid_synth_sfload(gSynth, bank.c_str(), 1) == FLUID_FAILED) {
-        fprintf(stderr, "[audio] cannot load soundbank %s\n", bank.c_str());
-        delete_fluid_synth(gSynth);
-        gSynth = nullptr;
-        return false;
-    }
-    printf("[audio] using soundbank %s\n", bank.c_str());
-    SDL_AudioSpec spec{SDL_AUDIO_F32, 2, gDeviceSpec.freq};
-    gSynthStream = SDL_CreateAudioStream(&spec, &gDeviceSpec);
-    SDL_SetAudioStreamGetCallback(gSynthStream, renderSynth, nullptr);
-    SDL_BindAudioStream(gDevice, gSynthStream);
-    return true;
+    fprintf(stderr, "[audio] cannot write %s: music is silent\n", emg.c_str());
+    return gBank = "";
 }
 
+/** Music: a MIDI sequence, played (as Java's sequencer and synthesizer)
+    by a FluidSynth player and synth of its own, made at prefetch. */
 class MidiPlayer : public BasePlayer, public virtual control::VolumeControl {
 public:
     std::vector<uint8_t> data;
+    std::mutex lock;
+    fluid_settings_t* settings = nullptr;
+    fluid_synth_t* synth = nullptr;
     fluid_player_t* player = nullptr;
+    SDL_AudioStream* stream = nullptr;
+    bool begun = false;     // the sequencer has been started since prefetch
     int32_t level = 100;
     bool muted = false;
 
     explicit MidiPlayer(std::vector<uint8_t> d) : data(std::move(d)) {}
-    ~MidiPlayer() override { close(); }
+    ~MidiPlayer() override { release(); }
+
+    static void SDLCALL render(void* self, SDL_AudioStream* s, int additional, int) {
+        auto* m = static_cast<MidiPlayer*>(self);
+        std::lock_guard<std::mutex> g(m->lock);
+        if (!m->synth) return;
+        int frames = additional / int(sizeof(float) * 2);
+        if (frames <= 0) frames = 256;
+        std::vector<float> buf(size_t(frames) * 2);
+        fluid_synth_write_float(m->synth, frames, buf.data(), 0, 2, buf.data(), 1, 2);
+        SDL_PutAudioStreamData(s, buf.data(), int(buf.size() * sizeof(float)));
+    }
+
+    /** A Standard MIDI File, as far as MidiSystem.getSequence checks it. */
+    bool validMidi() const {
+        if (data.size() < 14 || memcmp(data.data(), "MThd", 4) != 0) return false;
+        uint32_t len = uint32_t(data[4]) << 24 | uint32_t(data[5]) << 16 | uint32_t(data[6]) << 8 | data[7];
+        return len >= 6;
+    }
+
+    void release() {
+        if (stream) {
+            SDL_DestroyAudioStream(stream);   // the callback is done after this
+            stream = nullptr;
+        }
+        std::lock_guard<std::mutex> g(lock);
+        if (player) {
+            fluid_player_stop(player);
+            delete_fluid_player(player);
+            player = nullptr;
+        }
+        if (synth) {
+            delete_fluid_synth(synth);
+            synth = nullptr;
+        }
+        if (settings) {
+            delete_fluid_settings(settings);
+            settings = nullptr;
+        }
+        begun = false;
+    }
+
+    void fail(const std::string& why) {
+        close();
+        Ref<MediaException> e(new MediaException());
+        e->message = String::fromUtf8("MIDI unavailable: " + why);
+        jrt::throwJava(e);
+    }
 
     void prefetch() override {
         realize();
         if (state >= PREFETCHED) return;
-        if (!synth()) {
-            close();
-            Ref<MediaException> e(new MediaException());
-            e->message = JRT_LIT(u"MIDI unavailable");
-            jrt::throwJava(e);
+        release();   // a deallocated player gets a new sequencer, from the start
+        if (!audio()) fail("no audio");
+        std::string bank = soundbank();
+        if (bank.empty()) fail("no soundbank");
+        if (!validMidi()) fail("not a MIDI file");
+        fluid_set_log_function(FLUID_WARN, nullptr, nullptr);
+        fluid_set_log_function(FLUID_INFO, nullptr, nullptr);
+        fluid_set_log_function(FLUID_DBG, nullptr, nullptr);
+        {
+            std::lock_guard<std::mutex> g(lock);
+            settings = new_fluid_settings();
+            fluid_settings_setnum(settings, "synth.sample-rate", gDeviceSpec.freq);
+            fluid_settings_setnum(settings, "synth.gain", 0.5);
+            fluid_settings_setint(settings, "player.reset-synth", 0);   // a Java sequencer does not reset
+            synth = new_fluid_synth(settings);
         }
+        if (!synth || fluid_synth_sfload(synth, bank.c_str(), 1) == FLUID_FAILED) fail("cannot load " + bank);
+        {
+            std::lock_guard<std::mutex> g(lock);
+            player = new_fluid_player(synth);
+            fluid_player_add_mem(player, data.data(), data.size());
+        }
+        SDL_AudioSpec spec{SDL_AUDIO_F32, 2, gDeviceSpec.freq};
+        stream = SDL_CreateAudioStream(&spec, &gDeviceSpec);
+        if (!stream) fail(SDL_GetError());
+        SDL_SetAudioStreamGetCallback(stream, render, this);
+        SDL_BindAudioStream(gDevice, stream);
+        applyVolume();
         state = PREFETCHED;
     }
 
     void start() override {
         prefetch();
         {
-            std::lock_guard<std::mutex> g(gSynthLock);
-            if (player) {
-                fluid_player_stop(player);
-                delete_fluid_player(player);
-            }
-            player = new_fluid_player(gSynth);
-            fluid_player_add_mem(player, data.data(), data.size());
-            fluid_player_set_loop(player, loopCount < 0 ? -1 : std::max(1, loopCount));
-            fluid_player_play(player);
+            std::lock_guard<std::mutex> g(lock);
+            // Sequencer.setLoopCount: loopCount - 1 repeats, or for ever
+            fluid_player_set_loop(player, loopCount < 0 ? -1 : std::max(0, loopCount - 1) + 1);
+            if (fluid_player_get_status(player) != FLUID_PLAYER_PLAYING) fluid_player_play(player);   // resumes
+            begun = true;
         }
-        applyVolume();
         state = STARTED;
         notifyListeners(u"started");
     }
 
     void stop() override {
-        if (state == STARTED) {
-            std::lock_guard<std::mutex> g(gSynthLock);
-            if (player) fluid_player_stop(player);
-            for (int ch = 0; ch < 16; ch++) fluid_synth_all_notes_off(gSynth, ch);
+        if (state == STARTED && player) {
+            {
+                std::lock_guard<std::mutex> g(lock);
+                fluid_player_stop(player);   // pauses where it is
+                for (int ch = 0; ch < 16; ch++) fluid_synth_all_notes_off(synth, ch);
+            }
             state = PREFETCHED;
+            notifyListeners(u"stopped");
         }
-        if (state == PREFETCHED) notifyListeners(u"stopped");
     }
 
     void close() override {
-        std::lock_guard<std::mutex> g(gSynthLock);
-        if (player) {
-            fluid_player_stop(player);
-            delete_fluid_player(player);
-            player = nullptr;
-            for (int ch = 0; ch < 16; ch++) fluid_synth_all_notes_off(gSynth, ch);
-        }
+        release();
         state = CLOSED;
     }
 
+    /* Microseconds <-> ticks at the sequence's current tempo */
     int64_t setMediaTime(int64_t now) override {
-        std::lock_guard<std::mutex> g(gSynthLock);
-        if (player) fluid_player_seek(player, int(now / 1000));
+        std::lock_guard<std::mutex> g(lock);
+        if (player) {
+            int64_t tempo = fluid_player_get_midi_tempo(player), div = fluid_player_get_division(player);
+            fluid_player_seek(player, tempo > 0 && div > 0 ? int(now * div / tempo) : 0);
+        }
         return now;
+    }
+
+    int64_t getMediaTime() override {
+        std::lock_guard<std::mutex> g(lock);
+        if (!player) return TIME_UNKNOWN;
+        int64_t tempo = fluid_player_get_midi_tempo(player), div = fluid_player_get_division(player);
+        return div > 0 ? int64_t(fluid_player_get_current_tick(player)) * tempo / div : 0;
     }
 
     Ref<Control> getControl(Ref<String> type) override {
@@ -446,12 +550,13 @@ public:
         return nullptr;
     }
 
+    /* Java: controller 7 on every channel (the sequence's own may change it) */
     void applyVolume() {
-        if (!gSynth) return;
+        std::lock_guard<std::mutex> g(lock);
+        if (!synth) return;
         int value = muted ? 0 : int(level * 127LL / 100 * AudioSettings::musicFactor());
         value = std::max(0, std::min(127, value));
-        std::lock_guard<std::mutex> g(gSynthLock);
-        for (int ch = 0; ch < 16; ch++) fluid_synth_cc(gSynth, ch, 7, value);
+        for (int ch = 0; ch < 16; ch++) fluid_synth_cc(synth, ch, 7, value);
     }
     int32_t setLevel(int32_t l) override {
         level = std::max(0, std::min(100, l));
@@ -475,6 +580,11 @@ Ref<Player> Manager::createPlayer(Ref<java::io::InputStream> stream, Ref<String>
     int32_t n;
     while ((n = stream->read(buf, 0, buf->length)) > 0) data.insert(data.end(), buf->data, buf->data + n);
     std::string t = type ? type->utf8() : "";
+    bool wav = data.size() >= 4 && memcmp(data.data(), "RIFF", 4) == 0;
+    org::deep3d::Det::event("player " + (type ? type->utf8() : std::string("null")) + " " +
+                            (wav ? std::string("wav")
+                                 : std::to_string(data.size()) + " " +
+                                       org::deep3d::Det::hex(org::deep3d::Det::hashBytes(org::deep3d::Det::FNV, data.data(), data.size()))));
     for (auto& c : t) c = char(tolower(c));
     Ref<BasePlayer> p;
     if (org::deep3d::Det::ON) {

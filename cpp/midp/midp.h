@@ -54,6 +54,9 @@ public:
     bool mutable_ = false;
     /** Bumped when the pixels change (the GL texture cache re-uploads). */
     std::atomic<uint32_t> version{1};
+    uint64_t detHashV = 0;
+    /** Deterministic runs: a hash of the pixels (ARGB). */
+    uint64_t detHash();
 
     static Ref<Image> createImage(int32_t w, int32_t h);
     static Ref<Image> createImage(Ref<String> name);

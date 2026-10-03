@@ -69,6 +69,8 @@ Ref<RecordStore> RecordStore::openRecordStore(Ref<String> name, bool createIfNec
     Ref<RecordStore> rs(new RecordStore());
     rs->name = name->utf8();
     rs->path = saveDir() + "/" + sanitize(rs->name) + ".rms";
+    org::deep3d::Det::event("rms open " + rs->name + " " + (createIfNecessary ? "true" : "false") + " " +
+                            (access(rs->path.c_str(), F_OK) == 0 ? "true" : "false"));
     if (access(rs->path.c_str(), F_OK) == 0) {
         rs->load();
     } else if (!createIfNecessary) {
@@ -79,6 +81,7 @@ Ref<RecordStore> RecordStore::openRecordStore(Ref<String> name, bool createIfNec
 }
 
 void RecordStore::deleteRecordStore(Ref<String> name) {
+    org::deep3d::Det::event("rms delete " + name->utf8());
     std::string p = saveDir() + "/" + sanitize(name->utf8()) + ".rms";
     if (access(p.c_str(), F_OK) != 0) fail<RecordStoreNotFoundException>(name->utf8());
     if (unlink(p.c_str()) != 0) fail<RecordStoreException>("cannot delete " + name->utf8());
@@ -149,6 +152,7 @@ void RecordStore::checkId(int32_t id) {
 }
 
 void RecordStore::closeRecordStore() {
+    org::deep3d::Det::event("rms close " + name);
     checkOpen();
     open = false;
 }
@@ -160,6 +164,8 @@ int32_t RecordStore::addRecord(Ref<Array<int8_t>> data, int32_t offset, int32_t 
     auto copy = jrt::newArray<int8_t>(numBytes);
     if (numBytes > 0) java::lang::System::arraycopy(data, offset, copy, 0, numBytes);
     records.push_back(copy);
+    org::deep3d::Det::event("rms add " + name + " " + std::to_string(numBytes) + " " +
+                            org::deep3d::Det::hex(org::deep3d::Det::hashBytes(org::deep3d::Det::FNV, copy->data, size_t(copy->length))));
     save();
     return int32_t(records.size());
 }
@@ -170,6 +176,8 @@ void RecordStore::setRecord(int32_t id, Ref<Array<int8_t>> data, int32_t offset,
     auto copy = jrt::newArray<int8_t>(numBytes);
     if (numBytes > 0) java::lang::System::arraycopy(data, offset, copy, 0, numBytes);
     records[size_t(id - 1)] = copy;
+    org::deep3d::Det::event("rms set " + name + " " + std::to_string(id) + " " + std::to_string(numBytes) + " " +
+                            org::deep3d::Det::hex(org::deep3d::Det::hashBytes(org::deep3d::Det::FNV, copy->data, size_t(copy->length))));
     save();
 }
 
@@ -177,10 +185,12 @@ void RecordStore::deleteRecord(int32_t id) {
     checkOpen();
     checkId(id);
     records[size_t(id - 1)] = nullptr;
+    org::deep3d::Det::event("rms del " + name + " " + std::to_string(id));
     save();
 }
 
 Ref<Array<int8_t>> RecordStore::getRecord(int32_t id) {
+    org::deep3d::Det::event("rms get " + name + " " + std::to_string(id));
     checkOpen();
     checkId(id);
     auto& r = records[size_t(id - 1)];

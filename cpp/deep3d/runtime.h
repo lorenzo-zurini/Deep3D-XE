@@ -12,6 +12,9 @@ class Deep3dDebug {
 public:
     static jrt::Ref<class_37> player;
     static int32_t worldFrames;
+    // (private in Java; named as there for the tests' setf)
+    static int32_t tickWorldFrames, idleTicks, pinDist, pinDx, pinDy;
+    static bool worldAlive;
     static void install();
     static void tick();
     static bool godFor(jrt::Ref<class_37> damage);

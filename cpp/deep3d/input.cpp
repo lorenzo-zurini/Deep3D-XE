@@ -88,20 +88,26 @@ void Input::init() {
     for (int a = 0; a < kActionCount; a++) {
         std::vector<int32_t> keys = kActions[a].defaults;
         if (auto saved = Config::getBinding(kActions[a].name)) {
+            // saved.split(","): trailing empty parts dropped; each Integer.parseInt(part.trim())
+            std::vector<std::string> parts;
+            size_t pos = 0;
+            while (true) {
+                size_t c = saved->find(',', pos);
+                parts.push_back(saved->substr(pos, c == std::string::npos ? std::string::npos : c - pos));
+                if (c == std::string::npos) break;
+                pos = c + 1;
+            }
+            while (parts.size() > 1 && parts.back().empty()) parts.pop_back();
+            if (parts.size() == 1 && parts[0].empty() && !saved->empty()) parts.clear();   // "," splits to nothing
             std::vector<int32_t> parsed;
             bool ok = true;
-            size_t pos = 0;
-            while (pos <= saved->size()) {
-                size_t c = saved->find(',', pos);
-                std::string part = saved->substr(pos, c == std::string::npos ? std::string::npos : c - pos);
-                try {
-                    parsed.push_back(std::stoi(part));
-                } catch (...) {
+            for (auto& part : parts) {
+                auto v = javaParseInt(javaTrim(part));
+                if (!v) {
                     ok = false;
                     break;
                 }
-                if (c == std::string::npos) break;
-                pos = c + 1;
+                parsed.push_back(*v);
             }
             if (ok) keys = parsed;
         }
@@ -593,17 +599,17 @@ void publish() {
 std::atomic<bool> MouseFlight::testing{false};
 
 bool MouseFlight::wanted() {
-    return Config::mouseFlight && nanos() - gFlyingNanos < 300000000LL && !GameUi::profile() && !Overlay::isOpen() &&
+    return Config::mouseFlight && Det::nanos() - gFlyingNanos < 300000000LL && !GameUi::profile() && !Overlay::isOpen() &&
            !Runtime::isGamePaused();
 }
 
-void MouseFlight::flying() { gFlyingNanos = nanos(); }
+void MouseFlight::flying() { gFlyingNanos = Det::nanos(); }
 
 void MouseFlight::crosshair(int32_t x, int32_t y) {
     if (kLogCross) printf("[cross] %d %d\n", x, y);
     gCrossX = x;
     gCrossY = y;
-    gCrossNanos = nanos();
+    gCrossNanos = Det::nanos();
 }
 
 bool MouseFlight::captured() { return gCaptured; }
@@ -635,19 +641,19 @@ void MouseFlight::move(double dx, double dy, int32_t windowHeight) {
 void MouseFlight::draw(Ref<Graphics> g, int32_t w, int32_t h) {
     std::lock_guard<std::mutex> l(gMouseLock);
     if (!gCaptured || !wanted()) return;
-    bool cross = nanos() - gCrossNanos < 300000000LL;
+    bool cross = Det::nanos() - gCrossNanos < 300000000LL;
     int32_t cx = cross ? int32_t(gCrossX) : w / 2;
     int32_t cy = cross ? int32_t(gCrossY) : h / 2;
-    int32_t ax = cx + int32_t(std::lround(gOffX * h));
-    int32_t ay = cy + int32_t(std::lround(gOffY * h));
+    int32_t ax = cx + java::lang::Math::round(gOffX * float(h));   // Java's Math.round
+    int32_t ay = cy + java::lang::Math::round(gOffY * float(h));
     g->setClip(0, 0, w, h);
     float m = float(std::sqrt(gOffX * gOffX + gOffY * gOffY)) / RADIUS;
-    int32_t dz = std::max(3, int32_t(std::lround(MF_DEADZONE * RADIUS * h)));
+    int32_t dz = std::max(3, java::lang::Math::round(MF_DEADZONE * RADIUS * float(h)));
     g->setColor(0x2E5F78);
     g->drawArc(cx - dz, cy - dz, dz * 2, dz * 2, 0, 360);
     if (m > MF_DEADZONE) {
         g->setColor(0x4993B8);
-        int32_t steps = std::max(2, int32_t(std::lround(m * 6)));
+        int32_t steps = std::max(2, java::lang::Math::round(m * 6));
         for (int32_t i = 1; i < steps; i++) g->fillRect(cx + (ax - cx) * i / steps, cy + (ay - cy) * i / steps, 1, 1);
     }
     g->setColor(0xFFFFFF);
@@ -668,17 +674,25 @@ std::atomic<int32_t> gForceDepth{[] {
 }()};
 std::atomic<bool> gClean{false};
 float gRadiation = 0, gPressure = 0;
-const int64_t gStart = nanos();
+int64_t gStart = 0;
+
+/* Java's Remaster set its time base in its static initialiser: at the first
+   call of any of its methods */
+void clinit() {
+    static const bool done = (gStart = Det::nanos(), true);
+    (void)done;
+}
 bool gPending = false, gWorldPass = false;
 int32_t gFrame = 0, gLights = 0, gKind = 0;
 const bool kLayerClears = getenv("DEEP3D_RM_CLEARS") != nullptr;
 }  // namespace
 
-bool Remaster::on() { return Config::remasteredOn(); }
-void Remaster::testClean(bool on) { gClean = on; }
-void Remaster::forceDepth(int32_t depth) { gForceDepth = depth; }
+bool Remaster::on() { clinit(); return Config::remasteredOn(); }
+void Remaster::testClean(bool on) { clinit(); gClean = on; }
+void Remaster::forceDepth(int32_t depth) { clinit(); gForceDepth = depth; }
 
 void Remaster::world(Ref<jrt::Array<float>> cam, int32_t sectorDepth, float tr, float tg, float tb) {
+    clinit();
     if (!on()) return;
     float* m = cam->data;
     float* d = gFrameData->data;
@@ -686,7 +700,7 @@ void Remaster::world(Ref<jrt::Array<float>> cam, int32_t sectorDepth, float tr, 
     d[4] = m[1], d[5] = m[5], d[6] = m[9], d[7] = 0;
     d[8] = m[2], d[9] = m[6], d[10] = m[10], d[11] = 0;
     d[12] = m[3], d[13] = m[7], d[14] = m[11], d[15] = 1;
-    d[TIME] = float(nanos() - gStart) / 1e9f;
+    d[TIME] = float(Det::nanos() - gStart) / 1e9f;
     d[SECTOR_DEPTH] = float(gForceDepth > 0 ? int32_t(gForceDepth) : sectorDepth);
     d[TINT] = tr;
     d[TINT + 1] = tg;
@@ -704,6 +718,7 @@ void Remaster::world(Ref<jrt::Array<float>> cam, int32_t sectorDepth, float tr, 
 }
 
 void Remaster::sub(float x, float y, float z, float dx, float dy, float dz, float boost) {
+    clinit();
     float* d = gFrameData->data;
     d[SUB] = x, d[SUB + 1] = y, d[SUB + 2] = z;
     d[SUB_DIR] = dx, d[SUB_DIR + 1] = dy, d[SUB_DIR + 2] = dz;
@@ -712,16 +727,19 @@ void Remaster::sub(float x, float y, float z, float dx, float dy, float dz, floa
 }
 
 void Remaster::hazard(float rad, float pres) {
+    clinit();
     gRadiation = rad;
     gPressure = pres;
 }
 
 std::array<float, 3> Remaster::subHeading() {
+    clinit();
     float* d = gFrameData->data;
     return {d[SUB_DIR], d[SUB_DIR + 1], d[SUB_DIR + 2]};
 }
 
 void Remaster::light(float x, float y, float z, int32_t kind) {
+    clinit();
     if (gLights >= MAX_LIGHTS) return;
     float* d = gFrameData->data;
     int o = LIGHTS + gLights * 4;
@@ -730,6 +748,7 @@ void Remaster::light(float x, float y, float z, int32_t kind) {
 }
 
 void Remaster::bind() {
+    clinit();
     using javax::microedition::m3g::Platform;
     if (gPending && on()) {
         Platform::remaster(gFrameData);
@@ -743,16 +762,17 @@ void Remaster::bind() {
 }
 
 void Remaster::object(int32_t k) {
+    clinit();
     if (gWorldPass && k != gKind) {
         gKind = k;
         javax::microedition::m3g::Platform::remasterObject(k);
     }
 }
 
-void Remaster::nextLayer() { javax::microedition::m3g::Platform::remasterLayer(); }
-bool Remaster::sharedDepth() { return gWorldPass && !kLayerClears; }
-void Remaster::release() { gWorldPass = false; }
-bool Remaster::worldPass() { return gWorldPass; }
+void Remaster::nextLayer() { clinit(); javax::microedition::m3g::Platform::remasterLayer(); }
+bool Remaster::sharedDepth() { clinit(); return gWorldPass && !kLayerClears; }
+void Remaster::release() { clinit(); gWorldPass = false; }
+bool Remaster::worldPass() { clinit(); return gWorldPass; }
 
 // ---------------------------------------------------------------------
 // Cheats, GameSettings, MenuToolkit

@@ -28,7 +28,6 @@ void class_67::__clinit() {
     class_67::field_847 = (-15786202);
     class_67::field_848 = 0;
     class_67::field_849 = 0;
-    org::deep3d::MenuToolkit::install(jrt::Ref<org::deep3d::MenuToolkit>(jrt::New<Deep3dMenu>()));
 }
 
 void class_67::__init() {

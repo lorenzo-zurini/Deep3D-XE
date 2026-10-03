@@ -3,10 +3,13 @@
 
 #include <X11/Xlib.h>
 #include <execinfo.h>
+#include <csignal>
 #include <unistd.h>
 
 #include <cstdio>
 #include <cstring>
+#include <string>
+#include <vector>
 
 namespace jrt {
 extern Ref<java::io::InputStream> (*gResourceHook)(const Ref<java::lang::String>&);
@@ -37,28 +40,53 @@ int xError(Display* d, XErrorEvent* e) {
 }
 }  // namespace
 
-int main(int argc, char** argv) {
-    // the window's X connection is used from several threads (the game's
-    // presenting threads, the M3G engine's GLX contexts)
-    XInitThreads();
-    XSetErrorHandler(xError);
+/* The JVM's report of an exception nothing caught on the main thread */
+[[noreturn]] void uncaught(const jrt::Thrown& t) {
+    fprintf(stderr, "Exception in thread \"main\" ");
+    t.t->printStackTrace();
+    Runtime::halt(1);
+}
+
+int run(int argc, char** argv) {
     Config::load();
     Diagnostics::init();
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "--fullscreen")) {
+        std::string a = argv[i];
+        if (a == "--fullscreen") {
             Config::fullscreen = true;
-        } else if (!strcmp(argv[i], "--windowed")) {
+        } else if (a == "--windowed") {
             Config::fullscreen = false;
-        } else if (!strcmp(argv[i], "--res") && i + 1 < argc) {
-            sscanf(argv[++i], "%dx%d", &Config::internalWidth, &Config::internalHeight);
-        } else if (!strcmp(argv[i], "--help")) {
-            printf("usage: Deep3D-XE [--fullscreen|--windowed]\nsettings persist in deep3d.cfg; F10 opens the settings\n");
+        } else if (a == "--res") {
+            // args[++i].toLowerCase().split("x"), Integer.parseInt of both
+            if (++i >= argc) jrt::throwAIOOBE(i - 1, argc - 1);
+            auto parts = java::lang::String::fromUtf8(argv[i])->toLowerCase();
+            std::u16string v = parts->s;
+            std::vector<std::u16string> p;
+            size_t pos = 0;
+            while (true) {
+                size_t x = v.find(u'x', pos);
+                p.push_back(v.substr(pos, x == std::u16string::npos ? std::u16string::npos : x - pos));
+                if (x == std::u16string::npos) break;
+                pos = x + 1;
+            }
+            if (p.size() > 1) {   // split drops trailing empty parts (no match: the input itself)
+                while (!p.empty() && p.back().empty()) p.pop_back();
+            }
+            if (p.empty()) jrt::throwAIOOBE(0, 0);
+            Config::internalWidth = java::lang::Integer::parseInt(java::lang::String::of(p[0]));
+            if (p.size() < 2) jrt::throwAIOOBE(1, int32_t(p.size()));
+            Config::internalHeight = java::lang::Integer::parseInt(java::lang::String::of(p[1]));
+        } else if (a == "--help") {
+            printf("usage: deep3d [--fullscreen|--windowed] [--res WxH]\n");
+            printf("settings persist in deep3d.cfg; press Esc in game for options\n");
             return 0;
         } else {
             fprintf(stderr, "unknown option: %s (try --help)\n", argv[i]);
-            return 1;
+            return 0;
         }
     }
+    // SIGTERM/SIGINT/SIGHUP: Java's shutdown hook halted with status 0
+    for (int sig : {SIGTERM, SIGINT, SIGHUP}) signal(sig, [](int) { Runtime::halt(0); });
 
     Runtime::setAppProperty("MIDlet-Name", "Deep");
     Runtime::setAppProperty("MIDlet-Vendor", "www.fishlabs.net");
@@ -84,6 +112,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     Runtime::startEventThread();
+    startInputPipe();
 
     try {
         // Java runs static initialisers on first use; here all run now, in
@@ -101,4 +130,16 @@ int main(int argc, char** argv) {
     }
     gl::GLBackend::eventLoop();   // main thread: window events
     Runtime::halt(0);
+}
+
+int main(int argc, char** argv) {
+    // the window's X connection is used from several threads (the game's
+    // presenting threads, the M3G engine's GLX contexts)
+    XInitThreads();
+    XSetErrorHandler(xError);
+    try {
+        return run(argc, argv);
+    } catch (const jrt::Thrown& t) {
+        uncaught(t);
+    }
 }

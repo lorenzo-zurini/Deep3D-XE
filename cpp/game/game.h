@@ -1,6 +1,7 @@
 // Translated from the decompiled Java of the game (2026-10); now the source.
 #pragma once
 #include "deep3d/runtime.h"
+#include <functional>
 
 class class_0;
 class class_91;
@@ -4056,5 +4057,10 @@ public:
 };
 
 void game_clinit();
-bool game_setStatic(const std::string& cls, const std::string& field, int32_t value);
+// Reflection as the Java build's tests used it (game_reflect.cpp)
+struct game_ReflectError {
+    jrt::Ref<java::lang::Throwable> e;
+};
+void game_setStaticInt(const std::string& cls, const std::string& field, const std::function<int32_t()>& value);
+std::string game_callStaticInt(const std::string& cls, const std::string& method, int32_t arg);
 void game_dumpStatics(jrt::Dumper& d);

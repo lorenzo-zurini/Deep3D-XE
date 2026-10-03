@@ -10,16 +10,17 @@ using jrt::Ref;
 
 Ref<class_37> Deep3dDebug::player;
 int32_t Deep3dDebug::worldFrames = 0;
+int32_t Deep3dDebug::tickWorldFrames = 0;
+int32_t Deep3dDebug::idleTicks = 0;
+bool Deep3dDebug::worldAlive = false;
+int32_t Deep3dDebug::pinDist = 0;
+int32_t Deep3dDebug::pinDx = 0;
+int32_t Deep3dDebug::pinDy = 0;
 
 namespace {
 
-int32_t gTickWorldFrames = 0;
-int32_t gIdleTicks = 0;
-bool gWorldAlive = false;
-
 std::string gPinKind;
 Ref<class_91> gPinned;
-int32_t gPinDist = 0, gPinDx = 0, gPinDy = 0;
 
 Ref<class_61> currentScene() { return class_84::field_1126 ? class_84::field_1126->field_595 : nullptr; }
 
@@ -58,7 +59,7 @@ void applyPin() {
         if (!findPin()) return;
     }
     if (!class_84::field_1110 || !class_84::field_1110->field_40) return;
-    Ref<class_3> at = class_84::field_1110->field_40->field_1342->method_507(jrt::New<class_3>(gPinDx, gPinDy, -gPinDist),
+    Ref<class_3> at = class_84::field_1110->field_40->field_1342->method_507(jrt::New<class_3>(Deep3dDebug::pinDx, Deep3dDebug::pinDy, -Deep3dDebug::pinDist),
                                                                             jrt::New<class_3>());
     gPinned->field_1226->method_846(at);
     gPinned->field_1226->method_839(true);
@@ -75,7 +76,7 @@ public:
         if (!s) return "none";
         if (auto* flight = dynamic_cast<class_64*>(s.get())) {
             // loaded, drawing its world, and not in one of its cutscenes
-            if (!flight->field_786 || !gWorldAlive) return "flight-loading";
+            if (!flight->field_786 || !Deep3dDebug::worldAlive) return "flight-loading";
             return flight->field_795 ? "flight-cutscene" : "flight";
         }
         if (jrt::isInstance<class_63>(s)) return "station";
@@ -92,9 +93,9 @@ public:
         }
         gPinKind = what;
         gPinned = nullptr;
-        gPinDist = dist;
-        gPinDx = dx;
-        gPinDy = dy;
+        Deep3dDebug::pinDist = dist;
+        Deep3dDebug::pinDx = dx;
+        Deep3dDebug::pinDy = dy;
         return findPin() != nullptr;
     }
 
@@ -174,9 +175,9 @@ void Deep3dDebug::tick() {
     }
     applyPin();
     // the world drew within the last few loop passes
-    gIdleTicks = worldFrames != gTickWorldFrames ? 0 : gIdleTicks + 1;
-    gTickWorldFrames = worldFrames;
-    gWorldAlive = gIdleTicks < 5;
+    Deep3dDebug::idleTicks = worldFrames != Deep3dDebug::tickWorldFrames ? 0 : Deep3dDebug::idleTicks + 1;
+    Deep3dDebug::tickWorldFrames = worldFrames;
+    Deep3dDebug::worldAlive = Deep3dDebug::idleTicks < 5;
     org::deep3d::Scenario::tick();
 }
 

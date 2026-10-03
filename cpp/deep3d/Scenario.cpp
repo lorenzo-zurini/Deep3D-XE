@@ -5,11 +5,12 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 
-bool game_setStatic(const std::string& cls, const std::string& field, int32_t value);
+void game_setStaticInt(const std::string& cls, const std::string& field, const std::function<int32_t()>& value);
 
 namespace org::deep3d {
 
@@ -37,6 +38,47 @@ bool gAutoCalm = true;
 int gCalmPress = 0;
 std::string gPairMode = "remastered";
 
+/* fuzz: seeded random presses of the game's keys, held and spaced in frames */
+const int32_t kFuzzKeys[] = {-1, -2, -3, -4, -5, -6, -7, 48, 49, 51, 55, 57, 42, 35};
+uint64_t gFuzzRng = 0;
+int32_t gFuzzLeft = 0, gFuzzKey = 0, gFuzzHold = 0, gFuzzGap = 0;
+
+int32_t fuzzNext(int32_t n) {
+    gFuzzRng = gFuzzRng * 6364136223846793005ULL + 1442695040888963407ULL;
+    return int32_t((gFuzzRng >> 33) % uint64_t(n));
+}
+
+bool fuzz(int32_t frames, int64_t seed) {
+    if (gStepFrame == 1) {
+        gFuzzRng = uint64_t(seed);
+        gFuzzLeft = frames;
+        gFuzzKey = 0;
+        gFuzzGap = 0;
+    }
+    if (gFuzzKey != 0) {
+        if (--gFuzzHold <= 0) {
+            Input::sendMidpKey(gFuzzKey, false);
+            gFuzzKey = 0;
+            gFuzzGap = fuzzNext(12);
+        }
+    } else if (gFuzzGap > 0) {
+        gFuzzGap--;
+    } else {
+        gFuzzKey = kFuzzKeys[fuzzNext(int32_t(std::size(kFuzzKeys)))];
+        gFuzzHold = 1 + fuzzNext(8);
+        Input::sendMidpKey(gFuzzKey, true);
+    }
+    if (--gFuzzLeft <= 0) {
+        if (gFuzzKey != 0) {
+            Input::sendMidpKey(gFuzzKey, false);
+            gFuzzKey = 0;
+        }
+        printf("[scn] f%d fuzz done\n", gFrame);
+        return true;
+    }
+    return false;
+}
+
 int64_t nanos() { return Det::nanos(); }
 
 void log(const std::string& s) { printf("[scn] f%d %s\n", gFrame, s.c_str()); }
@@ -47,19 +89,41 @@ std::string join(const std::vector<std::string>& s, size_t from = 0) {
     return o;
 }
 
+struct ReadError : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
+/* One command per line; "include <file>" (relative to the including file).
+   As Java's BufferedReader lines (\n, \r or \r\n), trim, split("\\s+") */
 void load(const fs::path& f, int depth) {
-    std::ifstream in(f);
-    if (!in) throw std::runtime_error("cannot read " + f.string());
-    std::string line;
-    while (std::getline(in, line)) {
+    std::ifstream in(f, std::ios::binary);
+    if (!in) throw ReadError("java.io.FileNotFoundException: " + f.string() + " (" + strerror(errno) + ")");
+    std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    std::vector<std::string> lines;
+    std::string cur;
+    for (size_t i = 0; i < text.size(); i++) {
+        char ch = text[i];
+        if (ch == '\n' || ch == '\r') {
+            lines.push_back(cur);
+            cur.clear();
+            if (ch == '\r' && i + 1 < text.size() && text[i + 1] == '\n') i++;
+        } else {
+            cur.push_back(ch);
+        }
+    }
+    if (!cur.empty()) lines.push_back(cur);
+    for (std::string line : lines) {
+        line = javaTrim(line);
         size_t hash = line.find('#');
-        if (hash != std::string::npos) line = line.substr(0, hash);
+        if (hash != std::string::npos) line = javaTrim(line.substr(0, hash));
+        if (line.empty()) continue;
         std::istringstream ss(line);
         std::vector<std::string> parts;
         std::string p;
         while (ss >> p) parts.push_back(p);
-        if (parts.empty()) continue;
-        if (parts[0] == "include" && depth < 8 && parts.size() > 1) {
+        if (parts[0] == "include" && depth < 8) {
+            // a bare include throws out of Scenario.init, as parts[1] did
+            if (parts.size() < 2) jrt::throwAIOOBE(1, int32_t(parts.size()));
             load(f.parent_path() / parts[1], depth + 1);
         } else {
             gSteps.push_back(parts);
@@ -102,8 +166,40 @@ void next() {
     gCalm = 0;
 }
 
-int arg(const std::vector<std::string>& s, size_t i, int dflt) { return s.size() > i ? std::stoi(s[i]) : dflt; }
-float argf(const std::vector<std::string>& s, size_t i, float dflt) { return s.size() > i ? std::stof(s[i]) : dflt; }
+/* A step's words, read as Java's String[]: a missing one throws (the step
+   fails and the script goes on) */
+struct Args {
+    const std::vector<std::string>& v;
+    const std::string& operator[](size_t i) const {
+        if (i >= v.size()) jrt::throwAIOOBE(int32_t(i), int32_t(v.size()));
+        return v[i];
+    }
+    size_t size() const { return v.size(); }
+    operator const std::vector<std::string>&() const { return v; }
+};
+
+/* Integer.parseInt / Long.parseLong / Float.parseFloat */
+int32_t parseInt(const std::string& t) { return java::lang::Integer::parseInt(String::fromUtf8(t)); }
+int64_t parseLong(const std::string& t) { return java::lang::Long::parseLong(String::fromUtf8(t)); }
+float parseFloat(const std::string& t) {
+    std::string u = javaTrim(t);
+    size_t used = 0;
+    float v = 0;
+    try {
+        v = std::stof(u, &used);
+    } catch (const std::exception&) {
+        used = 0;
+    }
+    if (used == 0 || (used != u.size() && !(used + 1 == u.size() && strchr("fFdD", u.back())))) {
+        Ref<java::lang::NumberFormatException> e(new java::lang::NumberFormatException());
+        e->message = String::fromUtf8(u.empty() ? "empty String" : "For input string: \"" + u + "\"");
+        jrt::throwJava(e);
+    }
+    return v;
+}
+
+int arg(const Args& s, size_t i, int dflt) { return s.size() > i ? parseInt(s[i]) : dflt; }
+float argf(const Args& s, size_t i, float dflt) { return s.size() > i ? parseFloat(s[i]) : dflt; }
 
 void shot(const std::string& name) {
     gl::GLBackend::screenshotTo(gOut + "/" + name + ".png");
@@ -160,7 +256,7 @@ bool newGame() {
     return false;
 }
 
-bool run(const std::vector<std::string>& s) {
+bool run(const Args& s) {
     Cheats_Game* g = game();
     const std::string& c = s[0];
     if (c == "wait") return gStepFrame >= arg(s, 1, 60);
@@ -191,10 +287,14 @@ bool run(const std::vector<std::string>& s) {
         return true;
     }
     if (c == "setf") {
-        if (game_setStatic(s[1], s[2], std::stoi(s[3]))) {
+        // setInt by reflection: its ReflectiveOperationExceptions are logged,
+        // the others fail the step
+        try {
+            game_setStaticInt(s[1], s[2], [&] { return parseInt(s[3]); });
             log("setf " + s[1] + "." + s[2] + " = " + s[3]);
-        } else {
-            log("setf failed: no static field " + s[1] + "." + s[2]);
+        } catch (const jrt::Thrown& t) {
+            if (!jrt::isInstance<java::lang::ReflectiveOperationException>(t.t)) throw;
+            log("setf failed: " + t.t->toString()->utf8());
         }
         return true;
     }
@@ -207,7 +307,7 @@ bool run(const std::vector<std::string>& s) {
         return true;
     }
     if (c == "depth") {
-        Remaster::forceDepth(s[1] == "off" ? 0 : std::stoi(s[1]));
+        Remaster::forceDepth(s[1] == "off" ? 0 : parseInt(s[1]));
         return true;
     }
     if (c == "select") {
@@ -224,13 +324,21 @@ bool run(const std::vector<std::string>& s) {
         return true;
     }
     if (c == "button") {
-        press(std::stoi(s[1]));
+        press(parseInt(s[1]));
         return true;
     }
     if (c == "dir") {
-        std::string d = s[1];
-        Input::Action a = d == "up" ? Input::Action::UP : d == "down" ? Input::Action::DOWN
-                          : d == "left" ? Input::Action::LEFT : Input::Action::RIGHT;
+        // Input.Action.valueOf(s[1].toUpperCase())
+        std::string d = String::fromUtf8(s[1])->toUpperCase()->utf8();
+        int found = -1;
+        for (int i = 0; i < int(Input::Action::COUNT); i++)
+            if (d == Input::name(Input::Action(i))) found = i;
+        if (found < 0) {
+            Ref<java::lang::IllegalArgumentException> e(new java::lang::IllegalArgumentException());
+            e->message = String::fromUtf8("No enum constant org.deep3d.Input.Action." + d);
+            jrt::throwJava(e);
+        }
+        Input::Action a = Input::Action(found);
         GameUi::padUsed();
         Input::handleAction(a, true);
         gHoldUntil = nanos() + TAP_NANOS;
@@ -238,7 +346,7 @@ bool run(const std::vector<std::string>& s) {
         return true;
     }
     if (c == "key") {
-        int32_t code = std::stoi(s[1]);
+        int32_t code = parseInt(s[1]);
         Input::handleKey(code, 0, true, false, true);
         gHoldUntil = nanos() + TAP_NANOS;
         gRelease = [code] { Input::handleKey(code, 0, false, false, true); };
@@ -291,7 +399,7 @@ bool run(const std::vector<std::string>& s) {
     if (c == "newgame") return newGame();
     if (c == "teleport") {
         if (gStepFrame == 1) {
-            Cheats::teleport(std::stoi(s[1]));
+            Cheats::teleport(parseInt(s[1]));
             return false;
         }
         return gStepFrame > 4;
@@ -400,6 +508,11 @@ bool run(const std::vector<std::string>& s) {
         }
         return false;
     }
+    if (c == "fuzz") return fuzz(arg(s, 1, 3000), s.size() > 2 ? parseLong(s[2]) : 1);
+    if (c == "toast") {
+        Overlay::showToast(join(s, 1));
+        return true;
+    }
     if (c == "quit") {
         gPc = gSteps.size();
         return false;
@@ -415,14 +528,18 @@ void Scenario::init() {
     if (!path) return;
     const char* dir = getenv("DEEP3D_SCENARIO_OUT");
     gOut = dir ? dir : "scenario-out";
-    fs::create_directories(gOut);
+    std::error_code ec;
+    fs::create_directories(gOut, ec);   // File.mkdirs
     try {
         load(path, 0);
-    } catch (const std::exception& e) {
+        gMetrics = fopen((gOut + "/metrics.tsv").c_str(), "a");
+        if (!gMetrics) {
+            throw ReadError("java.io.FileNotFoundException: " + gOut + "/metrics.tsv (" + strerror(errno) + ")");
+        }
+    } catch (const ReadError& e) {
         printf("[scn] cannot read %s: %s\n", path, e.what());
         return;
     }
-    gMetrics = fopen((gOut + "/metrics.tsv").c_str(), "a");
     gActive = true;
     log("loaded " + std::to_string(gSteps.size()) + " steps from " + path);
 }
@@ -470,13 +587,13 @@ void Scenario::tick() {
     auto& s = gSteps[gPc];
     // the game's popups go away before the next step
     if (gAutoCalm && popup() && s[0] != "until" && s[0] != "calm" && s[0] != "newgame" && s[0] != "depart" &&
-        s[0] != "autocalm") {
+        s[0] != "autocalm" && s[0] != "fuzz") {
         if (++gCalmPress % 20 == 1) press(0);
         return;
     }
     gStepFrame++;
     try {
-        if (run(s)) next();
+        if (run(Args{s})) next();
     } catch (const jrt::Thrown& t) {
         log("step " + join(s) + " failed: " + t.t->toString()->utf8());
         next();

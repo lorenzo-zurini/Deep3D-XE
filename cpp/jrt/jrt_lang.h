@@ -172,6 +172,7 @@ JRT_EXCEPTION(IndexOutOfBoundsException, RuntimeException)
 JRT_EXCEPTION(ArrayIndexOutOfBoundsException, IndexOutOfBoundsException)
 JRT_EXCEPTION(StringIndexOutOfBoundsException, IndexOutOfBoundsException)
 JRT_EXCEPTION(NegativeArraySizeException, RuntimeException)
+JRT_EXCEPTION(ArrayStoreException, RuntimeException)
 JRT_EXCEPTION(IllegalArgumentException, RuntimeException)
 JRT_EXCEPTION(IllegalStateException, RuntimeException)
 JRT_EXCEPTION(NumberFormatException, IllegalArgumentException)
@@ -180,6 +181,9 @@ JRT_EXCEPTION(SecurityException, RuntimeException)
 JRT_EXCEPTION(InterruptedException, Exception)
 JRT_EXCEPTION(ReflectiveOperationException, Exception)
 JRT_EXCEPTION(ClassNotFoundException, ReflectiveOperationException)
+JRT_EXCEPTION(NoSuchFieldException, ReflectiveOperationException)
+JRT_EXCEPTION(NoSuchMethodException, ReflectiveOperationException)
+JRT_EXCEPTION(IllegalAccessException, ReflectiveOperationException)
 JRT_EXCEPTION(CloneNotSupportedException, Exception)
 JRT_EXCEPTION(LinkageError, Error)
 JRT_EXCEPTION(NoClassDefFoundError, LinkageError)
@@ -276,6 +280,12 @@ public:
     int64_t longValue() override { return value; }
     float floatValue() override { return value; }
     double doubleValue() override { return value; }
+    bool equals(Ref<Object> o) override {
+        auto* b = o ? dynamic_cast<Short*>(o.get()) : nullptr;
+        return b && b->value == value;
+    }
+    int32_t hashCode() override { return value; }
+    Ref<String> toString() override;
 };
 
 class Byte : public Number {
@@ -287,13 +297,18 @@ public:
     int64_t longValue() override { return value; }
     float floatValue() override { return value; }
     double doubleValue() override { return value; }
+    bool equals(Ref<Object> o) override {
+        auto* b = o ? dynamic_cast<Byte*>(o.get()) : nullptr;
+        return b && b->value == value;
+    }
+    int32_t hashCode() override { return value; }
+    Ref<String> toString() override;
 };
 
 class Float : public Number {
 public:
     float value = 0;
     static Ref<Float> valueOf(float v);
-    static float parseFloat(Ref<String> s);
     static int32_t floatToIntBits(float v);
     static int32_t floatToRawIntBits(float v);
     static float intBitsToFloat(int32_t v);
@@ -303,19 +318,29 @@ public:
     float floatValue() override { return value; }
     double doubleValue() override { return value; }
     Ref<String> toString() override;
+    bool equals(Ref<Object> o) override {
+        auto* b = o ? dynamic_cast<Float*>(o.get()) : nullptr;
+        return b && floatToIntBits(b->value) == floatToIntBits(value);
+    }
+    int32_t hashCode() override { return floatToIntBits(value); }
 };
 
 class Double : public Number {
 public:
     double value = 0;
     static Ref<Double> valueOf(double v);
-    static double parseDouble(Ref<String> s);
     static int64_t doubleToLongBits(double v);
     static double longBitsToDouble(int64_t v);
     int32_t intValue() override { return jrt::f2i(value); }
     int64_t longValue() override { return jrt::f2l(value); }
     float floatValue() override { return float(value); }
     double doubleValue() override { return value; }
+    bool equals(Ref<Object> o) override {
+        auto* b = o ? dynamic_cast<Double*>(o.get()) : nullptr;
+        return b && doubleToLongBits(b->value) == doubleToLongBits(value);
+    }
+    int32_t hashCode() override { return int32_t(doubleToLongBits(value) ^ (uint64_t(doubleToLongBits(value)) >> 32)); }
+    Ref<String> toString() override;
 };
 
 class Boolean : public Object {
@@ -324,6 +349,12 @@ public:
     void __init(bool v) { value = v; }
     static Ref<Boolean> valueOf(bool v);
     bool booleanValue() { return value; }
+    bool equals(Ref<Object> o) override {
+        auto* b = o ? dynamic_cast<Boolean*>(o.get()) : nullptr;
+        return b && b->value == value;
+    }
+    int32_t hashCode() override { return value ? 1231 : 1237; }
+    Ref<String> toString() override;
 };
 
 class Character : public Object {
@@ -340,6 +371,12 @@ public:
     static char16_t toUpperCase(char16_t c);
     static char16_t toLowerCase(char16_t c);
     static int32_t digit(char16_t c, int32_t radix);
+    bool equals(Ref<Object> o) override {
+        auto* b = o ? dynamic_cast<Character*>(o.get()) : nullptr;
+        return b && b->value == value;
+    }
+    int32_t hashCode() override { return value; }
+    Ref<String> toString() override;
 };
 
 class Math : public Object {
@@ -359,25 +396,16 @@ public:
     static float max(float a, float b);
     static double max(double a, double b);
     static double sqrt(double v) { return std::sqrt(v); }
-    static double sin(double v);
-    static double cos(double v);
     static double tan(double v);
-    static double asin(double v);
-    static double acos(double v);
     static double atan(double v);
-    static double atan2(double y, double x);
     static double floor(double v) { return std::floor(v); }
     static double ceil(double v) { return std::ceil(v); }
-    static double pow(double a, double b);
-    static double exp(double v);
-    static double log(double v);
     static int32_t round(float v);
     static int64_t round(double v);
-    static double toRadians(double v) { return v / 180.0 * PI; }
-    static double toDegrees(double v) { return v * 180.0 / PI; }
+    static double toRadians(double v) { return v * 0.017453292519943295; }   // as the JDK
+    static double toDegrees(double v) { return v * 57.29577951308232; }
     static double random();
 };
-using StrictMath = Math;
 
 class Thread : public Object, public Runnable {
 public:
@@ -387,13 +415,17 @@ public:
     std::atomic<bool> started{false};
     std::atomic<bool> alive{false};
 
-    void __init() {}
-    void __init(Ref<Runnable> r) { target = r; }
+    void __init() { name = nextName(); }
+    void __init(Ref<Runnable> r) {
+        target = r;
+        name = nextName();
+    }
     void __init(Ref<Runnable> r, Ref<String> n) {
         target = r;
         name = n;
     }
     ~Thread() override;
+    Ref<String> getName();
 
     void run() override;
     void start();
@@ -406,6 +438,9 @@ public:
     static void sleep(int64_t millis);
     static void yield();
     static Ref<Thread> currentThread();
+
+private:
+    static Ref<String> nextName();   // "Thread-<n>", numbered as Java numbers unnamed threads
 };
 
 class System : public Object {

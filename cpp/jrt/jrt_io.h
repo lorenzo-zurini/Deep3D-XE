@@ -247,7 +247,8 @@ using List = Vector;
 using ArrayList = Vector;
 using AbstractList = Vector;
 
-/** Hashtable / HashMap with Java's equals/hashCode keys, insertion order kept. */
+/** Hashtable with Java's equals keys and null rules. No iteration: Java's
+    order (by hash buckets) is not reproduced, and nothing iterates one. */
 class Hashtable : public Object {
 public:
     std::vector<std::pair<Ref<Object>, Ref<Object>>> entries;
@@ -260,12 +261,9 @@ public:
     Ref<Object> remove(Ref<Object> key);
     bool containsKey(Ref<Object> key);
     void clear() { entries.clear(); }
-    Ref<Enumeration> keys();
-    Ref<Enumeration> elements();
 
 private:
     int32_t find(const Ref<Object>& key);
 };
-using HashMap = Hashtable;
 
 }  // namespace java::util

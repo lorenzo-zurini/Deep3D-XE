@@ -3,7 +3,7 @@
 # cpp/midp, cpp/deep3d: the phone APIs and the PC layer; native/m3g: Nokia's
 # M3G engine.
 cmake_minimum_required(VERSION 3.20)
-project(Deep3D-XE C CXX)
+project(Deep3D-XE C CXX ASM)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,7 +16,7 @@ set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(M3G ${ROOT}/native/m3g)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(DEPS REQUIRED IMPORTED_TARGET glfw3 sdl3 fluidsynth libzip libpng zlib opencore-amrnb)
+pkg_check_modules(DEPS REQUIRED IMPORTED_TARGET glfw3 sdl3 fluidsynth libzip libpng zlib freetype2 fontconfig)
 find_package(OpenGL REQUIRED COMPONENTS OpenGL GLX EGL)
 find_package(X11 REQUIRED)
 find_package(Threads REQUIRED)
@@ -26,7 +26,8 @@ find_package(Threads REQUIRED)
 set(JAVA_FLAGS -fwrapv -ffp-contract=off -fno-strict-aliasing)
 
 # --- the M3G engine (Nokia's JSR-184 reference, EPL) and its glue ---
-set(M3G_FLAGS -w -fwrapv -DM3G_TARGET_ANDROID -DM3G_GL_ES_1_1
+# the Java build's flags for the engine (native/build-m3g.sh), whatever the build type
+set(M3G_FLAGS -O2 -w -ffp-contract=off -DM3G_TARGET_ANDROID -DM3G_GL_ES_1_1
     $<$<COMPILE_LANGUAGE:C>:-Wno-error=int-conversion -Wno-error=incompatible-pointer-types>)
 add_library(m3gengine STATIC
     ${M3G}/src/m3g_core.c
@@ -47,7 +48,13 @@ file(GLOB RUNTIME_SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/midp/*.cpp $
     ${CMAKE_CURRENT_SOURCE_DIR}/deep3d/*.cpp)
 file(GLOB GAME_SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/game/*.cpp)
 
-add_executable(deep3d ${JRT_SRC} ${RUNTIME_SRC} ${GAME_SRC} ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+# Gervill's emergency soundbank, built in (midp/media.cpp)
+set(GERVILL_EMG ${CMAKE_CURRENT_SOURCE_DIR}/midp/gervill_emg.S)
+set_source_files_properties(${GERVILL_EMG} PROPERTIES
+    COMPILE_OPTIONS "-I${CMAKE_CURRENT_SOURCE_DIR}/midp"
+    OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/midp/gervill_emg.sf2)
+
+add_executable(deep3d ${JRT_SRC} ${RUNTIME_SRC} ${GAME_SRC} ${GERVILL_EMG} ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 target_include_directories(deep3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/jni ${M3G}/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/m3g ${CMAKE_CURRENT_SOURCE_DIR}/game)
 target_compile_options(deep3d PRIVATE ${JAVA_FLAGS} -Wall -Wno-unused -Wno-unused-variable -Wno-unused-but-set-variable

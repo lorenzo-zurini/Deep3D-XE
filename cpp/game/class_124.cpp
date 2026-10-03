@@ -79,6 +79,9 @@ void class_124::method_949() {
         class_58::method_531(11, 1);
         class_58::method_522(192, 192, 192, 0, 1);
         class_84::field_1118 = jrt::Ref<javax::microedition::lcdui::Canvas>(jrt::Ref<class_124>(this));
+        // Java initialised class_67 here, its first use: its static
+        // initialiser installed the toolkit (the other statics are constants)
+        org::deep3d::MenuToolkit::install(jrt::Ref<org::deep3d::MenuToolkit>(jrt::New<Deep3dMenu>()));
         class_67::method_576();
         this->field_1521 = jrt::New<class_33>();
         this->field_1521->field_332 = jrt::Ref<javax::microedition::lcdui::game::GameCanvas>(jrt::Ref<class_124>(this));

@@ -13,6 +13,10 @@
 #include <string>
 #include <vector>
 
+namespace org::deep3d::gl {
+class Draw2D;
+}
+
 namespace org::deep3d {
 
 using jrt::Array;
@@ -37,6 +41,17 @@ public:
     static bool onGameThread();
     static bool queueKey(int32_t code, bool pressed);
     static void frame();
+
+    // what the game does in a pass (game thread only), hashed into det.log
+    // and written to det_events.txt: its drawing, sounds, saves, resources
+    static constexpr uint64_t FNV = 0xcbf29ce484222325ULL;
+    static bool recording();
+    static void event(const std::string& e);
+    static uint64_t hashBytes(uint64_t h, const void* data, size_t len);
+    static uint64_t hashInts(uint64_t h, const int32_t* a, size_t n);
+    static std::string hex(uint64_t v);
+    /** A frame the game thread presents (and a screenshot every DEEP3D_DET_SHOTS). */
+    static void present(const gl::Draw2D& frame);
 };
 
 /** Where user files live: DEEP3D_HOME, the executable's folder, or the working directory. */
@@ -362,6 +377,9 @@ public:
     static void mouseWheel(int32_t rotation);
     static bool drawMenu(Ref<Graphics> g);
     static bool drawInGameMenu(Ref<Graphics> g, int32_t top);
+    /** The window-resolution layer (an ARGB canvas, cleared): the menu when
+        the game's toolkit cannot draw it, and the toast. */
+    static void render(uint32_t* canvas, int32_t w, int32_t h);
 };
 
 class MouseFlight {
@@ -408,16 +426,34 @@ public:
 };
 
 /** The game's bitmap font, for the window-resolution overlay layer. */
+/* Java's parsing of the settings text (UTF-8 here): String.trim,
+   Integer.parseInt (empty when it would throw), Boolean.parseBoolean */
+/** The test hook reading commands from DEEP3D_INPUT_PIPE (InputPipe.cpp). */
+void startInputPipe();
+
+std::string javaTrim(const std::string& s);
+std::optional<int32_t> javaParseInt(const std::string& s);
+bool javaParseBoolean(const std::string& s);
+
+/** Java2D's AlphaMath tables (mul8table, div8table): its blending rounds
+    with these, so pixels composed the Java way use them too. */
+struct AlphaTables {
+    uint8_t mul8[256][256];
+    uint8_t div8[256][256];
+};
+const AlphaTables& alphaTables();
+
 class GameFont {
 public:
     static GameFont* white();
     static GameFont* gray();
     static bool available();
     int32_t height(int32_t scale) const { return cellH * scale; }
-    int32_t width(const std::string& text, int32_t scale) const;
-    std::string elide(const std::string& text, int32_t scale, int32_t maxWidth) const;
+    /* Text is UTF-16, a glyph per char, as Java's String */
+    int32_t width(const std::u16string& text, int32_t scale) const;
+    std::u16string elide(const std::u16string& text, int32_t scale, int32_t maxWidth) const;
     /** Draws into an ARGB canvas (w x h) at integer scale. */
-    void draw(uint32_t* canvas, int32_t cw, int32_t ch, const std::string& text, int32_t x, int32_t y,
+    void draw(uint32_t* canvas, int32_t cw, int32_t ch, const std::u16string& text, int32_t x, int32_t y,
               int32_t scale) const;
 
 private:
