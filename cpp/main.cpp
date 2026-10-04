@@ -108,7 +108,7 @@ int run(int argc, char** argv) {
     try {
         gl::GLBackend::init();
     } catch (const std::exception& e) {
-        fprintf(stderr, "[gl] init failed: %s\n", e.what());
+        fprintf(stderr, "[gl] init failed: %s (Deep3D-XE needs OpenGL)\n", e.what());
         return 1;
     }
     Runtime::startEventThread();

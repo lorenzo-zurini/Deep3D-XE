@@ -181,14 +181,6 @@ std::vector<Item> buildItems() {
             items.push_back(Item::choice("Brightness", [] { return std::to_string(Config::brightness) + "%"; }, [](int d) {
                 Config::brightness = std::max(50, std::min(150, Config::brightness + d * 10));
             }));
-            // this session renders with OpenGL
-            items.push_back(Item::choice(
-                "Renderer",
-                [] {
-                    bool glChosen = Config::renderer == "gl";
-                    return std::string(glChosen ? "OpenGL" : "Software") + (!glChosen ? " (restart)" : "");
-                },
-                [](int) { Config::renderer = Config::renderer == "gl" ? "software" : "gl"; }));
             break;
         case Page::AUDIO:
             items.push_back(Item::level("Volume", [] { return Config::masterVolume; }, [](int32_t v) {

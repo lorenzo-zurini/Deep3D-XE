@@ -68,7 +68,6 @@ public:
 /** Settings (deep3d.cfg, a Java properties file shared with the Java build). */
 class Config {
 public:
-    static std::string renderer;
     static bool vsync;
     static bool enhanced;
     static bool remastered;
