@@ -428,6 +428,7 @@ void readLoop(std::string path) {
             bool isInit = (ev[6] & 0x80) != 0;
             int number = ev[7];
             if (isInit) continue;
+            jrt::MutatorScope running;   // the handlers may call into the game
             if (type == 0x01) {
                 handleButton(number, value != 0);
             } else if (type == 0x02) {

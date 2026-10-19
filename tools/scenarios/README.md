@@ -105,3 +105,11 @@ Environment variables for `run.sh` (`EXTRA_ENV="..."`):
 | `DEEP3D_RM_ATLASDUMP=<dir>` | dump the atlases the light classification reads |
 | `DEEP3D_LOG_CROSSHAIR=1`, `DEEP3D_LOG_HITS=1` | log the crosshair's position, weapon hits |
 | `DEEP3D_RM_DEBUG=1` | log the frame data and draw states |
+
+## Memory switches
+
+| | |
+|---|---|
+| `DEEP3D_GC_LOG=1` | log every cycle collection: objects, the unreachable ones by class, time, skipped tries |
+| `DEEP3D_GC=0` | find unreachable cycles but keep them (the old leak, for comparisons) |
+| `DEEP3D_GC_EVERY=<n>` | collect after every n new objects (1: at every safe point, a stress test) |

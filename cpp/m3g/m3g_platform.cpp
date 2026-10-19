@@ -171,6 +171,12 @@ void Interface::deregister(Ref<Loader> obj, Ref<Interface>) {
     if (it != gLive.end() && it->second == obj.get()) gLive.erase(it);
 }
 
+/* The cycle collector found the wrapper unreachable (Java: its weak
+   reference is cleared): the native object gets a new wrapper if asked for
+   again, not this one, whose references are being cleared. */
+void Object3D::__gcUnreachable() { Interface::deregister(Ref<Object3D>(this), nullptr); }
+void Loader::__gcUnreachable() { Interface::deregister(Ref<Loader>(this), nullptr); }
+
 Ref<Object3D> Interface::getObjectInstance(int64_t handle) {
     if (handle == 0) return nullptr;
     {

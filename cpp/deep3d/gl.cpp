@@ -874,13 +874,16 @@ void installCallbacks() {
     });
     glfwSetWindowCloseCallback(gWindow, [](GLFWwindow*) { Runtime::requestQuit(); });
     glfwSetKeyCallback(gWindow, [](GLFWwindow*, int key, int, int action, int mods) {
+        jrt::MutatorScope running;   // may call into the game
         if (action == GLFW_REPEAT) return;
         Input::handleKey(mapKey(key), keyChar(key, mods), action == GLFW_PRESS, (mods & GLFW_MOD_ALT) != 0, true);
     });
     glfwSetCharCallback(gWindow, [](GLFWwindow*, unsigned int cp) {
+        jrt::MutatorScope running;   // may call into the game
         if (GameUi::textEntryActive() && !Overlay::isOpen() && cp >= 32 && cp < 127) GameUi::pushTypedChar(char16_t(cp));
     });
     glfwSetCursorPosCallback(gWindow, [](GLFWwindow*, double x, double y) {
+        jrt::MutatorScope running;   // may call into the game
         if (MouseFlight::captured()) {
             // mouse flight: relative motion pulls the aim reticle
             if (!std::isnan(gLastCursorX)) {
@@ -900,6 +903,7 @@ void installCallbacks() {
         }
     });
     glfwSetMouseButtonCallback(gWindow, [](GLFWwindow*, int button, int action, int) {
+        jrt::MutatorScope running;   // may call into the game
         if (MouseFlight::captured() || gMouseFlightHeld[button & 7]) {
             // mouse flight: left fires, right boosts, middle docks
             bool down = action == GLFW_PRESS;
@@ -922,6 +926,7 @@ void installCallbacks() {
         }
     });
     glfwSetScrollCallback(gWindow, [](GLFWwindow*, double, double dy) {
+        jrt::MutatorScope running;   // may call into the game
         int rot = dy > 0 ? -1 : (dy < 0 ? 1 : 0);
         if (rot == 0) return;
         if (MouseFlight::captured()) {
@@ -1470,6 +1475,7 @@ void GLBackend::eventLoop() {
                 task = std::move(gMainTasks.front());
                 gMainTasks.pop_front();
             }
+            jrt::MutatorScope running;   // may call into the game
             task();
         }
     }

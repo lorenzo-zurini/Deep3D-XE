@@ -13,6 +13,8 @@ class Dumper {
 public:
     std::string out;
     std::unordered_map<const void*, int> ids;
+    /** Set: the field list goes to the cycle collector instead (no text). */
+    Tracer* gc = nullptr;
 
     void v(bool x) { out += x ? "true" : "false"; }
     void v(int8_t x) { out += std::to_string(int(x)); }
@@ -33,6 +35,11 @@ public:
 
     template <class T>
     void f(const char* name, const T& value) {
+        if (gc) {
+            // the fields are the object's own (non-const) members
+            if constexpr (isRef<T>::value) (*gc)(const_cast<T&>(value));
+            return;
+        }
         out += name;
         out += '=';
         v(value);

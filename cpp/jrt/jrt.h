@@ -9,7 +9,9 @@
 // Objects are reference counted through jrt::Ref<T>. An object whose count
 // drops to zero is not freed at once but at the next safe point (the game
 // loop's), as Java code may drop the last reference to an object while one
-// of its methods still runs. Reference cycles are not collected.
+// of its methods still runs. Reference cycles are freed by a cycle collector
+// (jrt_gc.cpp), also at the safe point, while every other thread running
+// Java code waits (MutatorScope / SafeRegion).
 //
 // Java's runtime errors are C++ exceptions of type jrt::Thrown carrying the
 // Java exception object: null dereferences, array bounds, integer division
@@ -50,6 +52,8 @@ class Monitor;
 [[noreturn]] void throwArrayStore();
 
 void destroyLater(java::lang::Object* o);
+/** Takes a destroyed object off the cycle collector's list. */
+void forgetObject(java::lang::Object* o);
 
 template <class T>
 inline void retain(T* p) noexcept;
@@ -263,6 +267,65 @@ inline double dInf() { return std::numeric_limits<double>::infinity(); }
 
 /** Frees objects whose count dropped to zero (call at safe points). */
 void collect();
+/** Frees unreachable reference cycles when enough was allocated since the
+    last time (call at the safe point, after collect()). */
+void maybeCollectCycles();
+/** Runs the cycle collector now; false if the other threads did not stop. */
+bool collectCycles();
+
+/**
+ * A thread running Java code: the cycle collector only runs while every
+ * such thread is stopped (outside its scopes or in a SafeRegion). Nests.
+ */
+class MutatorScope {
+public:
+    MutatorScope();
+    ~MutatorScope();
+    MutatorScope(const MutatorScope&) = delete;
+    MutatorScope& operator=(const MutatorScope&) = delete;
+};
+/** A blocking wait inside Java code (sleep, wait, join, monitor entry): the
+    collector may run meanwhile. Leaving it waits for a running collection. */
+class SafeRegion {
+    int depth_;
+
+public:
+    SafeRegion();
+    ~SafeRegion();
+    SafeRegion(const SafeRegion&) = delete;
+    SafeRegion& operator=(const SafeRegion&) = delete;
+};
+
+/**
+ * Visits an object's references for the cycle collector. A tracer must
+ * report only references the object holds (counted Refs), each once; one
+ * it leaves out only keeps what it points to alive.
+ */
+class Tracer {
+public:
+    enum class Mode { Count, Mark, Clear };
+    Mode mode = Mode::Count;
+    Dumper* dumper = nullptr;   // reused for the translated classes' field lists
+
+    template <class T>
+    void operator()(Ref<T>& r) {
+        if (!r.get()) return;
+        if (mode == Mode::Clear) {
+            r = nullptr;
+        } else {
+            edge(toObjectSlow(r.get()));
+        }
+    }
+    template <class C>
+    void all(C& refs) {
+        for (auto& r : refs) (*this)(r);
+    }
+
+private:
+    void edge(java::lang::Object* o);
+    template <class T>
+    static java::lang::Object* toObjectSlow(T* p);
+};
 /** The thread started for this runnable becomes the safe point thread. */
 void setSafePointRunnable(void* runnable);
 /** The thread whose loop is the safe point (the game loop). */
@@ -277,10 +340,12 @@ namespace java::lang {
 class Object {
 public:
     std::atomic<int32_t> __rc{0};
+    uint32_t __gcSlot = 0;    // index in the collector's list of objects
+    int32_t __gcRefs = 0;     // collector scratch: count minus traced references
     std::atomic<bool> __dying{false};
     std::atomic<jrt::Monitor*> __monitor{nullptr};
 
-    Object() = default;
+    Object();
     Object(const Object&) = delete;
     Object& operator=(const Object&) = delete;
     virtual ~Object();
@@ -305,6 +370,12 @@ public:
     virtual bool __dumpable() { return false; }
     virtual const char* __javaName() { return ""; }
     virtual void __dumpFields(jrt::Dumper&) {}
+
+    // the cycle collector: the references of hand-written classes (each
+    // calls its base's); the translated classes' come from __dumpFields
+    virtual void __gcTrace(jrt::Tracer&) {}
+    /** Called once before an unreachable object's references are cleared. */
+    virtual void __gcUnreachable() {}
 };
 
 }  // namespace java::lang
@@ -325,6 +396,15 @@ template <class T>
 inline java::lang::Object* Synchronized::toObjectPtr(T* p) {
     return toObject(p);
 }
+template <class T>
+inline java::lang::Object* Tracer::toObjectSlow(T* p) {
+    return toObject(p);
+}
+
+template <class T>
+struct isRef : std::false_type {};
+template <class E>
+struct isRef<Ref<E>> : std::true_type {};
 
 template <class T>
 inline void retain(T* p) noexcept {
@@ -387,6 +467,12 @@ public:
     }
 
     void __dumpElems(jrt::Dumper& d) override;
+
+    void __gcTrace(Tracer& t) override {
+        if constexpr (isRef<T>::value) {
+            for (int32_t i = 0; i < length; i++) t(data[i]);
+        }
+    }
 
     T& at(int32_t i) {
         if (uint32_t(i) >= uint32_t(length)) throwAIOOBE(i, length);

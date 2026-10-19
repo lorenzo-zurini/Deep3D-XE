@@ -242,6 +242,7 @@ public:
     Ref<Enumeration> elements();
     void copyInto(Ref<Array<Ref<Object>>> a);
     Ref<Array<Ref<Object>>> toArray();
+    void __gcTrace(jrt::Tracer& t) override { t.all(items); }
 };
 using List = Vector;
 using ArrayList = Vector;
@@ -261,6 +262,12 @@ public:
     Ref<Object> remove(Ref<Object> key);
     bool containsKey(Ref<Object> key);
     void clear() { entries.clear(); }
+    void __gcTrace(jrt::Tracer& t) override {
+        for (auto& [k, v] : entries) {
+            t(k);
+            t(v);
+        }
+    }
 
 private:
     int32_t find(const Ref<Object>& key);

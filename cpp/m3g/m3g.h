@@ -89,6 +89,8 @@ public:
     static int64_t _find(int64_t hObject, int32_t userID);
     ~Object3D() override;
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { t(userObject); t(animTracks); t(iInterface); }
+    void __gcUnreachable() override;   // Deep3D-PC: m3g_platform.cpp
 };
 }
 
@@ -160,6 +162,7 @@ public:
     static int32_t _getTargetProperty(int64_t handle);
     static void _setController(int64_t handle, int64_t hController);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Object3D::__gcTrace(t); t(controller); t(sequence); }
 };
 }
 
@@ -199,6 +202,7 @@ public:
     static void _setPolygonMode(int64_t hApp, int64_t hMode);
     static void _setTexture(int64_t hApp, int32_t unit, int64_t hTexture);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Object3D::__gcTrace(t); t(compositingMode); t(fog); t(material); t(polygonMode); t(textures); }
 };
 }
 
@@ -238,6 +242,7 @@ public:
     static void _setCrop(int64_t handle, int32_t cropX, int32_t cropY, int32_t width, int32_t height);
     static int32_t _getCrop(int64_t handle, int32_t which);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Object3D::__gcTrace(t); t(image); }
 };
 }
 
@@ -314,6 +319,7 @@ public:
     static int32_t _getSubtreeSize(int64_t handle);
     static int32_t _getAlignmentTarget(int64_t handle, int32_t axis);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Transformable::__gcTrace(t); t(parent); t(zRef); t(yRef); }
 };
 }
 
@@ -549,6 +555,7 @@ public:
     static bool _isAASupported(int64_t handle);
     static bool _isProperRenderer();
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { t(buffer); t(camera); t(lights); t(currentTarget); t(destroyer); t(iInterface); t(texSlot); t(texInfo); }
 };
 }
 
@@ -560,6 +567,7 @@ public:
     void __init(jrt::Ref<javax::microedition::m3g::Graphics3D> g3d);
     virtual void shuttingDown();
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { t(target); }
 };
 }
 
@@ -572,6 +580,7 @@ public:
     virtual void checkAndThrow();
     virtual void doRun() = 0;
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { t(e); }
 };
 }
 
@@ -634,6 +643,7 @@ public:
     void __init();
     virtual void doRun();
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::M3gRunnable::__gcTrace(t); t(finalBackground); }
 };
 }
 
@@ -645,6 +655,7 @@ public:
     void __init();
     virtual void doRun();
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::M3gRunnable::__gcTrace(t); t(finalWorld); }
 };
 }
 
@@ -660,6 +671,7 @@ public:
     void __init();
     virtual void doRun();
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::M3gRunnable::__gcTrace(t); t(finalVertices); t(finalPrimitives); t(finalAppearance); t(finalTransform); }
 };
 }
 
@@ -672,6 +684,7 @@ public:
     void __init();
     virtual void doRun();
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::M3gRunnable::__gcTrace(t); t(finalNode); t(finalTransform); }
 };
 }
 
@@ -707,6 +720,7 @@ public:
     static int64_t _pick3D(int64_t handle, int32_t mask, jrt::Ref<jrt::Array<float>> ray, jrt::Ref<jrt::Array<float>> result);
     static int64_t _pick2D(int64_t handle, int32_t mask, float x, float y, int64_t hCamera, jrt::Ref<jrt::Array<float>> result);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Node::__gcTrace(t); t(children); }
 };
 }
 
@@ -756,6 +770,7 @@ public:
     void __init();
     virtual void doRun();
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::M3gRunnable::__gcTrace(t); t(byteArr); }
 };
 }
 
@@ -916,6 +931,8 @@ public:
     static int32_t _getUserParameter(int64_t handle, int32_t obj, int32_t index, jrt::Ref<jrt::Array<int8_t>> data);
     ~Loader() override;
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { t(iLoadedObjects); t(iFileHistory); t(iResourceName); t(iParentResourceName); t(iStreamData); t(iInterface); }
+    void __gcUnreachable() override;   // Deep3D-PC: m3g_platform.cpp
 };
 }
 
@@ -935,6 +952,7 @@ public:
     virtual void close();
     virtual void rewind();
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { java::io::InputStream::__gcTrace(t); t(iPeekBuffer); t(iStream); }
 };
 }
 
@@ -952,6 +970,7 @@ public:
     virtual void close();
     virtual int32_t available();
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { java::io::InputStream::__gcTrace(t); t(iStream); }
 };
 }
 
@@ -1011,6 +1030,7 @@ public:
     static int64_t _getVertexBuffer(int64_t handle);
     static int32_t _getSubmeshCount(int64_t handle);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Node::__gcTrace(t); t(vertices); t(appearances); t(triangles); }
 };
 }
 
@@ -1037,6 +1057,7 @@ public:
     static int64_t _getMorphTarget(int64_t handle, int32_t index);
     static int32_t _getMorphTargetCount(int64_t handle);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Mesh::__gcTrace(t); t(targets); }
 };
 }
 
@@ -1104,6 +1125,7 @@ public:
     static jrt::Ref<jrt::Array<float>> createResult();
     virtual void fill(int64_t hIntersected, jrt::Ref<jrt::Array<float>> result);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { t(intersected); t(textureS); t(textureT); t(normal); t(ray); }
 };
 }
 
@@ -1130,6 +1152,7 @@ public:
     static void _getBoneTransform(int64_t handle, int64_t hBone, jrt::Ref<jrt::Array<int8_t>> transform);
     static int32_t _getBoneVertices(int64_t handle, int64_t hBone, jrt::Ref<jrt::Array<int32_t>> indices, jrt::Ref<jrt::Array<float>> weights);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Mesh::__gcTrace(t); t(skeleton); }
 };
 }
 
@@ -1159,6 +1182,7 @@ public:
     static int64_t _getAppearance(int64_t handle);
     static int64_t _getImage(int64_t handle);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Node::__gcTrace(t); t(image); t(appearance); }
 };
 }
 
@@ -1204,6 +1228,7 @@ public:
     static int32_t _getImageFilter(int64_t handle);
     static int32_t _getLevelFilter(int64_t handle);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Transformable::__gcTrace(t); t(image); }
 };
 }
 
@@ -1239,6 +1264,7 @@ public:
     static void _transformTable(jrt::Ref<jrt::Array<int8_t>> matrix, jrt::Ref<jrt::Array<float>> v);
     static void _transformArray(jrt::Ref<jrt::Array<int8_t>> matrix, int64_t handle, jrt::Ref<jrt::Array<float>> out, bool W);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { t(matrix); }
 };
 }
 
@@ -1313,6 +1339,7 @@ public:
     static int64_t _getArray(int64_t hBuffer, int32_t which, jrt::Ref<jrt::Array<float>> scaleBias);
     static int32_t _getVertexCount(int64_t hBuffer);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Object3D::__gcTrace(t); t(positions); t(normals); t(colors); t(texCoords); }
 };
 }
 
@@ -1333,6 +1360,7 @@ public:
     static int64_t _getActiveCamera(int64_t handle);
     static int64_t _getBackground(int64_t handle);
     static void __clinit();
+    void __gcTrace(jrt::Tracer& t) override { javax::microedition::m3g::Group::__gcTrace(t); t(activeCamera); t(background); }
 };
 }
 

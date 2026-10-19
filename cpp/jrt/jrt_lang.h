@@ -438,6 +438,7 @@ public:
     static void sleep(int64_t millis);
     static void yield();
     static Ref<Thread> currentThread();
+    void __gcTrace(jrt::Tracer& t) override { t(target); }
 
 private:
     static Ref<String> nextName();   // "Thread-<n>", numbered as Java numbers unnamed threads

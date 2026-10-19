@@ -136,7 +136,17 @@ public:
             count++;
             return;
         }
-        cv.wait(l, [&] { return count == 0; });
+        if (count > 0) {
+            // blocked: the cycle collector may run meanwhile
+            l.unlock();
+            SafeRegion safe;
+            l.lock();
+            cv.wait(l, [&] { return count == 0; });
+            owner = me;
+            count = 1;
+            l.unlock();   // before ~SafeRegion, which can wait for a collection
+            return;
+        }
         owner = me;
         count = 1;
     }
@@ -148,6 +158,7 @@ public:
         }
     }
     void wait(int64_t millis) {
+        SafeRegion safe;
         std::unique_lock<std::mutex> l(m);
         int saved = count;
         count = 0;
@@ -161,6 +172,7 @@ public:
         cv.wait(l, [&] { return count == 0; });
         owner = std::this_thread::get_id();
         count = saved;
+        l.unlock();   // before ~SafeRegion, which can wait for a collection
     }
     void notifyAll() { cv.notify_all(); }
 };
@@ -297,7 +309,10 @@ using jrt::throwNPE;
 // Object
 // ---------------------------------------------------------------------
 
-Object::~Object() { delete __monitor.load(); }
+Object::~Object() {
+    jrt::forgetObject(this);
+    delete __monitor.load();
+}
 
 const char* Object::className() const {
     static thread_local std::string name;
@@ -1105,6 +1120,7 @@ void Thread::start() {
             jrt::setSafePointThread();
         }
         try {
+            jrt::MutatorScope running;
             self->run();
         } catch (const jrt::Thrown& t) {
             // the Java build's default handler (Diagnostics)
@@ -1116,9 +1132,11 @@ void Thread::start() {
 }
 
 void Thread::join() {
+    jrt::SafeRegion safe;
     while (alive) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 void Thread::join(int64_t millis) {
+    jrt::SafeRegion safe;
     auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(millis);
     while (alive && std::chrono::steady_clock::now() < end) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
@@ -1126,7 +1144,11 @@ void Thread::join(int64_t millis) {
 void (*gSleepHook)(int64_t) = nullptr;
 
 void Thread::sleep(int64_t millis) {
-    if (jrt::onSafePointThread()) jrt::collect();
+    if (jrt::onSafePointThread()) {
+        jrt::collect();
+        jrt::maybeCollectCycles();
+    }
+    jrt::SafeRegion safe;
     if (gSleepHook) {
         gSleepHook(millis);
         return;

@@ -164,6 +164,7 @@ void startInputPipe() {
             while (ss >> w) parts.push_back(w);
             if (parts.size() < 2) continue;
             try {
+                jrt::MutatorScope running;   // the commands call into the game
                 handle(Parts{parts});
             } catch (const jrt::Thrown& t) {
                 fprintf(stderr, "[input-pipe] %s\n", t.t->toString()->utf8().c_str());

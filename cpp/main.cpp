@@ -115,6 +115,7 @@ int run(int argc, char** argv) {
     startInputPipe();
 
     try {
+        jrt::MutatorScope running;   // startApp goes on after the game thread starts
         // Java runs static initialisers on first use; here all run now, in
         // dependency order (they only build constants and tables)
         m3g_clinit();

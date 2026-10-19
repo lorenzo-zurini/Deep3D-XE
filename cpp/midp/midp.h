@@ -171,6 +171,7 @@ public:
     Ref<String> getLabel() { return label; }
     int32_t getCommandType() { return type; }
     int32_t getPriority() { return priority; }
+    void __gcTrace(jrt::Tracer& t) override { t(label); }
 };
 
 class Displayable : public Object {
@@ -186,6 +187,7 @@ public:
     void setCommandListener(Ref<CommandListener> l) { listener = l; }
     void setTitle(Ref<String>) {}
     Ref<String> getTitle() { return nullptr; }
+    void __gcTrace(jrt::Tracer& t) override { t.all(commands); t(listener); }
 };
 
 class Canvas : public Displayable {
@@ -271,6 +273,7 @@ public:
     Ref<String> text;
     void __init(Ref<String>, Ref<String> t) { text = t; }
     Ref<String> getText() { return text; }
+    void __gcTrace(jrt::Tracer& t) override { Item::__gcTrace(t); t(text); }
 };
 
 class Form : public Displayable {
@@ -282,6 +285,7 @@ public:
     void set(int32_t index, Ref<Item> item);
     Ref<Item> get(int32_t index);
     int32_t size() { return int32_t(items.size()); }
+    void __gcTrace(jrt::Tracer& t) override { Displayable::__gcTrace(t); t.all(items); }
 };
 
 }  // namespace javax::microedition::lcdui
@@ -371,6 +375,7 @@ public:
     void setTransform(int32_t t) { transform = t; }
     void defineReferencePixel(int32_t, int32_t) {}
     void paint(Ref<Graphics> g) override;
+    void __gcTrace(jrt::Tracer& t) override { Layer::__gcTrace(t); t(image); t(frameSequence); }
 };
 
 }  // namespace javax::microedition::lcdui::game
@@ -442,6 +447,7 @@ private:
     void save();
     void checkOpen();
     void checkId(int32_t id);
+    void __gcTrace(jrt::Tracer& t) override { t.all(records); }
 };
 
 }  // namespace javax::microedition::rms
