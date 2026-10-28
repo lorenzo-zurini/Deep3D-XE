@@ -90,7 +90,12 @@ static const char *WATER =
 /* depth below the surface, 0 (the shallowest stations) .. 1 (the abyss):
    the game's own scale, its depth = station depth - height / 8 */
 "float depth01(float y) { return clamp((uSector - y / 8.0 - 15000.0) / 15000.0, 0.0, 1.0); }\n"
-"float surfLight(float d) { return mix(1.0, 0.16, pow(d, 1.4)); }\n"
+/* The light from above at height y: one gradient over the game's depth
+   (its sector depth - height / 8), from the surface (3.2: blinding) through
+   the shallowest stations (15000: 1, bright but comfortable) to the deepest
+   (30000: pitch black). Lamps, station lights and living light are added to
+   it, so in the deep they are all there is */
+"float sunLight(float y) { float z = clamp((uSector - y / 8.0) / 30000.0, 0.0, 1.0); return 3.2 * pow(1.0 - z, 1.7); }\n"
 "uniform float uLong;\n"
 "uniform float uSelf;\n"
 "uniform float uSpawner;\n"   /* creatures, ships, items; else (uLong, uSelf: 0) weapons, effects */
@@ -120,19 +125,21 @@ static const char *WATER =
    /* the tint band reaches down to where the original's dome shows it
       (the top of the screen in level flight): the stations' orange, yellow
       and red were lost in the teal */
-"  vec3 c = mix(ZENITH, uTint, smoothstep(0.0, 0.2, v));\n"
+"  float subDepth = uSubOn > 0.5 ? uSector - uSub.y / 8.0 : 15000.0;\n"
+"  vec3 tint = min(uTint / max(1.0 - clamp((subDepth - 15000.0) / 15000.0, 0.0, 1.0), 0.05), vec3(1.0));\n"
+"  vec3 c = mix(ZENITH, tint, smoothstep(0.0, 0.2, v));\n"
 "  c = mix(c, TEAL, smoothstep(0.34, 0.6, v));\n"
 "  c *= 1.0 - smoothstep(0.44, 0.88, v);\n"
 "  return c + TEAL * 0.035;\n"
 "}\n"
-/* the water's light along dir, seen from height y: the dome, dimmer and
-   murkier the deeper the station; what distant things melt into */
+/* the water's light along dir, seen from height y: the dome, bluer the
+   deeper, and as bright as the light from above there; what distant things
+   melt into */
 "vec3 water(vec3 dir, float y) {\n"
 "  float d = depth01(y);\n"
 "  vec3 c = dome(dir);\n"
 "  c = mix(c, TEAL * 0.35 * (0.6 + 0.4 * smoothstep(-0.8, 0.6, dir.y)), d * d * 0.5);\n"
-"  c *= mix(1.0, 0.55, d * d);\n"
-"  return c;\n"
+"  return c * sunLight(y);\n"
 "}\n"
 "float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n"
 /* interleaved gradient noise: an even, fixed dither per pixel (it does not
@@ -280,7 +287,7 @@ static const char *SCENE_FS =
 "  N = length(N) > 0.0 ? normalize(N) : -V;\n"
 "  if (dot(N, V) > 0.0) N = -N;\n"
 "  float d = depth01(wp.y);\n"
-"  float L = surfLight(d);\n"
+"  float L = sunLight(wp.y);\n"
 "  vec3 col = base.rgb;\n"
    /* sprites: the stations' flares and other glows are lights: they pierce
       the murk and feed the bloom */
@@ -308,7 +315,7 @@ static const char *SCENE_FS =
    /* the models are pre-lit: light from above gives them shape, the depth
       dims them, and a rim of water colour sits them in the water */
 "  float sky = N.y * 0.5 + 0.5;\n"
-"  col *= mix(0.76, 1.1, sky) * mix(1.0, 0.62, d * d);\n"
+"  col *= mix(0.76, 1.1, sky) * L;\n"
 "  float rim = pow(1.0 - abs(dot(N, V)), 3.0);\n"
 "  col += water(-N, wp.y) * rim * 0.22;\n"
 "  float up = smoothstep(-0.15, 0.85, N.y);\n"
@@ -317,12 +324,14 @@ static const char *SCENE_FS =
 "  float vis = uSelf > 0.5 ? 1.0 : shadowAt(wp + N * 25.0, ign(gl_FragCoord.xy) * 6.2832);\n"
 "  col *= mix(0.5, 1.0, vis);\n"
 "  float cz = causticAt(wp, 0.3 + 2.0 * d) * 2.2;\n"
-"  col += alb.rgb * uSunCol * cz * up * near * L * L * 0.55 * vis;\n"
+"  col += alb.rgb * uSunCol * cz * up * near * min(L * L, 4.0) * 0.55 * vis;\n"
 "  float mx = max(alb.r, max(alb.g, alb.b)), mn = min(alb.r, min(alb.g, alb.b));\n"
    /* a structure's lamps (bright, saturated texels) keep their own light */
 "  float emis = uKind == 0 && uLong > 0.5 ? smoothstep(0.80, 0.97, mx) * smoothstep(0.30, 0.55, mx - mn) : 0.0;\n"
 "  col = mix(col, alb.rgb * 1.1, emis * 0.8);\n"
-"  col += alb.rgb * lamps(wp, N) * (1.0 - uSelf);\n"
+"  col += alb.rgb * lamps(wp, N) * (1.0 - uSelf);\n"   /* the sub's own running lights and cockpit glow: it stays in sight
+      where no daylight reaches */
+"  col += alb.rgb * uSelf * 0.22 * (1.0 - min(L, 1.0));\n"
    /* the deep's creatures and ships carry a faint glow on their edges */
 "  if (uLong < 0.5 && uSelf < 0.5) {\n"
 "    float bio = smoothstep(0.45, 0.9, d) * (0.6 + 0.4 * sin(uTime * 2.1 + wp.x * 0.003 + wp.z * 0.002));\n"
@@ -349,7 +358,7 @@ static const char *BG_FS =
 "  vec4 e = uInvProj * vec4(vPos, 1.0, 1.0);\n"
 "  vec3 dir = normalize(mat3(uCamToWorld) * normalize(e.xyz / e.w));\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
-"  float d = depth01(cam.y); float L = surfLight(d);\n"
+"  float d = depth01(cam.y); float L = sunLight(cam.y);\n"
 "  vec3 c = water(dir, cam.y);\n"
    /* the surface: seen from below through the murk. Inside Snell's window
       (the waves tilt it) the bright sky; outside it, the water below mirrored */
@@ -357,15 +366,28 @@ static const char *BG_FS =
 "    float t = (uSurfY - cam.y) / max(dir.y, 1e-3);\n"
 "    vec2 sxz = cam.xz + dir.xz * t;\n"
 "    vec2 g = surfGrad(sxz);\n"
+     /* chop on the swells (seen, not in the caustics) */
+"    vec2 q1 = sxz / 520.0 + vec2(uTime * 0.21, uTime * 0.13), q2 = sxz / 190.0 - vec2(uTime * 0.37, -uTime * 0.29);\n"
+"    g += vec2(noise(q1 + vec2(0.5, 0.0)) - noise(q1 - vec2(0.5, 0.0)), noise(q1 + vec2(0.0, 0.5)) - noise(q1 - vec2(0.0, 0.5))) * 0.22\n"
+"       + vec2(noise(q2 + vec2(0.5, 0.0)) - noise(q2 - vec2(0.5, 0.0)), noise(q2 + vec2(0.0, 0.5)) - noise(q2 - vec2(0.0, 0.5))) * 0.12;\n"
 "    vec3 N = normalize(vec3(-g.x, 1.0, -g.y));\n"
 "    vec3 rt = refract(dir, -N, 1.333);\n"
-"    float win = dot(rt, rt) > 1e-6 ? 1.0 : 0.0;\n"
+     /* Fresnel, water to air: the light that gets through falls smoothly to
+        nothing towards the critical angle, where all is reflected */
+"    float ci = max(dot(dir, N), 0.0), st2 = 1.777 * (1.0 - ci * ci);\n"
+"    float win = 0.0;\n"
+"    if (st2 < 1.0) {\n"
+"      float ct = sqrt(1.0 - st2);\n"
+"      float rs = (1.333 * ci - ct) / (1.333 * ci + ct), rp = (1.333 * ct - ci) / (1.333 * ct + ci);\n"
+"      win = 1.0 - 0.5 * (rs * rs + rp * rp);\n"
+"    }\n"
 "    float edge = win * smoothstep(0.0, 0.35, rt.y);\n"
 "    vec3 sky = mix(ZENITH, vec3(0.75, 0.86, 1.0), 0.3) * (0.55 + 0.45 * edge)\n"
 "             + vec3(1.0, 0.95, 0.85) * (pow(max(dot(rt, uSunAir), 0.0), 900.0) * 12.0\n"
 "                                       + pow(max(dot(rt, uSunAir), 0.0), 40.0) * 1.5) * win;\n"
-"    vec3 below = water(reflect(dir, N), cam.y) * 0.6;\n"
-"    vec3 surf = mix(below, sky, win * (0.25 + 0.75 * edge));\n"
+"    vec3 rf = reflect(dir, N);\n"
+"    vec3 below = water(vec3(rf.x, -abs(rf.y), rf.z), cam.y) * 0.6;\n"
+"    vec3 surf = mix(below, sky, win);\n"
 "    float T = exp(-pow(t * uSigma.g, 2.35));\n"
 "    c = mix(c, surf, T * smoothstep(0.0, 0.08, dir.y));\n"
 "  }\n"
@@ -409,8 +431,8 @@ static const char *SNOW_VS =
 "  float dist = length(eye.xyz);\n"
 "  float big = aSeed.w > 0.93 ? 2.2 : 1.0;\n"
 "  gl_PointSize = clamp(26.0 * big * uPx / max(dist, 1.0), 1.0, 9.0 * big);\n"
-"  float d = depth01(wp.y); float L = surfLight(d);\n"
-"  vec3 c = mix(TEAL, ZENITH, 0.45) * L * 0.8 + TEAL * 0.05;\n"
+"  float d = depth01(wp.y); float L = sunLight(wp.y);\n"
+"  vec3 c = mix(TEAL, ZENITH, 0.45) * L * 0.8;\n"
 "  c += lamps(wp, normalize(cam - wp)) * 0.55;\n"
 "  float glow = 0.0;\n"
 "  if (fract(aSeed.w * 97.0) < 0.10) {\n"
@@ -425,7 +447,7 @@ static const char *SNOW_VS =
 "    c += vec3(0.1, 1.0, 0.75) * stir * 1.8;\n"
 "    glow = max(glow, stir);\n"
 "  }\n"
-"  float fade = (1.0 - smoothstep(uBox * 0.32, uBox * 0.5, dist)) * smoothstep(40.0, 220.0, dist);\n"
+"  float fade = (1.0 - smoothstep(uBox * 0.32, uBox * 0.5, dist)) * smoothstep(40.0, 220.0, dist) * step(wp.y, uSurfY - 50.0);\n"
 "  vec3 T = trans(dist);\n"
 "  vCol = vec4(c * mix(T, sqrt(T), glow), fade * (0.55 + 0.45 * glow));\n"
 "}\n";
@@ -454,10 +476,10 @@ static const char *BUBBLE_VS =
 "  float r = (7.0 + aSeed * 16.0) * (1.0 + k * 1.4);\n"
 "  gl_PointSize = clamp(r * 2.0 * uPx / max(dist, 1.0), 1.0, 28.0);\n"
 "  float d = depth01(wp.y);\n"
-"  vec3 c = mix(ZENITH, water(vec3(0.0, 1.0, 0.0), wp.y), 0.5) * (0.35 + 0.65 * surfLight(d));\n"
+"  vec3 c = (ZENITH * sunLight(wp.y) + water(vec3(0.0, 1.0, 0.0), wp.y)) * 0.5;\n"
 "  c += lamps(wp, normalize(uCamToWorld[3].xyz - wp)) * 0.5;\n"
 "  float a = (k < 0.0 || k > 1.0) ? 0.0 : smoothstep(0.0, 0.06, k) * (1.0 - smoothstep(0.7, 1.0, k));\n"
-"  a *= smoothstep(150.0, 450.0, dist);\n"
+"  a *= smoothstep(150.0, 450.0, dist) * step(wp.y, uSurfY - 50.0);\n"
 "  vCol = vec4(c * trans(dist), a * 0.85);\n"
 "}\n";
 static const char *BUBBLE_FS =
@@ -547,7 +569,7 @@ static const char *FISH_FS =
 "  vec3 V = (vWp - cam) / max(dist, 1.0);\n"
 "  vec3 N = normalize(vN);\n"
 "  if (dot(N, V) > 0.0) N = -N;\n"
-"  float d = depth01(vWp.y); float L = surfLight(d);\n"
+"  float d = depth01(vWp.y); float L = sunLight(vWp.y);\n"
 "  float h = vUV.y;\n"
    /* the species: back, flank, belly, the stripe along the flank and the
       tail (sardines, yellowtails, blue-green, orange reef fish) */
@@ -563,10 +585,10 @@ static const char *FISH_FS =
 "  alb = mix(alb, cTail, smoothstep(0.75, 0.9, vUV.x));\n"
 "  alb *= 0.9 + 0.2 * seed;\n"
 "  float sky = N.y * 0.5 + 0.5;\n"
-"  vec3 col = alb * (0.3 + 0.7 * sky) * (0.18 + 0.82 * L);\n"
+"  vec3 col = alb * (0.3 + 0.7 * sky) * L;\n"
    /* silver: the flanks mirror the water and the light above */
 "  vec3 R = reflect(V, N);\n"
-"  vec3 env = water(R, cam.y) + uSunCol * pow(max(dot(R, uSunDir), 0.0), 20.0) * L * L * 1.6;\n"
+"  vec3 env = water(R, cam.y) + uSunCol * pow(max(dot(R, uSunDir), 0.0), 20.0) * min(L * L, 4.0) * 1.6;\n"
 "  float mirror = (1.0 - smoothstep(0.35, 0.9, abs(h))) * (1.0 - smoothstep(0.75, 1.0, vUV.x)) * silver;\n"
 "  float fres = pow(1.0 - abs(dot(N, V)), 2.0);\n"
 "  col = mix(col, env * 1.4, mirror * (0.35 + 0.6 * fres));\n"
@@ -640,7 +662,7 @@ static const char *POST_FS =
 "  vec3 dbg = vec3(max(b.r, max(b.g, b.b)) * uBloom, 0.0, 0.0);\n"
 "  vec3 c0 = c;\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
-"  float d = depth01(cam.y); float L = surfLight(d);\n"
+"  float d = depth01(cam.y); float L = sunLight(cam.y);\n"
 "  float z = texture2D(uDepth, uv).r;\n"
 "  vec3 eyeFar = eyeAt(uv * uVP.zw + uVP.xy, z);\n"
 "  float sceneDist = z >= 0.99999 ? 1e9 : length(eyeFar);\n"
@@ -766,10 +788,10 @@ static const char *LIGHT_FS =
 "    float t = (float(i) + jit) / 32.0 * tmax;\n"
 "    vec3 p = cam + wrd * t;\n"
 "    float T = trans1(t * 0.55);\n"
-"    float d = depth01(p.y); float Lp = surfLight(d);\n"
+"    float d = depth01(p.y); float Lp = sunLight(p.y);\n"
 "    float vis = shadowAt(p, jit * 6.2832 + float(i) * 2.4);\n"
 "    float c = causticLod(p, 0.5 + 2.5 * d + t / 6000.0);\n"
-"    R += max(c - 0.6 * CAUST_MEAN, 0.0) * vis * T * Lp * Lp;\n"
+"    R += max(c - 0.6 * CAUST_MEAN, 0.0) * vis * T * min(Lp * Lp, 4.0);\n"
 "    S += (1.0 - vis) * T * Lp;\n"
 "  }\n"
 "  float k = tmax / 18000.0 / 32.0;\n"
@@ -1597,7 +1619,7 @@ static void spawnSchool(School *s, const float *focus, const float *dir, float r
     float lat = (frnd() * 2 - 1) * side;
     s->c[0] = focus[0] + sinf(yaw) * r + cosf(yaw) * lat;
     s->c[2] = focus[2] + cosf(yaw) * r - sinf(yaw) * lat;
-    s->c[1] = focus[1] + (frnd() * 2 - 1) * 1600.0f;
+    s->c[1] = fminf(focus[1] + (frnd() * 2 - 1) * 1600.0f, surfY - 2500.0f);   /* not in the air */
     s->heading = frnd() * 6.2832f;
     s->climb = 0;
     s->mode = (int) (frnd() * 3);
@@ -1690,6 +1712,7 @@ static void simulateFish(float dt, const float *focus, int subOn) {
             s->v[j] += (want[j] - s->v[j]) * fminf(1.0f, 1.2f * dt);
             s->c[j] += s->v[j] * dt;
         }
+        s->c[1] = fminf(s->c[1], surfY - 2500.0f);
         float spin = t * 0.5f * s->spin;
         float cs = cosf(spin), sn = sinf(spin);
         for (int i = 0; i < s->n; i++) {
@@ -1763,6 +1786,10 @@ static void simulateFish(float dt, const float *focus, int subOn) {
             for (int j = 0; j < 3; j++) {
                 f->v[j] *= k;
                 f->p[j] += f->v[j] * dt;
+            }
+            if (f->p[1] > surfY - 300.0f) {   /* the surface: they turn back down */
+                f->p[1] = surfY - 300.0f;
+                f->v[1] = -fabsf(f->v[1]);
             }
             /* banking into the turn */
             float cr = old[2] * f->v[0] - old[0] * f->v[2];

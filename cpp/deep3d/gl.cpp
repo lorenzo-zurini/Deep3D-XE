@@ -1568,6 +1568,7 @@ void GLBackend::endFrame() {
         // pause: redraw the last frame and the menu until resumed (the menu
         // is drawn by the game's own toolkit, on this thread)
         bool pausedHere = false;
+        auto pauseFrameAt = std::chrono::steady_clock::now();
         while (Runtime::isGamePaused() && gRunning) {
             pausedHere = true;
             Scenario::tick();   // test scenarios go on in menus
@@ -1582,7 +1583,13 @@ void GLBackend::endFrame() {
             checkPipeShot();
             swap();
             releaseContext();
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            // paced like the game: what is left of a frame at the FPS limit
+            // (60 without one); vsync's swap has usually waited already
+            auto frame = std::chrono::microseconds(1000000 / (Config::fpsCap > 0 ? Config::fpsCap : 60));
+            auto next = pauseFrameAt + frame;
+            auto now = std::chrono::steady_clock::now();
+            if (next > now) std::this_thread::sleep_until(next);
+            pauseFrameAt = std::max(next, now);
             claimContext();
         }
         if (pausedHere) {

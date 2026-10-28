@@ -1513,6 +1513,7 @@ public:
     virtual bool method_270(int32_t var1);
     virtual void method_271();
     void deep3dRemaster();
+    void deep3dSurface();
     bool __dumpable() override { return true; }
     const char* __javaName() override { return "class_26"; }
     void __dumpFields(jrt::Dumper& d) override;
