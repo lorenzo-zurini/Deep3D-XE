@@ -307,6 +307,7 @@ void class_70::method_671(int64_t var1) {
             if (this->field_1015) {
                 this->field_971->method_870(class_84::field_1110->field_40->field_1341);
                 this->field_971->method_847((-4200));
+                this->deep3dCornerArrow();
                 this->field_973->method_839(false);
             }
             if (this->field_1000->method_23() > 500000) {
@@ -512,3 +513,26 @@ void class_70::__dumpFields(jrt::Dumper& d) {
     d.f("field_999", this->field_999);
 }
 
+// Deep3D-PC: the arrow that points back into the sector's depth range sits
+// in the bottom-left corner of the view rather than under the reticle. It is
+// 4200 ahead of the camera; this moves it across the view plane there, by the
+// camera's own projection (so any field of view or aspect).
+void class_70::deep3dCornerArrow() {
+    float fovy = 44.0f, aspect = class_84::field_1121 > 0 ? float(class_84::field_1120) / float(class_84::field_1121) : 1.0f;
+    jrt::Ref<class_107> cam = jrt::cast<class_107>(class_84::field_1110->field_40);
+    if (cam != nullptr && cam->field_1362 != nullptr) {
+        jrt::Ref<jrt::Array<float>> p = jrt::newArray<float>(4);
+        if (cam->field_1362->getProjection(p) == javax::microedition::m3g::Camera::PERSPECTIVE) {
+            fovy = p->at(0);
+            aspect = p->at(1);
+        }
+    }
+    float halfH = 4200.0f * float(std::tan(double(fovy) * 3.141592653589793 / 360.0));
+    int32_t ox = int32_t(-0.80f * halfH * aspect);
+    int32_t oy = int32_t(-0.62f * halfH);
+    jrt::Ref<class_57> m = this->field_971->field_1341;
+    m->field_698 += ((m->field_689 * ox) >> 12) + ((m->field_692 * oy) >> 12);
+    m->field_699 += ((m->field_690 * ox) >> 12) + ((m->field_693 * oy) >> 12);
+    m->field_700 += ((m->field_691 * ox) >> 12) + ((m->field_694 * oy) >> 12);
+    this->field_971->method_847(0);   // marks the transform changed
+}

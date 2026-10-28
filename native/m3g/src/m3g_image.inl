@@ -198,8 +198,8 @@ static void m3gBindTextureObject(Image *img, M3Gbool mipmap)
                 {
                     /* Deep3D-PC: phone texture colour depth (see gl.h) */
                     M3Gubyte *q = deep3d_phone_textures
-                        ? deep3d_quantize_texels(img->glFormat, pixels,
-                                                 img->width * img->height)
+                        ? deep3d_phone_texels(img->glFormat, pixels,
+                                              img->width, img->height)
                         : deep3d_clean_alpha(img->glFormat, pixels,
                                              img->width * img->height);
                     glTexImage2D(GL_TEXTURE_2D,

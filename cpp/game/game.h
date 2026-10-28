@@ -3221,6 +3221,7 @@ public:
     virtual void method_673(int64_t var1);
     virtual void method_674(int64_t var1);
     virtual void steerAnalog(int64_t var1, float yaw, float pitch);
+    void deep3dCornerArrow();
     virtual void method_675(int64_t var1);
     virtual void method_676(int64_t var1);
     virtual void method_677(int32_t var1);

@@ -656,9 +656,6 @@ void MouseFlight::draw(Ref<Graphics> g, int32_t w, int32_t h) {
     int32_t ay = cy + java::lang::Math::round(gOffY * float(h));
     g->setClip(0, 0, w, h);
     float m = float(std::sqrt(gOffX * gOffX + gOffY * gOffY)) / RADIUS;
-    int32_t dz = std::max(3, java::lang::Math::round(MF_DEADZONE * RADIUS * float(h)));
-    g->setColor(0x2E5F78);
-    g->drawArc(cx - dz, cy - dz, dz * 2, dz * 2, 0, 360);
     if (m > MF_DEADZONE) {
         g->setColor(0x4993B8);
         int32_t steps = std::max(2, java::lang::Math::round(m * 6));

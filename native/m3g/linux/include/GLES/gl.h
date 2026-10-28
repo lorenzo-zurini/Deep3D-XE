@@ -142,6 +142,64 @@ static inline unsigned char *deep3d_quantize_texels(GLenum fmt, const void *src,
 }
 
 /*
+ * Gradient strips (the skybox: a few texels wide, a long ramp of colour and
+ * alpha) band in solid steps of equal height: every DEEP3D_BAND_ROWS rows
+ * (16 bands to each 64-row ramp, as many as the phone's 4-bit levels) become
+ * their average, colour weighted by alpha. Quantising values instead gave
+ * bands as thick as the ramp is flat - twice as thick by the horizon - and
+ * the texels' colour noise made a band's rows and columns differ.
+ */
+#define DEEP3D_BAND_ROWS 4
+static inline int deep3d_is_strip(int w, int h) {
+    return w <= 8 && h >= 64;
+}
+
+static inline unsigned char *deep3d_band_strip(GLenum fmt, const void *src, int w, int h) {
+    int comps = fmt == GL_RGBA ? 4 : fmt == GL_RGB ? 3 : 0;
+    if (!comps || !src) {
+        return NULL;
+    }
+    const unsigned char *in = (const unsigned char *) src;
+    unsigned char *out = (unsigned char *) malloc((size_t) w * h * comps);
+    for (int y0 = 0; y0 < h; y0 += DEEP3D_BAND_ROWS) {
+        int y1 = y0 + DEEP3D_BAND_ROWS < h ? y0 + DEEP3D_BAND_ROWS : h;
+        double sum[4] = {0, 0, 0, 0}, plain[3] = {0, 0, 0}, wsum = 0;
+        int n = 0;
+        for (int y = y0; y < y1; y++) {
+            for (int x = 0; x < w; x++) {
+                const unsigned char *t = in + ((size_t) y * w + x) * comps;
+                double a = comps == 4 ? t[3] : 255.0;
+                for (int k = 0; k < 3; k++) {
+                    sum[k] += t[k] * a;
+                    plain[k] += t[k];
+                }
+                sum[3] += a;
+                wsum += a;
+                n++;
+            }
+        }
+        unsigned char v[4];
+        for (int k = 0; k < 3; k++) {
+            double c = wsum > 0 ? sum[k] / wsum : plain[k] / n;
+            v[k] = (unsigned char) (c + 0.5);
+        }
+        v[3] = (unsigned char) (sum[3] / n + 0.5);
+        for (int y = y0; y < y1; y++) {
+            for (int x = 0; x < w; x++) {
+                memcpy(out + ((size_t) y * w + x) * comps, v, comps);
+            }
+        }
+    }
+    return out;
+}
+
+/* the phone's colour depth for a w x h texture (see above) */
+static inline unsigned char *deep3d_phone_texels(GLenum fmt, const void *src, int w, int h) {
+    unsigned char *b = deep3d_is_strip(w, h) ? deep3d_band_strip(fmt, src, w, h) : NULL;
+    return b ? b : deep3d_quantize_texels(fmt, src, (size_t) w * h);
+}
+
+/*
  * Full-colour textures: alpha below 1/16 is cleared, as the phones' 4-bit
  * alpha did. Glow textures (the stations' flares) keep bright colour in
  * their nearly transparent texels, which additive blending otherwise sums
@@ -175,7 +233,7 @@ static inline void deep3d_glCompressedTexImage2D(GLenum target, GLint level, GLe
             memcpy(out + (size_t)i * comps, pal + (size_t)idx[i] * comps, comps);
         }
         unsigned char *q = deep3d_phone_textures
-            ? deep3d_quantize_texels(comps == 4 ? GL_RGBA : GL_RGB, out, (size_t)w * h)
+            ? deep3d_phone_texels(comps == 4 ? GL_RGBA : GL_RGB, out, w, h)
             : deep3d_clean_alpha(comps == 4 ? GL_RGBA : GL_RGB, out, (size_t)w * h);
         if (q) {
             free(out);
