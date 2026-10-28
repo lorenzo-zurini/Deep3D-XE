@@ -65,6 +65,7 @@ static GLint vp[4];
 
 static const char *WATER =
 "#version 120\n"
+"#extension GL_ARB_shader_texture_lod : enable\n"
 "uniform mat4 uCamToWorld;\n"
 "uniform mat4 uInvProj;\n"
 "uniform vec4 uVP;\n"
@@ -72,6 +73,7 @@ static const char *WATER =
 "uniform float uSector;\n"
 "uniform vec3 uTint;\n"
 "uniform vec3 uSunDir;\n"
+"uniform vec3 uSunAir;\n"
 "uniform vec3 uSunCol;\n"
 "uniform vec3 uSigma;\n"
 "uniform vec3 uSub;\n"
@@ -133,6 +135,9 @@ static const char *WATER =
 "  return c;\n"
 "}\n"
 "float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n"
+/* interleaved gradient noise: an even, fixed dither per pixel (it does not
+   crawl from frame to frame, and a small blur removes it) */
+"float ign(vec2 px) { return fract(52.9829189 * fract(dot(px, vec2(0.06711056, 0.00583715)))); }\n"
 "float noise(vec2 p) {\n"
 "  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);\n"
 "  return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);\n"
@@ -160,6 +165,14 @@ static const char *WATER =
 "float causticAt(vec3 p, float blur) {\n"
 "  vec2 uv = (uCaustVP * vec4(p, 1.0)).xy * 0.5 + 0.5;\n"
 "  float c = texture2D(uCaustMap, uv, blur).r;\n"
+"  vec2 e = min(uv, 1.0 - uv);\n"
+"  return mix(CAUST_MEAN, c, smoothstep(0.0, 0.12, min(e.x, e.y)));\n"
+"}\n"
+/* the same at a chosen blur (mip level): along view rays, where the
+   screen-space derivatives mean nothing */
+"float causticLod(vec3 p, float lod) {\n"
+"  vec2 uv = (uCaustVP * vec4(p, 1.0)).xy * 0.5 + 0.5;\n"
+"  float c = texture2DLod(uCaustMap, uv, lod).r;\n"
 "  vec2 e = min(uv, 1.0 - uv);\n"
 "  return mix(CAUST_MEAN, c, smoothstep(0.0, 0.12, min(e.x, e.y)));\n"
 "}\n"
@@ -301,7 +314,7 @@ static const char *SCENE_FS =
 "  float up = smoothstep(-0.15, 0.85, N.y);\n"
 "  float near = 1.0 - smoothstep(2500.0, 17000.0, dist);\n"
    /* in the shade of what is above: less of the light from above, no caustics */
-"  float vis = uSelf > 0.5 ? 1.0 : shadowAt(wp + N * 25.0, hash(gl_FragCoord.xy) * 6.2832);\n"
+"  float vis = uSelf > 0.5 ? 1.0 : shadowAt(wp + N * 25.0, ign(gl_FragCoord.xy) * 6.2832);\n"
 "  col *= mix(0.5, 1.0, vis);\n"
 "  float cz = causticAt(wp, 0.3 + 2.0 * d) * 2.2;\n"
 "  col += alb.rgb * uSunCol * cz * up * near * L * L * 0.55 * vis;\n"
@@ -349,11 +362,18 @@ static const char *BG_FS =
 "    float win = dot(rt, rt) > 1e-6 ? 1.0 : 0.0;\n"
 "    float edge = win * smoothstep(0.0, 0.35, rt.y);\n"
 "    vec3 sky = mix(ZENITH, vec3(0.75, 0.86, 1.0), 0.3) * (0.55 + 0.45 * edge)\n"
-"             + vec3(1.0, 0.95, 0.85) * pow(max(dot(rt, uSunDir), 0.0), 60.0) * 3.0 * win;\n"
+"             + vec3(1.0, 0.95, 0.85) * (pow(max(dot(rt, uSunAir), 0.0), 900.0) * 12.0\n"
+"                                       + pow(max(dot(rt, uSunAir), 0.0), 40.0) * 1.5) * win;\n"
 "    vec3 below = water(reflect(dir, N), cam.y) * 0.6;\n"
 "    vec3 surf = mix(below, sky, win * (0.25 + 0.75 * edge));\n"
 "    float T = exp(-pow(t * uSigma.g, 2.35));\n"
 "    c = mix(c, surf, T * smoothstep(0.0, 0.08, dir.y));\n"
+"  }\n"
+   /* above the surface (god mode): the sky, the sun */
+"  if (cam.y >= uSurfY) {\n"
+"    vec3 air = mix(vec3(0.62, 0.74, 0.86), vec3(0.25, 0.45, 0.8), smoothstep(0.0, 0.6, dir.y));\n"
+"    air += vec3(1.0, 0.95, 0.85) * (pow(max(dot(dir, uSunAir), 0.0), 900.0) * 12.0 + pow(max(dot(dir, uSunAir), 0.0), 40.0) * 0.6);\n"
+"    c = dir.y > 0.0 ? air : mix(vec3(0.02, 0.18, 0.24), air * 0.5, pow(1.0 + dir.y, 6.0));\n"
 "  }\n"
 "  gl_FragColor = vec4(c, 1.0);\n"
 "}\n";
@@ -628,9 +648,7 @@ static const char *POST_FS =
 "  vec3 wrd = normalize(mat3(uCamToWorld) * rd);\n"
    /* the light from the waves in the water (shafts, brighter towards the
       light above) and the shade under everything (LIGHT_FS) */
-"  vec2 lpx = 2.0 / uVP.zw;\n"   /* a texel of the half-resolution light: a little blur against its grain */
-"  vec2 lt = (texture2D(uLight, uv).rg * 2.0 + texture2D(uLight, uv + vec2(lpx.x, 0.0)).rg + texture2D(uLight, uv - vec2(lpx.x, 0.0)).rg\n"
-"           + texture2D(uLight, uv + vec2(0.0, lpx.y)).rg + texture2D(uLight, uv - vec2(0.0, lpx.y)).rg) / 6.0;\n"
+"  vec2 lt = texture2D(uLight, uv).rg;\n"
 "  float phase = 0.6 + 0.9 * pow(max(dot(wrd, uSunDir), 0.0), 4.0);\n"
 "  float rays = lt.r * uRayK * phase;\n"
 "  rays = rays / (1.0 + rays * 1.2);\n"
@@ -742,33 +760,53 @@ static const char *LIGHT_FS =
 "  vec3 wrd = normalize(mat3(uCamToWorld) * normalize(eyeFar));\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
 "  float tmax = min(sceneDist, 18000.0);\n"
-"  float jit = hash(vUV * 731.0 + fract(uTime * 7.31));\n"
+"  float jit = ign(gl_FragCoord.xy);\n"
 "  float R = 0.0, S = 0.0;\n"
-"  for (int i = 0; i < 24; i++) {\n"
-"    float t = (float(i) + jit) / 24.0 * tmax;\n"
+"  for (int i = 0; i < 32; i++) {\n"
+"    float t = (float(i) + jit) / 32.0 * tmax;\n"
 "    vec3 p = cam + wrd * t;\n"
 "    float T = trans1(t * 0.55);\n"
 "    float d = depth01(p.y); float Lp = surfLight(d);\n"
 "    float vis = shadowAt(p, jit * 6.2832 + float(i) * 2.4);\n"
-"    float c = causticAt(p, 1.2 + 3.5 * d + t / 5000.0);\n"
+"    float c = causticLod(p, 0.5 + 2.5 * d + t / 6000.0);\n"
 "    R += max(c - 0.6 * CAUST_MEAN, 0.0) * vis * T * Lp * Lp;\n"
 "    S += (1.0 - vis) * T * Lp;\n"
 "  }\n"
-"  float k = tmax / 18000.0 / 24.0;\n"
+"  float k = tmax / 18000.0 / 32.0;\n"
    /* the shade: the light a shadow keeps out of the path, saturating (a
       station's shadow, a few thousand units across, reads clearly) */
-"  float shade = 1.0 - exp(-S * tmax / 24.0 / 1800.0);\n"
+"  float shade = 1.0 - exp(-S * tmax / 32.0 / 1800.0);\n"
 "  gl_FragColor = vec4(R * k, shade, 0.0, 1.0);\n"
+"}\n";
+
+/* The light pass, blurred (horizontally, then vertically): a Gaussian that
+   stops at edges in depth, so the shafts do not bleed over things */
+static const char *BLUR_FS =
+"uniform sampler2D uSrc; uniform sampler2D uDepth; uniform vec2 uStep;\n"
+"varying vec2 vUV;\n"
+"float distAt(vec2 uv) {\n"
+"  float z = texture2D(uDepth, uv).r;\n"
+"  return z >= 0.99999 ? 60000.0 : min(length(eyeAt(uv * uVP.zw + uVP.xy, z)), 60000.0);\n"
+"}\n"
+"void main() {\n"
+"  float dc = distAt(vUV);\n"
+"  vec4 acc = vec4(0.0); float wsum = 0.0;\n"
+"  for (int i = -6; i <= 6; i++) {\n"
+"    vec2 uv = vUV + uStep * float(i);\n"
+"    float w = exp(-float(i * i) / 18.0) / (1.0 + abs(distAt(uv) - dc) / (dc * 0.06 + 80.0));\n"
+"    acc += texture2D(uSrc, uv) * w; wsum += w;\n"
+"  }\n"
+"  gl_FragColor = acc / wsum;\n"
 "}\n";
 
 struct Prog {
     GLuint id;
     GLint uCamToWorld, uInvProj, uVP, uTime, uSector, uTint, uSunDir, uSunCol, uSigma;
     GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf, uSpawner, uGlowP, uGlowC, uNumGlows;
-    GLint uWave, uWaveB, uSurfY, uCaustMap, uCaustVP, uShadowMap, uShadowVP, uShadowOn, uShadowDepth, uShadowTexel;
+    GLint uWave, uWaveB, uSurfY, uCaustMap, uCaustVP, uShadowMap, uShadowVP, uShadowOn, uShadowDepth, uShadowTexel, uSunAir;
 };
 
-static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pSpark, pGlow, pCaust, pShadow, pLight;
+static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pSpark, pGlow, pCaust, pShadow, pLight, pBlur;
 static GLint fiWorldToEye, fiProj;
 static GLint buWorldToEye, buProj, buPx, buLife, buBub, buSeed;
 static GLint sTex0, sTex1, sEn0, sEn1, sMode0, sMode1, sFmt0, sFmt1, sKind, sSprite;
@@ -847,6 +885,7 @@ static int link(Prog *p, const char *vs1, const char *vs2, const char *fs) {
     p->uShadowOn = glGetUniformLocation(id, "uShadowOn");
     p->uShadowDepth = glGetUniformLocation(id, "uShadowDepth");
     p->uShadowTexel = glGetUniformLocation(id, "uShadowTexel");
+    p->uSunAir = glGetUniformLocation(id, "uSunAir");
     return 1;
 }
 
@@ -866,7 +905,8 @@ static int buildPrograms() {
         || !link(&pFish, WATER, FISH_VS, FISH_FS)
         || !link(&pCaust, POST_VS, NULL, CAUST_FS)
         || !link(&pShadow, SHADOW_VS, NULL, SHADOW_FS)
-        || !link(&pLight, POST_VS, NULL, LIGHT_FS)) {
+        || !link(&pLight, POST_VS, NULL, LIGHT_FS)
+        || !link(&pBlur, POST_VS, NULL, BLUR_FS)) {
         rmBroken = 1;
         fprintf(stderr, "[remaster] disabled\n");
         return 0;
@@ -912,10 +952,10 @@ static int buildPrograms() {
 
 static float sunDir[3], sunCol[3], sigma[3];
 
-/* The surface: 4000 m (game depth) above the shallowest stations (2000 m
-   above where a sub can climb to), out of reach but for god mode. Its waves (world units: 8 per metre), long swells
-   to short chop, roughly with one wind; deep-water speeds, doubled */
-#define SURF_DEPTH 11000.0f
+/* The surface: the sea's, at depth 0 (out of reach but for god mode). Its
+   waves (world units: 8 per metre) are huge swells, 350 m to 2.3 km long,
+   roughly with one wind, at deep-water speeds */
+#define SURF_DEPTH 0.0f
 static float surfY;
 static float waveA[8 * 4], waveB[8 * 4];
 
@@ -923,17 +963,17 @@ static void initWaves() {
     /* wavelength, direction (rad), focusing: tuned so the light folds into
        a network of thin bright lines (the caustics), irregular, not a lattice */
     static const float W[8][3] = {
-        {4700, 0.30f, 0.624f}, {3350, 2.05f, 0.600f}, {2620, -0.55f, 0.600f}, {1930, 1.17f, 0.576f},
-        {1490, 2.71f, 0.552f}, {1170, -1.33f, 0.528f}, {890, 0.47f, 0.480f}, {705, 2.35f, 0.456f}};
+        {18800, 0.30f, 0.624f}, {13400, 2.05f, 0.600f}, {10480, -0.55f, 0.600f}, {7720, 1.17f, 0.576f},
+        {5960, 2.71f, 0.552f}, {4680, -1.33f, 0.528f}, {3560, 0.47f, 0.480f}, {2820, 2.35f, 0.456f}};
     unsigned x = 9001;
     for (int i = 0; i < 8; i++) {
         float k = 6.2831853f / W[i][0];
         waveA[i * 4] = cosf(W[i][1]);
         waveA[i * 4 + 1] = sinf(W[i][1]);
         waveA[i * 4 + 2] = k;
-        waveA[i * 4 + 3] = 2.0f * sqrtf(78.5f * k);       /* g = 9.81 m/s2 * 8 units/m */
+        waveA[i * 4 + 3] = sqrtf(78.5f * k);              /* g = 9.81 m/s2 * 8 units/m */
         x = x * 1664525u + 1013904223u;
-        waveB[i * 4] = 0.07f / k;                          /* height: slope 0.07 */
+        waveB[i * 4] = 0.1f / k;                           /* height: slope 0.1 (a storm swell) */
         waveB[i * 4 + 1] = W[i][2];
         waveB[i * 4 + 2] = (x >> 8) / 16777216.0f * 6.2831853f;
         waveB[i * 4 + 3] = 0;
@@ -948,7 +988,7 @@ static void initWaves() {
 #define SH_HALF 18000.0f
 #define SH_RANGE 60000.0f
 #define CA_HALF 40000.0f
-static GLuint texShadow[2], fbShadow[2], texCaust, fbCaust, texLight;
+static GLuint texShadow[2], fbShadow[2], texCaust, fbCaust, texLight, texLight2;
 static int shCur = 0, shHave = 0;
 static float lightVP[2][16], caustVP[16];
 
@@ -981,10 +1021,22 @@ static void lightFrame(float *m, float half) {
     m[15] = 1;
 }
 
+/* The sun: 55 degrees up in the sky (sunAir, towards it). Under water its
+   light comes in bent towards the vertical by the surface (Snell: sin of the
+   angle from the vertical / 1.333): sunDir, towards where it comes from */
+#define SUN_ELEVATION 55.0f
+#define SUN_AZIMUTH 36.0f
+static float sunAir[3];
+
 static void deriveFrame() {
-    float sx = 0.22f, sy = 1.0f, sz = 0.16f;
-    float n = sqrtf(sx * sx + sy * sy + sz * sz);
-    sunDir[0] = sx / n; sunDir[1] = sy / n; sunDir[2] = sz / n;
+    float el = SUN_ELEVATION * 0.0174533f, az = SUN_AZIMUTH * 0.0174533f;
+    sunAir[0] = cosf(el) * cosf(az);
+    sunAir[1] = sinf(el);
+    sunAir[2] = cosf(el) * sinf(az);
+    float sw = cosf(el) / 1.333f, cw = sqrtf(1.0f - sw * sw);
+    sunDir[0] = sw * cosf(az);
+    sunDir[1] = cw;
+    sunDir[2] = sw * sinf(az);
     /* sunlight, warmed a little by the sector's tint */
     /* the skydome's pale zenith, with a little of the sector's hue */
     float m = fmaxf(F[F_TINT], fmaxf(F[F_TINT + 1], F[F_TINT + 2]));
@@ -1366,6 +1418,7 @@ static void setCommon(const Prog *p) {
     glUniform1f(p->uShadowOn, shHave && !noShadows() ? 1.0f : 0.0f);
     glUniform1f(p->uShadowDepth, 2.0f * SH_RANGE);
     glUniform1f(p->uShadowTexel, 1.0f / (2.0f * SH_HALF));
+    glUniform3fv(p->uSunAir, 1, sunAir);
 }
 
 static int invert4(const float *m, float *out) {
@@ -2652,6 +2705,7 @@ static void ensurePostTextures(int w, int h) {
         glGenTextures(1, &texDepth);
         glGenTextures(1, &texBright);
         glGenTextures(1, &texLight);
+        glGenTextures(1, &texLight2);
     }
     glBindTexture(GL_TEXTURE_2D, texScene);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
@@ -2678,12 +2732,15 @@ static void ensurePostTextures(int w, int h) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glGenerateMipmap(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, texLight);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (w + 1) / 2, (h + 1) / 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    const GLuint lightTex[2] = {texLight, texLight2};
+    for (GLuint t : lightTex) {
+        glBindTexture(GL_TEXTURE_2D, t);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, (w + 1) / 2, (h + 1) / 2, 0, GL_RGBA, GL_UNSIGNED_SHORT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
     postW = w;
     postH = h;
@@ -2763,6 +2820,19 @@ static void post(int w, int h) {
     glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_2D, texShadow[shCur]);
     drawQuad(0);
+    /* blurred: across, into texLight2, then down, back into texLight */
+    glUseProgram(pBlur.id);
+    setCommon(&pBlur);
+    glUniform1i(glGetUniformLocation(pBlur.id, "uSrc"), 3);
+    glUniform1i(glGetUniformLocation(pBlur.id, "uDepth"), 1);
+    static int noBlur = getenv("DEEP3D_RM_NOBLUR") != NULL;
+    for (int pass = 0; pass < (noBlur ? 0 : 2); pass++) {
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pass ? texLight : texLight2, 0);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, pass ? texLight2 : texLight);
+        glUniform2f(glGetUniformLocation(pBlur.id, "uStep"), pass ? 0.0f : 1.0f / bw, pass ? 1.0f / bh : 0.0f);
+        drawQuad(0);
+    }
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, texLight);
 

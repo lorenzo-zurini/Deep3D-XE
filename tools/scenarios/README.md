@@ -119,4 +119,5 @@ Environment variables for `run.sh` (`EXTRA_ENV="..."`):
 | | |
 |---|---|
 | `DEEP3D_RM_NOSHADOW=1` | no shadows (the shade under things, shading on surfaces) |
+| `DEEP3D_RM_NOBLUR=1` | the light in the water unblurred |
 | `DEEP3D_RM_CAUSTDUMP=<file.pgm>`, `DEEP3D_RM_SHADOWDUMP=<file.pgm>` | at world frame 200, write the surface's caustic map / the shadow map |
