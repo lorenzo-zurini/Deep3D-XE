@@ -5,16 +5,23 @@
  * hands each world frame over through Platform._remaster; everything is
  * skipped otherwise):
  *
- *   pass begin   one depth buffer for all of the game's layers
- *   first draw   the water itself: a procedural backdrop (light from the
- *                surface, sun glow, shafts) replacing the game's skydome
+ *   pass begin   one depth buffer for all of the game's layers; the light
+ *                from above for this frame: the caustics of the surface's
+ *                waves (far above), a fresh shadow map along the light
+ *   first draw   the water itself: a procedural backdrop (the original's
+ *                dome, the wavy surface seen from below) in place of the
+ *                game's skydome, which is drawn every frame for that
  *   every draw   the engine's fixed-function vertex stage stays; a fragment
  *                shader does M3G's texturing, then the water: light that
- *                fades with depth, caustics, the ships' lamps, emissive
- *                surfaces, and absorption / scattering with distance
- *   pass end     marine snow, then a post pass: bloom, god rays blocked by
- *                geometry, the sub's headlight beam in the water, halos of
- *                other ships' lamps, a refraction wobble and a grade
+ *                fades with depth, the caustics and the shade from above,
+ *                the ships' lamps, emissive surfaces, and absorption /
+ *                scattering with distance; opaque meshes are drawn again
+ *                into the shadow map
+ *   pass end     marine snow, then a post pass: bloom, the light in the
+ *                water (shafts: the caustics carried down along the light;
+ *                shade: cones under everything that blocks it), the sub's
+ *                headlight beam, halos of other ships' lamps, a refraction
+ *                wobble and a grade
  *
  * The water model (depth -> light, colour, extinction) lives in one GLSL
  * chunk shared by every shader, so fogged objects melt exactly into the
@@ -44,6 +51,7 @@ static int rmDrawn = 0;         /* draws in this pass */
 static int rmLayer = 0;         /* the game's render layer (0 structures and ships, 2 creatures, 3 the sub) */
 static int rmStructure = 0;     /* the draws belong to a structure (long reach) */
 static int rmSpawner = 0;       /* to something that spawns (fades out before it) */
+static int rmSky = 0;           /* the game's skydome: the backdrop is drawn in its place */
 static int rmSprite = 0;        /* the current draw is a sprite */
 static int bgFrame = -1;
 static int postFrame = -1;
@@ -129,32 +137,67 @@ static const char *WATER =
 "  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);\n"
 "  return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);\n"
 "}\n"
-/* tileable water caustic */
-"float caustic(vec2 uv, float t) {\n"
-"  vec2 p = mod(uv * 6.28318, 6.28318) - 250.0;\n"
-"  vec2 i = p; float c = 1.0; float inten = 0.005;\n"
-"  for (int n = 0; n < 4; n++) {\n"
-"    float tt = t * (1.0 - (3.5 / float(n + 1)));\n"
-"    i = p + vec2(cos(tt - i.x) + sin(tt + i.y), sin(tt - i.y) + cos(tt + i.x));\n"
-"    c += 1.0 / length(vec2(p.x / (sin(i.x + tt) / inten), p.y / (cos(i.y + tt) / inten)));\n"
+/* The surface: a sum of moving waves far above (uSurfY). uWave: direction
+   xz, wavenumber, angular speed; uWaveB: height, focusing strength, phase */
+"uniform vec4 uWave[8];\n"
+"uniform vec4 uWaveB[8];\n"
+"uniform float uSurfY;\n"
+"vec2 surfGrad(vec2 xz) {\n"
+"  vec2 g = vec2(0.0);\n"
+"  for (int i = 0; i < 8; i++) {\n"
+"    float th = dot(uWave[i].xy, xz) * uWave[i].z - uWave[i].w * uTime + uWaveB[i].z;\n"
+"    g += uWave[i].xy * (uWaveB[i].x * uWave[i].z * cos(th));\n"
 "  }\n"
-"  c /= 4.0; c = clamp(1.17 - pow(max(c, 0.0), 1.4), 0.0, 1.0);\n"   /* NaN / huge otherwise: black and white faces */
-"  return pow(c, 8.0);\n"
+"  return g;\n"
 "}\n"
-/* shafts of light radiating from the sun's direction */
-"float shafts(vec3 dir) {\n"
-"  vec3 a = normalize(cross(uSunDir, vec3(0.0, 0.0, 1.0)));\n"
-"  vec3 b = cross(uSunDir, a);\n"
-"  float ang = atan(dot(dir, b), dot(dir, a));\n"
-"  float n = noise(vec2(ang * 9.0, uTime * 0.07)) * noise(vec2(ang * 23.0 + 3.0, uTime * 0.11 + 5.0));\n"
-   /* the waves above: each ray is the light that came through one patch of
-      the moving surface (where dir meets it), so the rays brighten, split
-      and sweep as the swell and its caustics pass */
-"  vec2 sp = dir.xz / max(dir.y, 0.12) + uCamToWorld[3].xz / 40000.0;\n"
-"  float swell = 0.5 + 0.5 * sin(dot(sp, vec2(2.3, 1.1)) * 3.0 - uTime * 0.8);\n"
-"  float wave = caustic(sp * 0.9 + vec2(uTime * 0.035, uTime * 0.02), uTime * 0.45);\n"
-"  n *= 0.5 + 1.2 * pow(wave, 0.35) * (0.5 + 0.5 * swell);\n"
-"  return smoothstep(0.1, 0.55, n) * smoothstep(-0.35, 0.95, dot(dir, uSunDir));\n"
+/* The light that came down through the waves: their caustic pattern
+   (uCaustMap, made each frame in the light's frame: see CAUST_FS) carried
+   down along the light, so it is the same all along a ray of light (the
+   shafts), and blurrier the deeper it went */
+"uniform sampler2D uCaustMap;\n"
+"uniform mat4 uCaustVP;\n"
+"const float CAUST_MEAN = 0.143;\n"
+"float causticAt(vec3 p, float blur) {\n"
+"  vec2 uv = (uCaustVP * vec4(p, 1.0)).xy * 0.5 + 0.5;\n"
+"  float c = texture2D(uCaustMap, uv, blur).r;\n"
+"  vec2 e = min(uv, 1.0 - uv);\n"
+"  return mix(CAUST_MEAN, c, smoothstep(0.0, 0.12, min(e.x, e.y)));\n"
+"}\n"
+/* How much of the light from above reaches p (1: all). The shadow map is
+   the scene seen from above along the light; the light comes from the whole
+   bright window above, so a shadow is crisp just under its caster, widens
+   and fades further down: a cone of shade under everything */
+"uniform sampler2D uShadowMap;\n"
+"uniform mat4 uShadowVP;\n"
+"uniform float uShadowOn;\n"
+"uniform float uShadowDepth;\n"   /* world units per unit of stored depth */
+"uniform float uShadowTexel;\n"   /* map uv per world unit */
+"float shadowAt(vec3 p, float rot) {\n"
+"  if (uShadowOn < 0.5) return 1.0;\n"
+"  vec3 q = (uShadowVP * vec4(p, 1.0)).xyz * 0.5 + 0.5;\n"
+"  if (q.x <= 0.002 || q.x >= 0.998 || q.y <= 0.002 || q.y >= 0.998 || q.z >= 1.0) return 1.0;\n"
+"  vec2 a = vec2(cos(rot), sin(rot)), b = vec2(-a.y, a.x);\n"
+   /* the casters around: how far above p they are */
+"  float sr = 700.0 * uShadowTexel, nb = 0.0, above = 0.0;\n"
+"  for (int k = 0; k < 4; k++) {\n"
+"    vec2 o = (k == 0 ? a : k == 1 ? -a : k == 2 ? b : -b) * sr * (k < 2 ? 0.5 : 1.0);\n"
+"    float d = texture2D(uShadowMap, q.xy + o).r;\n"
+"    if (d < q.z - 60.0 / uShadowDepth) { nb += 1.0; above += (q.z - d) * uShadowDepth; }\n"
+"  }\n"
+"  float dc = texture2D(uShadowMap, q.xy).r;\n"
+"  if (dc < q.z - 60.0 / uShadowDepth) { nb += 1.0; above += (q.z - dc) * uShadowDepth; }\n"
+"  if (nb < 0.5) return 1.0;\n"
+"  above /= nb;\n"
+   /* the penumbra grows with the distance below the caster */
+"  float r = (40.0 + above * 0.2) * uShadowTexel;\n"
+"  float lit = 0.0;\n"
+"  for (int k = 0; k < 8; k++) {\n"
+"    float ang = float(k) * 2.39996 + rot;\n"
+"    vec2 o = vec2(cos(ang), sin(ang)) * r * sqrt((float(k) + 0.5) / 8.0);\n"
+"    lit += step(q.z - 60.0 / uShadowDepth, texture2D(uShadowMap, q.xy + o).r);\n"
+"  }\n"
+"  lit /= 8.0;\n"
+"  return mix(lit, 1.0, smoothstep(6000.0, 26000.0, above));\n"
 "}\n"
 /* light from the sub's headlight, its engines and other ships' lamps at wp */
 "vec3 lamps(vec3 wp, vec3 N) {\n"
@@ -257,8 +300,11 @@ static const char *SCENE_FS =
 "  col += water(-N, wp.y) * rim * 0.22;\n"
 "  float up = smoothstep(-0.15, 0.85, N.y);\n"
 "  float near = 1.0 - smoothstep(2500.0, 17000.0, dist);\n"
-"  float cz = caustic(wp.xz / 2900.0, uTime * 0.5) + 0.6 * caustic(wp.xz / 1700.0 + 0.37, uTime * 0.37);\n"
-"  col += alb.rgb * uSunCol * cz * up * near * L * L * 0.55;\n"
+   /* in the shade of what is above: less of the light from above, no caustics */
+"  float vis = uSelf > 0.5 ? 1.0 : shadowAt(wp + N * 25.0, hash(gl_FragCoord.xy) * 6.2832);\n"
+"  col *= mix(0.5, 1.0, vis);\n"
+"  float cz = causticAt(wp, 0.3 + 2.0 * d) * 2.2;\n"
+"  col += alb.rgb * uSunCol * cz * up * near * L * L * 0.55 * vis;\n"
 "  float mx = max(alb.r, max(alb.g, alb.b)), mn = min(alb.r, min(alb.g, alb.b));\n"
    /* a structure's lamps (bright, saturated texels) keep their own light */
 "  float emis = uKind == 0 && uLong > 0.5 ? smoothstep(0.80, 0.97, mx) * smoothstep(0.30, 0.55, mx - mn) : 0.0;\n"
@@ -292,23 +338,23 @@ static const char *BG_FS =
 "  vec3 cam = uCamToWorld[3].xyz;\n"
 "  float d = depth01(cam.y); float L = surfLight(d);\n"
 "  vec3 c = water(dir, cam.y);\n"
-"  c += uSunCol * shafts(dir) * 0.12 * L * L;\n"
-   /* the surface far above, rippling, for the shallows */
-"  float up = dir.y;\n"
-"  if (up > 0.0) {\n"
-     /* the surface: a bright rippling window straight above, dimmer beyond */
-"    float win = smoothstep(0.62, 0.74, up);\n"
-"    vec2 wp2 = dir.xz / max(up, 0.05);\n"
-"    float wv = caustic(wp2 * 0.32 + uTime * 0.015, uTime * 0.55);\n"
-"    c += uSunCol * (0.2 + 0.7 * wv) * win * pow(L, 2.5) * 0.42;\n"
-"    c *= 1.0 - (1.0 - win) * smoothstep(0.3, 0.62, up) * pow(L, 2.0) * 0.25;\n"
+   /* the surface: seen from below through the murk. Inside Snell's window
+      (the waves tilt it) the bright sky; outside it, the water below mirrored */
+"  if (dir.y > 0.0 && cam.y < uSurfY) {\n"
+"    float t = (uSurfY - cam.y) / max(dir.y, 1e-3);\n"
+"    vec2 sxz = cam.xz + dir.xz * t;\n"
+"    vec2 g = surfGrad(sxz);\n"
+"    vec3 N = normalize(vec3(-g.x, 1.0, -g.y));\n"
+"    vec3 rt = refract(dir, -N, 1.333);\n"
+"    float win = dot(rt, rt) > 1e-6 ? 1.0 : 0.0;\n"
+"    float edge = win * smoothstep(0.0, 0.35, rt.y);\n"
+"    vec3 sky = mix(ZENITH, vec3(0.75, 0.86, 1.0), 0.3) * (0.55 + 0.45 * edge)\n"
+"             + vec3(1.0, 0.95, 0.85) * pow(max(dot(rt, uSunDir), 0.0), 60.0) * 3.0 * win;\n"
+"    vec3 below = water(reflect(dir, N), cam.y) * 0.6;\n"
+"    vec3 surf = mix(below, sky, win * (0.25 + 0.75 * edge));\n"
+"    float T = exp(-pow(t * uSigma.g, 2.35));\n"
+"    c = mix(c, surf, T * smoothstep(0.0, 0.08, dir.y));\n"
 "  }\n"
-"  if (up > 0.2) {\n"
-"    vec2 sp = dir.xz / up * 2.2;\n"
-"    float rip = noise(sp * 3.0 + uTime * 0.25) * noise(sp * 5.0 - uTime * 0.18);\n"
-"    c += uSunCol * rip * smoothstep(0.2, 0.9, up) * pow(L, 3.0) * 0.35;\n"
-"  }\n"
-
 "  gl_FragColor = vec4(c, 1.0);\n"
 "}\n";
 
@@ -531,7 +577,8 @@ static const char *BRIGHT_FS =
 "}\n";
 static const char *POST_FS =
 "uniform sampler2D uScene; uniform sampler2D uDepth; uniform sampler2D uBright;\n"
-"uniform vec3 uSunUV; uniform float uBloom; uniform float uRays; uniform int uPV; uniform float uClean; uniform float uSpeed;\n"
+"uniform float uBloom; uniform int uPV; uniform float uClean; uniform float uSpeed;\n"
+"uniform sampler2D uLight; uniform float uRayK; uniform float uShadeK;\n"
 "uniform float uRad; uniform float uPres;\n"
 "varying vec2 vUV;\n"
 "void main() {\n"
@@ -574,21 +621,21 @@ static const char *POST_FS =
 "  vec3 c0 = c;\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
 "  float d = depth01(cam.y); float L = surfLight(d);\n"
-   /* god rays: the backdrop's light smeared towards the sun, blocked by
-      everything in front of it */
-"  if (uSunUV.z > 0.0) {\n"
-"    vec2 dv = uSunUV.xy - uv; float len = length(dv);\n"
-"    vec2 st = dv / max(len, 1e-4) * min(len, 1.2) / 36.0;\n"
-"    vec2 q = uv; float rays = 0.0; float decay = 1.0;\n"
-"    for (int i = 0; i < 36; i++) { q += st; rays += texture2D(uBright, q, 1.5).a * decay; decay *= 0.955; }\n"
-"    c += uSunCol * rays / 36.0 * uRays * uSunUV.z * L * L;\n"
-"    dbg.g = rays / 36.0 * uRays * uSunUV.z * L * L;\n"
-"  }\n"
 "  float z = texture2D(uDepth, uv).r;\n"
 "  vec3 eyeFar = eyeAt(uv * uVP.zw + uVP.xy, z);\n"
 "  float sceneDist = z >= 0.99999 ? 1e9 : length(eyeFar);\n"
 "  vec3 rd = normalize(eyeFar);\n"
 "  vec3 wrd = normalize(mat3(uCamToWorld) * rd);\n"
+   /* the light from the waves in the water (shafts, brighter towards the
+      light above) and the shade under everything (LIGHT_FS) */
+"  vec2 lpx = 2.0 / uVP.zw;\n"   /* a texel of the half-resolution light: a little blur against its grain */
+"  vec2 lt = (texture2D(uLight, uv).rg * 2.0 + texture2D(uLight, uv + vec2(lpx.x, 0.0)).rg + texture2D(uLight, uv - vec2(lpx.x, 0.0)).rg\n"
+"           + texture2D(uLight, uv + vec2(0.0, lpx.y)).rg + texture2D(uLight, uv - vec2(0.0, lpx.y)).rg) / 6.0;\n"
+"  float phase = 0.6 + 0.9 * pow(max(dot(wrd, uSunDir), 0.0), 4.0);\n"
+"  float rays = lt.r * uRayK * phase;\n"
+"  rays = rays / (1.0 + rays * 1.2);\n"
+"  c = c * (1.0 - lt.g * uShadeK) + uSunCol * rays;\n"
+"  dbg.g = rays;\n"
    /* the sub's headlight: a beam in the water */
 "  if (uSubOn > 0.5) {\n"
 "    vec3 lp = uSub + uSubDir * 220.0;\n"
@@ -646,19 +693,88 @@ static const char *POST_FS =
 "  gl_FragColor = vec4(c, 1.0);\n"
 "}\n";
 
+/* The caustics of the surface, in the light's frame (uCaustVP): each texel
+   is a line of light; where the waves above focus it (their curvature: the
+   map from the surface to the light below shrinks) it is bright */
+static const char *CAUST_FS =
+"uniform mat4 uCaustInv;\n"
+"varying vec2 vUV;\n"
+"void main() {\n"
+"  vec4 w = uCaustInv * vec4(vUV * 2.0 - 1.0, 0.0, 1.0);\n"
+"  vec3 p = w.xyz / w.w;\n"
+"  vec2 s = p.xz + uSunDir.xz * ((uSurfY - p.y) / uSunDir.y);\n"
+"  float a = 0.0, b = 0.0, h = 0.0;\n"
+"  for (int i = 0; i < 8; i++) {\n"
+"    vec2 d = uWave[i].xy;\n"
+"    float f = uWaveB[i].y * sin(dot(d, s) * uWave[i].z - uWave[i].w * uTime + uWaveB[i].z);\n"
+"    a += f * d.x * d.x; b += f * d.y * d.y; h += f * d.x * d.y;\n"
+"  }\n"
+"  float det = (1.0 - a) * (1.0 - b) - h * h;\n"
+"  float I = 1.0 / max(abs(det), 0.04);\n"
+"  gl_FragColor = vec4(vec3(clamp(pow(I * 0.05, 1.3), 0.0, 1.0)), 1.0);\n"
+"}\n";
+
+/* Shadow casters: the scene's opaque meshes again, seen from above */
+static const char *SHADOW_VS =
+"#version 120\n"
+"uniform mat4 uLightVP; uniform mat4 uCamToWorld;\n"
+"void main() {\n"
+"  gl_Position = uLightVP * (uCamToWorld * (gl_ModelViewMatrix * gl_Vertex));\n"
+"  gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
+"}\n";
+static const char *SHADOW_FS =
+"uniform sampler2D uTex0; uniform int uCut;\n"
+"void main() {\n"
+"  if (uCut != 0 && texture2D(uTex0, gl_TexCoord[0].st).a < 0.5) discard;\n"
+"  gl_FragColor = vec4(1.0);\n"
+"}\n";
+
+/* The light in the water, half resolution: along each view ray, the
+   shafts (the caustics carried down, where the light is not blocked) and
+   the shade (where it is) */
+static const char *LIGHT_FS =
+"uniform sampler2D uDepth;\n"
+"varying vec2 vUV;\n"
+"void main() {\n"
+"  float z = texture2D(uDepth, vUV).r;\n"
+"  vec3 eyeFar = eyeAt(vUV * uVP.zw + uVP.xy, z);\n"
+"  float sceneDist = z >= 0.99999 ? 1e9 : length(eyeFar);\n"
+"  vec3 wrd = normalize(mat3(uCamToWorld) * normalize(eyeFar));\n"
+"  vec3 cam = uCamToWorld[3].xyz;\n"
+"  float tmax = min(sceneDist, 18000.0);\n"
+"  float jit = hash(vUV * 731.0 + fract(uTime * 7.31));\n"
+"  float R = 0.0, S = 0.0;\n"
+"  for (int i = 0; i < 24; i++) {\n"
+"    float t = (float(i) + jit) / 24.0 * tmax;\n"
+"    vec3 p = cam + wrd * t;\n"
+"    float T = trans1(t * 0.55);\n"
+"    float d = depth01(p.y); float Lp = surfLight(d);\n"
+"    float vis = shadowAt(p, jit * 6.2832 + float(i) * 2.4);\n"
+"    float c = causticAt(p, 1.2 + 3.5 * d + t / 5000.0);\n"
+"    R += max(c - 0.6 * CAUST_MEAN, 0.0) * vis * T * Lp * Lp;\n"
+"    S += (1.0 - vis) * T * Lp;\n"
+"  }\n"
+"  float k = tmax / 18000.0 / 24.0;\n"
+   /* the shade: the light a shadow keeps out of the path, saturating (a
+      station's shadow, a few thousand units across, reads clearly) */
+"  float shade = 1.0 - exp(-S * tmax / 24.0 / 1800.0);\n"
+"  gl_FragColor = vec4(R * k, shade, 0.0, 1.0);\n"
+"}\n";
+
 struct Prog {
     GLuint id;
     GLint uCamToWorld, uInvProj, uVP, uTime, uSector, uTint, uSunDir, uSunCol, uSigma;
     GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf, uSpawner, uGlowP, uGlowC, uNumGlows;
+    GLint uWave, uWaveB, uSurfY, uCaustMap, uCaustVP, uShadowMap, uShadowVP, uShadowOn, uShadowDepth, uShadowTexel;
 };
 
-static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pSpark, pGlow;
+static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pSpark, pGlow, pCaust, pShadow, pLight;
 static GLint fiWorldToEye, fiProj;
 static GLint buWorldToEye, buProj, buPx, buLife, buBub, buSeed;
 static GLint sTex0, sTex1, sEn0, sEn1, sMode0, sMode1, sFmt0, sFmt1, sKind, sSprite;
 static GLint snWorldToEye, snProj, snBox, snPx, snSeed;
 static GLint brScene, brDepth, brThresh;
-static GLint poScene, poDepth, poBright, poSunUV, poBloom, poRays;
+static GLint poScene, poDepth, poBright, poBloom;
 static GLint bgPos, brPos, poPos;
 static int programsReady = 0;
 
@@ -721,6 +837,16 @@ static int link(Prog *p, const char *vs1, const char *vs2, const char *fs) {
     p->uGlowC = glGetUniformLocation(id, "uGlowC");
     p->uNumGlows = glGetUniformLocation(id, "uNumGlows");
     p->uSelf = glGetUniformLocation(id, "uSelf");
+    p->uWave = glGetUniformLocation(id, "uWave");
+    p->uWaveB = glGetUniformLocation(id, "uWaveB");
+    p->uSurfY = glGetUniformLocation(id, "uSurfY");
+    p->uCaustMap = glGetUniformLocation(id, "uCaustMap");
+    p->uCaustVP = glGetUniformLocation(id, "uCaustVP");
+    p->uShadowMap = glGetUniformLocation(id, "uShadowMap");
+    p->uShadowVP = glGetUniformLocation(id, "uShadowVP");
+    p->uShadowOn = glGetUniformLocation(id, "uShadowOn");
+    p->uShadowDepth = glGetUniformLocation(id, "uShadowDepth");
+    p->uShadowTexel = glGetUniformLocation(id, "uShadowTexel");
     return 1;
 }
 
@@ -737,7 +863,10 @@ static int buildPrograms() {
         || !link(&pBub, WATER, BUBBLE_VS, BUBBLE_FS)
         || !link(&pSpark, WATER, SPARK_VS, SPARK_FS)
         || !link(&pGlow, WATER, GLOW_VS, GLOW_FS)
-        || !link(&pFish, WATER, FISH_VS, FISH_FS)) {
+        || !link(&pFish, WATER, FISH_VS, FISH_FS)
+        || !link(&pCaust, POST_VS, NULL, CAUST_FS)
+        || !link(&pShadow, SHADOW_VS, NULL, SHADOW_FS)
+        || !link(&pLight, POST_VS, NULL, LIGHT_FS)) {
         rmBroken = 1;
         fprintf(stderr, "[remaster] disabled\n");
         return 0;
@@ -762,9 +891,7 @@ static int buildPrograms() {
     poScene = glGetUniformLocation(pPost.id, "uScene");
     poDepth = glGetUniformLocation(pPost.id, "uDepth");
     poBright = glGetUniformLocation(pPost.id, "uBright");
-    poSunUV = glGetUniformLocation(pPost.id, "uSunUV");
     poBloom = glGetUniformLocation(pPost.id, "uBloom");
-    poRays = glGetUniformLocation(pPost.id, "uRays");
     fiWorldToEye = glGetUniformLocation(pFish.id, "uWorldToEye");
     fiProj = glGetUniformLocation(pFish.id, "uProj");
     buWorldToEye = glGetUniformLocation(pBub.id, "uWorldToEye");
@@ -785,6 +912,75 @@ static int buildPrograms() {
 
 static float sunDir[3], sunCol[3], sigma[3];
 
+/* The surface: 4000 m (game depth) above the shallowest stations (2000 m
+   above where a sub can climb to), out of reach but for god mode. Its waves (world units: 8 per metre), long swells
+   to short chop, roughly with one wind; deep-water speeds, doubled */
+#define SURF_DEPTH 11000.0f
+static float surfY;
+static float waveA[8 * 4], waveB[8 * 4];
+
+static void initWaves() {
+    /* wavelength, direction (rad), focusing: tuned so the light folds into
+       a network of thin bright lines (the caustics), irregular, not a lattice */
+    static const float W[8][3] = {
+        {4700, 0.30f, 0.624f}, {3350, 2.05f, 0.600f}, {2620, -0.55f, 0.600f}, {1930, 1.17f, 0.576f},
+        {1490, 2.71f, 0.552f}, {1170, -1.33f, 0.528f}, {890, 0.47f, 0.480f}, {705, 2.35f, 0.456f}};
+    unsigned x = 9001;
+    for (int i = 0; i < 8; i++) {
+        float k = 6.2831853f / W[i][0];
+        waveA[i * 4] = cosf(W[i][1]);
+        waveA[i * 4 + 1] = sinf(W[i][1]);
+        waveA[i * 4 + 2] = k;
+        waveA[i * 4 + 3] = 2.0f * sqrtf(78.5f * k);       /* g = 9.81 m/s2 * 8 units/m */
+        x = x * 1664525u + 1013904223u;
+        waveB[i * 4] = 0.07f / k;                          /* height: slope 0.07 */
+        waveB[i * 4 + 1] = W[i][2];
+        waveB[i * 4 + 2] = (x >> 8) / 16777216.0f * 6.2831853f;
+        waveB[i * 4 + 3] = 0;
+    }
+}
+
+/* The light's frame: an orthographic view down along the light, around the
+   camera (a little ahead of it), snapped to whole texels so the shadows and
+   caustics do not crawl. One for the shadow map drawn this frame (read by
+   the post pass and, the next frame, by the scene) */
+#define SH_SIZE 2048
+#define SH_HALF 18000.0f
+#define SH_RANGE 60000.0f
+#define CA_HALF 40000.0f
+static GLuint texShadow[2], fbShadow[2], texCaust, fbCaust, texLight;
+static int shCur = 0, shHave = 0;
+static float lightVP[2][16], caustVP[16];
+
+static void lightFrame(float *m, float half) {
+    const float *L = sunDir, *c = F + F_CAM;
+    float ex[3] = {L[1], -L[0], 0};
+    float n = sqrtf(ex[0] * ex[0] + ex[1] * ex[1]);
+    ex[0] /= n; ex[1] /= n;
+    float ey[3] = {L[1] * ex[2] - L[2] * ex[1], L[2] * ex[0] - L[0] * ex[2], L[0] * ex[1] - L[1] * ex[0]};
+    /* the camera looks along -z: its forward, flattened */
+    float fx = -c[8], fz = -c[10], fn = sqrtf(fx * fx + fz * fz);
+    float cen[3] = {c[12], c[13], c[14]};
+    if (fn > 1e-3f) {
+        cen[0] += fx / fn * SH_HALF * 0.35f;
+        cen[2] += fz / fn * SH_HALF * 0.35f;
+    }
+    float texel = 2.0f * half / SH_SIZE;
+    float cu = floorf((ex[0] * cen[0] + ex[1] * cen[1] + ex[2] * cen[2]) / texel) * texel;
+    float cv = floorf((ey[0] * cen[0] + ey[1] * cen[1] + ey[2] * cen[2]) / texel) * texel;
+    float cl = L[0] * cen[0] + L[1] * cen[1] + L[2] * cen[2];
+    for (int j = 0; j < 3; j++) {
+        m[j * 4] = ex[j] / half;
+        m[j * 4 + 1] = ey[j] / half;
+        m[j * 4 + 2] = -L[j] / SH_RANGE;
+        m[j * 4 + 3] = 0;
+    }
+    m[12] = -cu / half;
+    m[13] = -cv / half;
+    m[14] = cl / SH_RANGE;
+    m[15] = 1;
+}
+
 static void deriveFrame() {
     float sx = 0.22f, sy = 1.0f, sz = 0.16f;
     float n = sqrtf(sx * sx + sy * sy + sz * sz);
@@ -801,6 +997,7 @@ static void deriveFrame() {
        red dies first, blue last */
     float k = 1.0f / 19940.0f;
     sigma[0] = k / 0.62f; sigma[1] = k; sigma[2] = k / 1.12f;
+    surfY = (F[F_SECTOR] - SURF_DEPTH) * 8.0f;
 }
 
 /* Glows: the game's flare sprites, explosions and additive glows, caught
@@ -835,6 +1032,11 @@ static void addGlow(const float *eye, float r, const float *c, int drawn) {
     }
     g->r = r;
     g->drawn = drawn;
+    /* the stations' blinking flares: a quarter of the light, or each blink
+       floods the whole station */
+    if (rmStructure) {
+        for (int j = 0; j < 3; j++) g->c[j] *= 0.25f;
+    }
 }
 
 /* the glows that matter most (bright, big, near the camera) for lighting
@@ -1127,6 +1329,11 @@ static int drawEyeBox(int n, float *centre, float *half, float *aspect) {
     return 1;
 }
 
+static int noShadows() {
+    static int off = getenv("DEEP3D_RM_NOSHADOW") != NULL;
+    return off;
+}
+
 static void setCommon(const Prog *p) {
     glUniformMatrix4fv(p->uCamToWorld, 1, GL_FALSE, F + F_CAM);
     glUniformMatrix4fv(p->uInvProj, 1, GL_FALSE, invProj);
@@ -1149,6 +1356,16 @@ static void setCommon(const Prog *p) {
     glUniform1f(p->uLong, rmStructure ? 1.0f : 0.0f);
     glUniform1f(p->uSpawner, rmSpawner ? 1.0f : 0.0f);
     glUniform1f(p->uSelf, rmLayer >= 3 ? 1.0f : 0.0f);
+    glUniform4fv(p->uWave, 8, waveA);
+    glUniform4fv(p->uWaveB, 8, waveB);
+    glUniform1f(p->uSurfY, surfY);
+    glUniform1i(p->uCaustMap, 7);
+    glUniformMatrix4fv(p->uCaustVP, 1, GL_FALSE, caustVP);
+    glUniform1i(p->uShadowMap, 6);
+    glUniformMatrix4fv(p->uShadowVP, 1, GL_FALSE, lightVP[shCur ^ 1]);
+    glUniform1f(p->uShadowOn, shHave && !noShadows() ? 1.0f : 0.0f);
+    glUniform1f(p->uShadowDepth, 2.0f * SH_RANGE);
+    glUniform1f(p->uShadowTexel, 1.0f / (2.0f * SH_HALF));
 }
 
 static int invert4(const float *m, float *out) {
@@ -1672,6 +1889,142 @@ static void drawBackdrop() {
 }
 
 /* ------------------------------------------------------------------ */
+/* The light from above: caustics and shadows                          */
+/* ------------------------------------------------------------------ */
+
+static int lightReady() {
+    if (texCaust && glIsTexture(texCaust)) {
+        return 1;
+    }
+    glGenTextures(2, texShadow);
+    glGenFramebuffers(2, fbShadow);
+    for (int i = 0; i < 2; i++) {
+        glBindTexture(GL_TEXTURE_2D, texShadow[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, SH_SIZE, SH_SIZE, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_LUMINANCE);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbShadow[i]);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texShadow[i], 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+    }
+    glGenTextures(1, &texCaust);
+    glGenFramebuffers(1, &fbCaust);
+    glBindTexture(GL_TEXTURE_2D, texCaust);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, SH_SIZE, SH_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbCaust);
+    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texCaust, 0);
+    return 1;
+}
+
+/* A frame's light: the next shadow map (cleared), this frame's caustics */
+static void lightBegin() {
+    static int waves = (initWaves(), 1);
+    (void) waves;
+    Saved s;
+    pushState(&s);
+    lightReady();
+    shCur ^= 1;
+    lightFrame(lightVP[shCur], SH_HALF);
+    lightFrame(caustVP, CA_HALF);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_STENCIL_TEST);
+    glViewport(0, 0, SH_SIZE, SH_SIZE);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbShadow[shCur]);
+    glDepthMask(GL_TRUE);
+    glClearDepth(1.0);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbCaust);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_FALSE);
+    for (int u = 0; u < 4; u++) {
+        glActiveTexture(GL_TEXTURE0 + u);
+        glDisable(GL_TEXTURE_2D);
+    }
+    glUseProgram(pCaust.id);
+    setCommon(&pCaust);
+    float inv[16];
+    invert4(caustVP, inv);
+    glUniformMatrix4fv(glGetUniformLocation(pCaust.id, "uCaustInv"), 1, GL_FALSE, inv);
+    drawQuad(0);
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, texCaust);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    static const char *dump = getenv("DEEP3D_RM_CAUSTDUMP");
+    if (dump && (int) F[F_FRAME] == 200) {
+        static unsigned char px[SH_SIZE * SH_SIZE];
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, px);
+        FILE *f = fopen(dump, "wb");
+        if (f) {
+            fprintf(f, "P5 %d %d 255\n", SH_SIZE, SH_SIZE);
+            fwrite(px, 1, sizeof px, f);
+            fclose(f);
+        }
+    }
+    popState(&s);
+    /* for every draw of the frame: last frame's shadows, these caustics */
+    GLint active;
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+    glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D, texShadow[shCur ^ 1]);
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, texCaust);
+    glActiveTexture(active);
+}
+
+/* An opaque draw again, into this frame's shadow map */
+static int castKind = -1;
+static void castShadow(int arrays, GLenum mode, GLint first, GLsizei count, GLenum type, const void *indices) {
+    if (noShadows() || !texCaust) {
+        return;
+    }
+    GLint fb, prog;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fb);
+    glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+    int cut = glIsEnabled(GL_ALPHA_TEST) && glIsEnabled(GL_TEXTURE_2D);
+    glPushAttrib(GL_VIEWPORT_BIT | GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_ENABLE_BIT | GL_POLYGON_BIT | GL_SCISSOR_BIT
+                 | GL_STENCIL_BUFFER_BIT);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbShadow[shCur]);
+    glViewport(0, 0, SH_SIZE, SH_SIZE);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_STENCIL_TEST);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+    glUseProgram(pShadow.id);
+    glUniformMatrix4fv(glGetUniformLocation(pShadow.id, "uLightVP"), 1, GL_FALSE, lightVP[shCur]);
+    glUniformMatrix4fv(glGetUniformLocation(pShadow.id, "uCamToWorld"), 1, GL_FALSE, F + F_CAM);
+    glUniform1i(glGetUniformLocation(pShadow.id, "uTex0"), 0);
+    glUniform1i(glGetUniformLocation(pShadow.id, "uCut"), cut);
+    if (arrays) {
+        glDrawArrays(mode, first, count);
+    } else {
+        glDrawElements(mode, count, type, indices);
+    }
+    glPopAttrib();
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb);
+    glUseProgram(prog);
+}
+
+/* ------------------------------------------------------------------ */
 /* Per-draw scene shader                                               */
 /* ------------------------------------------------------------------ */
 
@@ -1731,6 +2084,12 @@ static int sceneBegin() {
         drawBackdrop();
     }
     rmDrawn++;
+    castKind = -1;
+    /* the skydome is always in view: every world frame has the backdrop,
+       even when nothing else is drawn (else the game's flat fill shows) */
+    if (rmSky) {
+        return -1;
+    }
 
     GLint active;
     glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
@@ -1765,6 +2124,7 @@ static int sceneBegin() {
         glGetIntegerv(GL_BLEND_DST_RGB, &dst);
         kind = dst == GL_ONE ? 2 : 1;
     }
+    castKind = kind;
     if (getenv("DEEP3D_RM_DEBUG") && kind == 2 && rmLayer == 0 && ((int) F[F_FRAME]) % 120 == 1) {
         GLint src = 0, dst = 0, mode0 = 0, colArr = 0, fog = 0, alphaTest = 0, texfn = 0;
         GLfloat cur[4], envc[4];
@@ -1908,6 +2268,9 @@ extern "C" void deep3d_rm_draw_elements(GLenum mode, GLsizei count, GLenum type,
     }
     glDrawElements(mode, count, type, indices);
     if (on > 0) {
+        if (castKind == 0 && rmLayer < 3) {
+            castShadow(0, mode, 0, count, type, indices);
+        }
         glUseProgram(0);
     }
 }
@@ -1934,14 +2297,15 @@ extern "C" void deep3d_rm_pass_begin(void) {
     rmDrawn = 0;
     texFrame++;
     rmLayer = 0;
-    rmStructure = 0;
-    rmSpawner = 0;
     glowNextN = 0;
     haveProj = 0;
     if (!rmPass) {
         return;
     }
     deriveFrame();
+    if (buildPrograms()) {
+        lightBegin();
+    }
     if (getenv("DEEP3D_RM_DEBUG") && ((int) F[F_FRAME]) % 60 == 0) {
         float cy = F[F_CAM + 13];
         fprintf(stderr, "[remaster] cam %.0f %.0f %.0f fwd %.2f %.2f %.2f sector %.0f depth01 %.2f tint %.2f %.2f %.2f sub %.0f at %.0f %.0f %.0f dir %.2f %.2f %.2f lights %.0f\n",
@@ -2287,6 +2651,7 @@ static void ensurePostTextures(int w, int h) {
         glGenTextures(1, &texScene);
         glGenTextures(1, &texDepth);
         glGenTextures(1, &texBright);
+        glGenTextures(1, &texLight);
     }
     glBindTexture(GL_TEXTURE_2D, texScene);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
@@ -2313,6 +2678,12 @@ static void ensurePostTextures(int w, int h) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texLight);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (w + 1) / 2, (h + 1) / 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
     postW = w;
     postH = h;
@@ -2338,8 +2709,8 @@ static void post(int w, int h) {
     glMatrixMode(GL_MODELVIEW);
 
     /* the pass so far -> scene colour + depth textures */
-    GLuint fb[2];
-    glGenFramebuffers(2, fb);
+    GLuint fb[3];
+    glGenFramebuffers(3, fb);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb[0]);
     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texScene, 0);
     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, postStencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT,
@@ -2380,6 +2751,21 @@ static void post(int w, int h) {
     glBindTexture(GL_TEXTURE_2D, texBright);
     glGenerateMipmap(GL_TEXTURE_2D);
 
+    /* the light in the water: this frame's shadows (all drawn by now) */
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb[2]);
+    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texLight, 0);
+    glViewport(0, 0, bw, bh);
+    glUseProgram(pLight.id);
+    setCommon(&pLight);
+    glUniform1i(glGetUniformLocation(pLight.id, "uDepth"), 1);
+    glUniformMatrix4fv(pLight.uShadowVP, 1, GL_FALSE, lightVP[shCur]);
+    glUniform1f(pLight.uShadowOn, noShadows() ? 0.0f : 1.0f);
+    glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D, texShadow[shCur]);
+    drawQuad(0);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, texLight);
+
     /* composite into the pass */
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glViewport(0, 0, w, h);
@@ -2388,34 +2774,10 @@ static void post(int w, int h) {
     glUniform1i(poScene, 0);
     glUniform1i(poDepth, 1);
     glUniform1i(poBright, 2);
-    /* where the sun is on screen (a direction: at infinity) */
-    float sunUV[3] = {0.5f, 2.0f, 0.0f};
-    {
-        const float *c = F + F_CAM;
-        /* world -> eye rotation is the transpose of the camera's */
-        float ex = c[0] * sunDir[0] + c[1] * sunDir[1] + c[2] * sunDir[2];
-        float ey = c[4] * sunDir[0] + c[5] * sunDir[1] + c[6] * sunDir[2];
-        float ez = c[8] * sunDir[0] + c[9] * sunDir[1] + c[10] * sunDir[2];
-        float n0 = sqrtf(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);
-        ex /= n0 * n0; ey /= n0 * n0; ez /= n0 * n0;
-        float cx = proj[0] * ex + proj[4] * ey + proj[8] * ez;
-        float cyy = proj[1] * ex + proj[5] * ey + proj[9] * ez;
-        float cw = proj[3] * ex + proj[7] * ey + proj[11] * ez;
-        float facing = -ez / sqrtf(ex * ex + ey * ey + ez * ez);
-        if (cw > 0.02f) {
-            sunUV[0] = cx / cw * 0.5f + 0.5f;
-            sunUV[1] = cyy / cw * 0.5f + 0.5f;
-        } else {
-            /* behind or beside the camera: rays still slant from above */
-            sunUV[0] = 0.5f + ex * 2.0f;
-            sunUV[1] = 0.5f + (ey > 0 ? 3.0f : -3.0f);
-        }
-        float f = (facing + 0.4f) / 1.2f;
-        sunUV[2] = f < 0 ? 0 : f > 1 ? 1 : f;
-    }
-    glUniform3fv(poSunUV, 1, sunUV);
+    glUniform1i(glGetUniformLocation(pPost.id, "uLight"), 3);
+    glUniform1f(glGetUniformLocation(pPost.id, "uRayK"), 0.8f);
+    glUniform1f(glGetUniformLocation(pPost.id, "uShadeK"), 0.8f);
     glUniform1f(poBloom, 0.42f + 0.12f * d);
-    glUniform1f(poRays, 1.1f);
     static int pv = getenv("DEEP3D_RM_POSTVIS") ? atoi(getenv("DEEP3D_RM_POSTVIS")) : 0;
     glUniform1i(glGetUniformLocation(pPost.id, "uPV"), pv);
     glUniform1f(glGetUniformLocation(pPost.id, "uClean"), F[F_CLEAN]);
@@ -2436,13 +2798,40 @@ static void post(int w, int h) {
     drawQuad(poPos);
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glDeleteFramebuffers(2, fb);
+    glDeleteFramebuffers(3, fb);
     popState(&s);
 }
 
 extern "C" void deep3d_rm_pass_end(int w, int h) {
     if (!rmPass) {
         return;
+    }
+    static const char *shDump = getenv("DEEP3D_RM_SHADOWDUMP");
+    if (shDump && (int) F[F_FRAME] == 200 && texCaust) {
+        static float px[SH_SIZE * SH_SIZE];
+        static unsigned char out[SH_SIZE * SH_SIZE];
+        GLint active;
+        glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+        glActiveTexture(GL_TEXTURE5);
+        GLint old;
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &old);
+        glBindTexture(GL_TEXTURE_2D, texShadow[shCur]);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, px);
+        glBindTexture(GL_TEXTURE_2D, old);
+        glActiveTexture(active);
+        int n = 0;
+        for (int i = 0; i < SH_SIZE * SH_SIZE; i++) {
+            out[i] = (unsigned char) (px[i] >= 1.0f ? 255 : px[i] * 200.0f);
+            n += px[i] < 1.0f;
+        }
+        fprintf(stderr, "[remaster] shadow map: %d of %d texels covered\n", n, SH_SIZE * SH_SIZE);
+        FILE *f = fopen(shDump, "wb");
+        if (f) {
+            fprintf(f, "P5 %d %d 255\n", SH_SIZE, SH_SIZE);
+            fwrite(out, 1, sizeof out, f);
+            fclose(f);
+        }
     }
     rmPass = 0;
     if (rmBroken || !rmDrawn || !haveProj || !programsReady) {
@@ -2453,6 +2842,7 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
         return;
     }
     postFrame = (int) F[F_FRAME];
+    shHave = 1;
     int clean = F[F_CLEAN] > 0.5f;
     if (!getenv("DEEP3D_RM_NOSNOW") && !clean) {
         drawSnow();
@@ -2492,12 +2882,18 @@ Java_javax_microedition_m3g_Platform__1remaster(JNIEnv *env, jclass, jfloatArray
     }
     env->GetFloatArrayRegion(frame, 0, F_SIZE, F);
     rmNext = 1;
+    /* the objects' kinds start over here (Remaster.bind), not at the pass's
+       start: the first object's kind comes before its draw starts the pass */
+    rmStructure = 0;
+    rmSpawner = 0;
+    rmSky = 0;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_javax_microedition_m3g_Platform__1remasterObject(JNIEnv *, jclass, jint kind) {
     rmStructure = kind == 1;
     rmSpawner = kind == 2;
+    rmSky = kind == 3;
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -113,3 +113,10 @@ Environment variables for `run.sh` (`EXTRA_ENV="..."`):
 | `DEEP3D_GC_LOG=1` | log every cycle collection: objects, the unreachable ones by class, time, skipped tries |
 | `DEEP3D_GC=0` | find unreachable cycles but keep them (the old leak, for comparisons) |
 | `DEEP3D_GC_EVERY=<n>` | collect after every n new objects (1: at every safe point, a stress test) |
+
+## Light switches (Remastered)
+
+| | |
+|---|---|
+| `DEEP3D_RM_NOSHADOW=1` | no shadows (the shade under things, shading on surfaces) |
+| `DEEP3D_RM_CAUSTDUMP=<file.pgm>`, `DEEP3D_RM_SHADOWDUMP=<file.pgm>` | at world frame 200, write the surface's caustic map / the shadow map |

@@ -1468,9 +1468,11 @@ bool class_26::method_264(jrt::Ref<class_3> var1) {
 void class_26::method_265(int64_t var1) {
     class_84::field_1117->setColor(this->field_298, this->field_299, this->field_300);
     class_84::field_1117->fillRect(0, 0, class_84::field_1120, class_84::field_1121);
-    if (!org::deep3d::Remaster::on()) {
-        class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_265));
+    if (org::deep3d::Remaster::on()) {
+        class_4::deep3dKind = 3;
     }
+    class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_265));
+    class_4::deep3dKind = 0;
     if (this->field_269 != nullptr) {
         for (int32_t var3 = 0; var3 < this->field_269->length; var3++) {
             this->field_269->at(var3)->method_887();
@@ -1523,9 +1525,11 @@ void class_26::method_265(int64_t var1) {
 void class_26::method_266(int64_t var1) {
     class_84::field_1117->setColor(this->field_298, this->field_299, this->field_300);
     class_84::field_1117->fillRect(0, 0, class_84::field_1120, class_84::field_1121);
-    if (!org::deep3d::Remaster::on()) {
-        class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_265));
+    if (org::deep3d::Remaster::on()) {
+        class_4::deep3dKind = 3;
     }
+    class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_265));
+    class_4::deep3dKind = 0;
     if (this->field_269 != nullptr) {
         for (int32_t var3 = 0; var3 < this->field_269->length; var3++) {
             this->field_269->at(var3)->method_887();

@@ -239,6 +239,11 @@ void class_70::method_671(int64_t var1) {
             this->field_996 = this->field_996 + jrt::f2i((this->field_1005 * ((this->field_984 * float(int32_t(var1))) / float(3))));
             if ((this->field_984 == float(0)) && (this->field_985 == float(0))) {
                 this->method_677(int32_t(this->field_992));
+            } else if (org::deep3d::AnalogInput::active()) {
+                int32_t deep3dLevel = org::deep3d::AnalogInput::levelRate(this->field_984, int32_t(this->field_992));
+                if (deep3dLevel > 0) {
+                    this->method_677(deep3dLevel);
+                }
             }
             this->field_970->method_847((int32_t(var1) * this->field_983));
         }
@@ -353,11 +358,13 @@ void class_70::method_674(int64_t var1) {
 
 void class_70::steerAnalog(int64_t var1, float yaw, float pitch) {
     this->field_985 = yaw;
-    float bank = 384.0f * java::lang::Math::abs(yaw);
-    if ((yaw > 0.0f) && (float(this->field_986) < bank)) {
-        this->field_986 = int32_t((int64_t(this->field_986) + var1));
-    } else if ((yaw < 0.0f) && (float(this->field_986) > (-bank))) {
-        this->field_986 = int32_t((int64_t(this->field_986) - var1));
+    /* the bank follows the turn both ways: into it at the keys' rate, out
+       of it at the rate it levels when the keys are released */
+    float bank = 384.0f * yaw;
+    if (float(this->field_986) < bank) {
+        this->field_986 = int32_t(java::lang::Math::min(bank, float(int64_t(this->field_986) + (yaw > 0.0f ? var1 : var1 / int64_t(5)))));
+    } else if (float(this->field_986) > bank) {
+        this->field_986 = int32_t(java::lang::Math::max(bank, float(int64_t(this->field_986) - (yaw < 0.0f ? var1 : var1 / int64_t(5)))));
     }
     this->field_984 = pitch;
 }

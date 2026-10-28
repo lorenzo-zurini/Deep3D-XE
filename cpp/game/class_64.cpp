@@ -142,6 +142,9 @@ void class_64::method_549(int32_t var1) {
                 this->field_780 = this->field_779;
                 this->field_783 = this->field_783 + this->field_781;
                 this->field_782 = this->field_782 + this->field_781;
+                if (this->field_793) {
+                    org::deep3d::Remaster::frozen();
+                }
                 if (!this->field_793) {
                     this->field_784 = this->field_784 + this->field_781;
                     if (!this->field_795) {

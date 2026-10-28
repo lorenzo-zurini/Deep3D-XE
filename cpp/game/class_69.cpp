@@ -385,6 +385,9 @@ void class_69::method_644(int64_t var0, int64_t var2, jrt::Ref<class_70> var4, b
     class_84::field_1117->fillTriangle((class_69::field_911 - 4), (class_69::field_940 + 6), (class_69::field_911 + 2), class_69::field_940, (class_69::field_911 - 4), (class_69::field_940 - 6));
     class_84::field_1117->setColor(class_67::field_844);
     class_84::field_1117->fillTriangle((class_69::field_911 - 3), (class_69::field_940 + 4), (class_69::field_911 + 1), class_69::field_940, (class_69::field_911 - 3), (class_69::field_940 - 4));
+    if ((!class_69::field_942) || class_67::method_581()) {
+        class_58::method_516(jrt::concat(var4->field_1004, JRT_LIT(u" m")), (class_69::field_911 - 7), class_69::field_940, 0, 6);
+    }
     class_69::method_642(var0, var4, false);
     if (class_69::field_943) {
         class_69::field_939 = int32_t((int64_t(class_69::field_939) + var0));

@@ -215,6 +215,9 @@ public:
     static bool active();
     static float x();
     static float y();
+    /** How much of the game's leveling rate applies while steering with a
+        stick or the mouse: full near the centre, none at a firm pitch. */
+    static int32_t levelRate(float pitch, int32_t rate);
 };
 
 /** The universal control scheme (see GameUi.java). */
@@ -405,6 +408,8 @@ public:
     static void world(Ref<Array<float>> camRowMajor, int32_t sectorDepth, float tr, float tg, float tb);
     static void sub(float x, float y, float z, float dx, float dy, float dz, float boost);
     static void hazard(float rad, float pres);
+    /** The world is frozen this frame (a dialog in flight): so are the effects. */
+    static void frozen();
     static std::array<float, 3> subHeading();
     static void light(float x, float y, float z, int32_t kind);
     static void bind();

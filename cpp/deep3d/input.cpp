@@ -545,7 +545,7 @@ std::array<float, 2> shaped() {
     return {clamp1(x * k), clamp1(y * k)};
 }
 
-float mouseShaped(float v) { return std::copysign(float(std::pow(double(std::fabs(v)), 1.25)), v); }
+float mouseShaped(float v) { return std::copysign(float(std::pow(double(std::fabs(v)), 1.1)), v); }
 }  // namespace
 
 void AnalogInput::setStick(float x, float y) {
@@ -561,7 +561,7 @@ void AnalogInput::setMouse(float x, float y, bool on) {
 
 bool AnalogInput::mouseSteering() {
     float x = gMouseX, y = gMouseY;
-    return gMouseOn && !Overlay::isOpen() && (x * x + y * y) > 0.0009f;
+    return gMouseOn && !Overlay::isOpen() && (x * x + y * y) > 1e-6f;
 }
 
 bool AnalogInput::active() {
@@ -574,6 +574,13 @@ bool AnalogInput::active() {
 float AnalogInput::x() { return mouseSteering() ? mouseShaped(gMouseX) : shaped()[0]; }
 float AnalogInput::y() { return mouseSteering() ? mouseShaped(gMouseY) : shaped()[1]; }
 
+int32_t AnalogInput::levelRate(float pitch, int32_t rate) {
+    float p = std::fabs(pitch);
+    float t = std::min(1.0f, p / 0.35f);
+    float k = 1.0f - t * t * (3.0f - 2.0f * t);   // smoothstep down to 0 at |pitch| 0.35
+    return int32_t(float(rate) * k);
+}
+
 // ---------------------------------------------------------------------
 // MouseFlight
 // ---------------------------------------------------------------------
@@ -581,7 +588,7 @@ float AnalogInput::y() { return mouseSteering() ? mouseShaped(gMouseY) : shaped(
 namespace {
 constexpr float RADIUS = 0.15f;
 constexpr float SENSITIVITY = 1.3f;
-constexpr float MF_DEADZONE = 0.1f;
+constexpr float MF_DEADZONE = 0.03f;
 std::atomic<bool> gCaptured{false};
 std::mutex gMouseLock;
 float gOffX = 0, gOffY = 0;
@@ -676,6 +683,10 @@ std::atomic<int32_t> gForceDepth{[] {
 std::atomic<bool> gClean{false};
 float gRadiation = 0, gPressure = 0;
 int64_t gStart = 0;
+/* the effects' clock: the game's time, which stops while a dialog freezes
+   the world (the bubbles would stream out of a sub that is not moving) */
+int64_t gLastNanos = -1, gGameNanos = 0;
+bool gFrozen = false;
 
 /* Java's Remaster set its time base in its static initialiser: at the first
    call of any of its methods */
@@ -701,7 +712,11 @@ void Remaster::world(Ref<jrt::Array<float>> cam, int32_t sectorDepth, float tr, 
     d[4] = m[1], d[5] = m[5], d[6] = m[9], d[7] = 0;
     d[8] = m[2], d[9] = m[6], d[10] = m[10], d[11] = 0;
     d[12] = m[3], d[13] = m[7], d[14] = m[11], d[15] = 1;
-    d[TIME] = float(Det::nanos() - gStart) / 1e9f;
+    int64_t now = Det::nanos() - gStart;
+    if (gLastNanos >= 0 && !gFrozen) gGameNanos += now - gLastNanos;
+    gLastNanos = now;
+    gFrozen = false;
+    d[TIME] = float(gGameNanos) / 1e9f;
     d[SECTOR_DEPTH] = float(gForceDepth > 0 ? int32_t(gForceDepth) : sectorDepth);
     d[TINT] = tr;
     d[TINT + 1] = tg;
@@ -726,6 +741,8 @@ void Remaster::sub(float x, float y, float z, float dx, float dy, float dz, floa
     d[SUB_ON] = 1;
     d[BOOST] = boost;
 }
+
+void Remaster::frozen() { gFrozen = true; }
 
 void Remaster::hazard(float rad, float pres) {
     clinit();
