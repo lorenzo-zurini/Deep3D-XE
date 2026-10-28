@@ -19,7 +19,7 @@ void class_122::__init() {
 void class_122::method_945(int32_t var1, int32_t var2) {
     this->field_1508 = class_28::method_282(jrt::concat(JRT_LIT(u"/data/interface/medal_"), var2, JRT_LIT(u".png")));
     this->field_1505 = class_58::method_532(class_84::field_1116->method_4(int32_t(class_1::field_0->at(var1)->at(0))), (((this->field_1503 - 10) - 13) - 4));
-    this->field_1506 = class_58::method_532(class_21::method_219(class_84::field_1116->method_4(int32_t(class_1::field_0->at(var1)->at(1))), jrt::concat(class_14::field_135->at(var1)->at((var2 - 1)), JRT_LIT(u""))), (this->field_1503 - 10));
+    this->field_1506 = class_58::method_532(class_21::method_219(class_84::field_1116->method_4(int32_t(class_1::field_0->at(var1)->at(1))), jrt::concat(org::deep3d::Scale::medal(var1, class_14::field_135->at(var1)->at((var2 - 1))), JRT_LIT(u""))), (this->field_1503 - 10));
     this->field_1502 = (class_84::field_1121 >> 1) - ((((class_58::method_530(this->field_1506) + 16) + 4) + (2 * class_58::method_527())) >> 1);
     this->field_1507 = ((((this->field_1502 + (this->field_1506->length * class_58::method_527())) + 16) + 4) + 10) + 2;
     this->field_1504 = ((this->field_1507 + class_58::method_527()) + 5) - this->field_1502;

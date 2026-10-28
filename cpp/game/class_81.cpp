@@ -75,7 +75,7 @@ void class_81::method_719() {
     class_84::field_1117->fillRect((this->class_74::field_1027 + 4), ((this->class_74::field_1028 + this->class_74::field_1030) - 14), (this->class_74::field_1029 - 8), 10);
     class_84::field_1117->setColor(class_67::field_844);
     class_84::field_1117->drawRect((this->class_74::field_1027 + 4), ((this->class_74::field_1028 + this->class_74::field_1030) - 14), (this->class_74::field_1029 - 8), 10);
-    this->class_76::field_1055 = jrt::concat(class_84::field_1116->method_4(52), JRT_LIT(u": "), class_21::method_178()->method_606(), JRT_LIT(u"km"));
+    this->class_76::field_1055 = jrt::concat(class_84::field_1116->method_4(52), JRT_LIT(u": "), org::deep3d::Scale::km(class_21::method_178()->method_606(), false));
     class_58::method_516(this->class_76::field_1055, (class_84::field_1120 / 2), ((this->class_74::field_1028 + this->class_74::field_1030) - 14), 0, 24);
 }
 

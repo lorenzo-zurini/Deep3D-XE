@@ -9,12 +9,14 @@
 # frame (2026-10). A difference means the game's behaviour changed (expected
 # only from deliberate game changes); the first differing frame is printed,
 # and DEEP3D_DET_DUMP=<frame> writes that frame's full state for diffing.
+# The game's own numbers (display.believable_scale=false): the scale only
+# changes text the game shows, some of which it keeps in its state.
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
 name=$1
 OUT=${OUT:-/tmp/deep3d-detcheck-$name}
 EXTRA_ENV="DEEP3D_DET=1 DEEP3D_DET_DUMP=${DEEP3D_DET_DUMP:-0} DEEP3D_M3G_READBACK=1 DEEP3D_NO_AUDIO=1" \
-  HEADLESS=${HEADLESS:-1} TIMEOUT=${TIMEOUT:-1500} "$HERE/run.sh" "$HERE/$name.scn" "$OUT" > /dev/null
+  HEADLESS=${HEADLESS:-1} TIMEOUT=${TIMEOUT:-1500} "$HERE/run.sh" "$HERE/$name.scn" "$OUT" display.believable_scale=false > /dev/null
 cut -d' ' -f1-3 "$OUT/det.log" > "$OUT/det.hashes"
 if [ "${UPDATE:-0}" = 1 ]; then
   cp "$OUT/det.hashes" "$HERE/golden/$name.det"

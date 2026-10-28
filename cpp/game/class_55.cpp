@@ -734,7 +734,7 @@ void class_55::method_451() {
             class_58::method_518(class_84::field_1116->method_4(int32_t(class_1::field_9->at(((class_21::method_175()->at(this->field_624->at(this->field_629)->field_1134)) ? 1 : 0)))), (this->field_606 + 2), ((this->field_607 + this->field_605) + 2), 0);
             class_58::method_518(jrt::concat(class_84::field_1116->method_4(44), JRT_LIT(u":  "), (this->field_663->at(this->field_624->at(this->field_629)->field_1134) ? jrt::concat(JRT_LIT(u""), this->field_624->at(this->field_629)->field_1139) : JRT_LIT(u"\?"))), (this->field_606 + 2), (((this->field_607 + this->field_605) + 2) + class_58::method_527()), 0);
             if (((this->field_611 > (class_58::method_527() * 2)) && this->field_659) && this->field_660) {
-                class_58::method_518(jrt::concat(class_84::field_1116->method_4(245), JRT_LIT(u":  "), this->field_624->at(this->field_629)->field_1140), (this->field_606 + 2), (((this->field_607 + this->field_605) + 2) + (2 * class_58::method_527())), 0);
+                class_58::method_518(jrt::concat(class_84::field_1116->method_4(245), JRT_LIT(u":  "), org::deep3d::Scale::depth(this->field_624->at(this->field_629)->field_1140)), (this->field_606 + 2), (((this->field_607 + this->field_605) + 2) + (2 * class_58::method_527())), 0);
             }
             if (this->field_623 == 4) {
                 this->field_621->method_944();

@@ -105,6 +105,7 @@ int32_t Config::windowHeight = 0;
 int32_t Config::fpsCap = 60;
 int32_t Config::brightness = 100;
 bool Config::showFps = false;
+bool Config::believableScale = true;
 int32_t Config::masterVolume = 100;
 int32_t Config::musicVolume = 80;
 int32_t Config::sfxVolume = 100;
@@ -438,6 +439,7 @@ void Config::load() {
     mouseFlight = getBool("input.mouse_flight", mouseFlight);
     textureFilter = getBool("display.texture_filter", textureFilter);
     showFps = getBool("display.show_fps", showFps);
+    believableScale = getBool("display.believable_scale", believableScale);
 }
 
 void Config::save() {
@@ -457,6 +459,7 @@ void Config::save() {
     gProps["display.resolution_mode"] = resolutionMode;
     gProps["display.texture_filter"] = b(textureFilter);
     gProps["display.show_fps"] = b(showFps);
+    gProps["display.believable_scale"] = b(believableScale);
     gProps["display.internal_width"] = i(internalWidth);
     gProps["display.internal_height"] = i(internalHeight);
     gProps["display.fullscreen"] = b(fullscreen);
@@ -524,7 +527,8 @@ bool Config::setField(const std::string& name, const std::string& value) {
     static const B bools[] = {{"vsync", &vsync}, {"enhanced", &enhanced}, {"remastered", &remastered},
         {"mouseFlight", &mouseFlight}, {"nativeResolution", &nativeResolution}, {"textureFilter", &textureFilter},
         {"antialiasing", &antialiasing}, {"fullColour", &fullColour}, {"fullscreen", &fullscreen},
-        {"integerScaling", &integerScaling}, {"showFps", &showFps}, {"gamepadEnabled", &gamepadEnabled}};
+        {"integerScaling", &integerScaling}, {"showFps", &showFps}, {"gamepadEnabled", &gamepadEnabled},
+        {"believableScale", &believableScale}};
     static const I ints[] = {{"originalLines", &originalLines}, {"internalWidth", &internalWidth},
         {"internalHeight", &internalHeight}, {"windowWidth", &windowWidth}, {"windowHeight", &windowHeight},
         {"fpsCap", &fpsCap}, {"brightness", &brightness}, {"masterVolume", &masterVolume},
@@ -853,6 +857,35 @@ bool FirstRun::ensureAssets() {
 // ---------------------------------------------------------------------
 // Runtime
 // ---------------------------------------------------------------------
+
+// ---------------------------------------------------------------------
+// Scale
+// ---------------------------------------------------------------------
+
+namespace {
+constexpr double DEPTH_K = 8.0 / 100.0;      // 8 world units per game metre of depth
+constexpr double DIST_K = 128.0 / 12.0 / 100.0;  // the HUD's metres are world units x 12/128
+}  // namespace
+
+int32_t Scale::depth(int32_t v) {
+    return Config::believableScale ? int32_t(std::lround(v * DEPTH_K)) : v;
+}
+
+int32_t Scale::dist(int32_t v) {
+    return Config::believableScale ? int32_t(std::lround(v * DIST_K)) : v;
+}
+
+Ref<String> Scale::km(int32_t v, bool space) {
+    std::string sep = space ? " " : "";
+    if (!Config::believableScale) return String::fromUtf8(std::to_string(v) + sep + "km");
+    int32_t m = dist(v * 1000);
+    if (m < 1000) return String::fromUtf8(std::to_string(m) + sep + "m");
+    char b[32];
+    snprintf(b, sizeof b, "%d.%d%skm", m / 1000, (m % 1000) / 100, sep.c_str());
+    return String::fromUtf8(std::string(b));
+}
+
+int32_t Scale::medal(int32_t medal, int32_t v) { return medal == 21 || medal == 22 ? depth(v) : v; }
 
 int32_t Runtime::screenWidth = 360;
 int32_t Runtime::screenHeight = 480;

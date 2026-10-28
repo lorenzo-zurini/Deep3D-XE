@@ -88,6 +88,8 @@ public:
     static int32_t fpsCap;
     static int32_t brightness;
     static bool showFps;
+    /** The numbers shown at a believable scale (see Scale). */
+    static bool believableScale;
     static int32_t masterVolume;
     static int32_t musicVolume;
     static int32_t sfxVolume;
@@ -397,6 +399,26 @@ public:
 };
 
 /** Remastered graphics: the frame block handed to the native renderer. */
+/**
+ * The game's numbers at a believable scale (Config::believableScale, on by
+ * default). Its "metres" are about ten times too big for what it shows:
+ * the sub is a one-seater some 3.6 m long (its windows, the stations'
+ * portholes), so a metre is about 100 world units, where the game counts 8
+ * for a depth and 10.7 for a distance. The world, its speeds and its light
+ * stay as they are: only what is shown changes.
+ */
+class Scale {
+public:
+    /** A depth in the game's metres, as shown. */
+    static int32_t depth(int32_t gameMetres);
+    /** A distance in the game's metres, as shown. */
+    static int32_t dist(int32_t gameMetres);
+    /** A distance in the game's kilometres, as text ("2.7 km", "830 m"). */
+    static Ref<String> km(int32_t gameKm, bool space);
+    /** A medal's threshold (the depth medals: Sun worshipper, Deep-sea diver). */
+    static int32_t medal(int32_t medal, int32_t value);
+};
+
 class Remaster {
 public:
     static constexpr int32_t CAM = 0, TIME = 16, SECTOR_DEPTH = 17, TINT = 18, SUB = 21, SUB_DIR = 24,

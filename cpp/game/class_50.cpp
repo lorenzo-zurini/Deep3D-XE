@@ -47,8 +47,8 @@ void class_50::method_410() {
     var2 = jrt::concat(var2, JRT_LIT(u"\n"), class_21::method_178()->field_882);
     var2 = jrt::concat(var2, JRT_LIT(u"\n"), class_21::method_178()->method_604());
     var2 = jrt::concat(var2, JRT_LIT(u"\n"), class_21::method_209());
-    var2 = jrt::concat(var2, JRT_LIT(u"\n"), class_21::method_160(), JRT_LIT(u"m"));
-    var2 = jrt::concat(var2, JRT_LIT(u"\n"), class_21::method_159(), JRT_LIT(u"m"));
+    var2 = jrt::concat(var2, JRT_LIT(u"\n"), org::deep3d::Scale::depth(class_21::method_160()), JRT_LIT(u"m"));
+    var2 = jrt::concat(var2, JRT_LIT(u"\n"), org::deep3d::Scale::depth(class_21::method_159()), JRT_LIT(u"m"));
     var2 = jrt::concat(var2, JRT_LIT(u"\n"), class_21::method_202());
     var2 = jrt::concat(var2, JRT_LIT(u"\n"), class_21::method_208());
     var2 = jrt::concat(var2, JRT_LIT(u"\n"), class_21::method_170());
@@ -65,7 +65,7 @@ bool class_50::method_411(int32_t var1) {
     if ((((var1 == 256) || (var1 == 16384)) && (this->field_549->field_1038 == 1)) && (!this->field_547)) {
         jrt::Ref<class_59> var2 = jrt::cast<class_59>(this->field_549->method_701());
         if (class_14::method_71()->at(var2->field_716) != 0) {
-            this->field_548->method_939(class_21::method_219(class_84::field_1116->method_4(int32_t(class_1::field_0->at(var2->field_716)->at(1))), jrt::concat(class_14::field_135->at(var2->field_716)->at((var2->field_715 - 1)), JRT_LIT(u""))));
+            this->field_548->method_939(class_21::method_219(class_84::field_1116->method_4(int32_t(class_1::field_0->at(var2->field_716)->at(1))), jrt::concat(org::deep3d::Scale::medal(var2->field_716, class_14::field_135->at(var2->field_716)->at((var2->field_715 - 1))), JRT_LIT(u""))));
             this->field_547 = true;
         }
         return true;

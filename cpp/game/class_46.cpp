@@ -301,6 +301,7 @@ jrt::Ref<java::lang::String> class_46::method_391(int32_t var1, int32_t var2, in
     int32_t var6 = var2 >> 1;
     int32_t var7 = var3 >> 1;
     int32_t var8 = jrt::f2i(class_46::method_392((((((this->field_520->field_72 - float(var5)) * (this->field_520->field_72 - float(var5))) + ((this->field_520->field_73 - float(var6)) * (this->field_520->field_73 - float(var6)))) + ((this->field_520->field_74 - float(var7)) * (this->field_520->field_74 - float(var7)))) / 4096.0f))) * 12;
+    var8 = org::deep3d::Scale::dist(var8);
     jrt::Ref<java::lang::String> var9 = jrt::concat(var8, JRT_LIT(u"m"));
     if (var8 >= 1000) {
         int32_t var10{};

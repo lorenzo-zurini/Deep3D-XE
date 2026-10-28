@@ -56,12 +56,12 @@ void class_10::method_51(jrt::Ref<class_59> var1, bool var2) {
                 if ((([&]() { auto __l1 = this->field_106->at(var4); auto __r1 = class_84::field_1116->method_4(49); return (__l1 == __r1); }()) || ([&]() { auto __l2 = this->field_106->at(var4); auto __r2 = class_84::field_1116->method_4(51); return (__l2 == __r2); }())) || ([&]() { auto __l3 = this->field_106->at(var4); auto __r3 = class_84::field_1116->method_4(53); return (__l3 == __r3); }())) {
                     this->field_107->at(var4) = jrt::concat(this->field_107->at(var4), JRT_LIT(u" ms"));
                 } else if (([&]() { auto __l4 = this->field_106->at(var4); auto __r4 = class_84::field_1116->method_4(54); return (__l4 == __r4); }()) || ([&]() { auto __l5 = this->field_106->at(var4); auto __r5 = class_84::field_1116->method_4(245); return (__l5 == __r5); }())) {
-                    this->field_107->at(var4) = jrt::concat(this->field_107->at(var4), JRT_LIT(u" m"));
+                    this->field_107->at(var4) = jrt::concat(org::deep3d::Scale::depth(var1->field_710->method_117(var4)), JRT_LIT(u" m"));
                 } else if ([&]() { auto __l6 = this->field_106->at(var4); auto __r6 = class_84::field_1116->method_4(52); return (__l6 == __r6); }()) {
                     int32_t var5{};
                     int32_t var6 = (var5 = java::lang::Integer::parseInt(this->field_107->at(var4)) / 3) % 10;
                     var5 = (((var5 + var6) % 10) == 0) ? (var5 + var6) : (var5 - var6);
-                    this->field_107->at(var4) = jrt::concat(var5, JRT_LIT(u" m"));
+                    this->field_107->at(var4) = jrt::concat(org::deep3d::Scale::dist(var5), JRT_LIT(u" m"));
                 } else if (([&]() { auto __l7 = this->field_106->at(var4); auto __r7 = class_84::field_1116->method_4(57); return (__l7 == __r7); }()) || ([&]() { auto __l8 = this->field_106->at(var4); auto __r8 = class_84::field_1116->method_4(55); return (__l8 == __r8); }())) {
                     this->field_107->at(var4) = jrt::concat(JRT_LIT(u"+"), this->field_107->at(var4), JRT_LIT(u"%"));
                 }
@@ -131,12 +131,12 @@ void class_10::method_51(jrt::Ref<class_59> var1, bool var2) {
             this->field_107 = jrt::arrayOf<jrt::Ref<java::lang::String>>({var15});
         } else if (var1->field_712->field_1146 == 8) {
             this->field_106 = jrt::arrayOf<jrt::Ref<java::lang::String>>({class_84::field_1116->method_4(334), class_84::field_1116->method_4(245), class_84::field_1116->method_4(333), class_84::field_1116->method_4(331), class_84::field_1116->method_4(332)});
-            this->field_107 = jrt::arrayOf<jrt::Ref<java::lang::String>>({var1->field_712->field_1153, jrt::concat(var1->field_712->field_1160, JRT_LIT(u" m")), ((var1->field_712->field_1158 == 0) ? class_84::field_1116->method_4(310) : jrt::concat(var1->field_712->field_1158, JRT_LIT(u" km"))), var11, var15});
+            this->field_107 = jrt::arrayOf<jrt::Ref<java::lang::String>>({var1->field_712->field_1153, jrt::concat(org::deep3d::Scale::depth(var1->field_712->field_1160), JRT_LIT(u" m")), ((var1->field_712->field_1158 == 0) ? class_84::field_1116->method_4(310) : org::deep3d::Scale::km(var1->field_712->field_1158, true)), var11, var15});
         } else {
             int32_t var22 = var1->field_712->method_764();
             jrt::Ref<java::lang::String> var23 = class_84::field_1116->method_4(((var22 < 4) ? 273 : ((var22 < 8) ? 274 : 275)));
             this->field_106 = jrt::arrayOf<jrt::Ref<java::lang::String>>({class_84::field_1116->method_4(334), class_84::field_1116->method_4(245), class_84::field_1116->method_4(333), class_84::field_1116->method_4(39), class_84::field_1116->method_4(332)});
-            this->field_107 = jrt::arrayOf<jrt::Ref<java::lang::String>>({var1->field_712->field_1153, jrt::concat(var1->field_712->field_1160, JRT_LIT(u" m")), ((var1->field_712->field_1158 == 0) ? class_84::field_1116->method_4(310) : jrt::concat(var1->field_712->field_1158, JRT_LIT(u" km"))), var23, var15});
+            this->field_107 = jrt::arrayOf<jrt::Ref<java::lang::String>>({var1->field_712->field_1153, jrt::concat(org::deep3d::Scale::depth(var1->field_712->field_1160), JRT_LIT(u" m")), ((var1->field_712->field_1158 == 0) ? class_84::field_1116->method_4(310) : org::deep3d::Scale::km(var1->field_712->field_1158, true)), var23, var15});
         }
         class_119::method_921(var1->field_712->field_1148);
     }

@@ -169,6 +169,8 @@ std::vector<Item> buildItems() {
                 [](int) { Config::originalScreen = Config::originalScreen == "phone" ? "widescreen" : "phone"; }));
             addGraphicsItems(items);
             items.push_back(Item::choice("Field of view", [] { return std::to_string(Config::fov); }, cycleFov));
+            items.push_back(Item::choice("Scale", [] { return std::string(Config::believableScale ? "Believable" : "Original"); },
+                                         [](int) { Config::believableScale = !Config::believableScale; }));
             items.push_back(Item::toggle("Fullscreen", [] { return Config::fullscreen; }, [] { Runtime::toggleFullscreen(); }));
             items.push_back(Item::toggle("VSync", [] { return Config::vsync; }, [] {
                 Config::vsync = !Config::vsync;
