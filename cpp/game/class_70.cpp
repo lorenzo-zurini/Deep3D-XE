@@ -439,7 +439,9 @@ void class_70::method_681(bool var1) {
         this->field_979->method_742(this->field_992);
         this->field_976->method_548();
     } else {
+        class_4::deep3dKind = 4;
         class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_970));
+        class_4::deep3dKind = 0;
         if (this->field_1015) {
             class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_971));
         }

@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 /* Frame block (org.deep3d.Remaster) */
 enum {
@@ -52,6 +53,8 @@ static int rmLayer = 0;         /* the game's render layer (0 structures and shi
 static int rmStructure = 0;     /* the draws belong to a structure (long reach) */
 static int rmSpawner = 0;       /* to something that spawns (fades out before it) */
 static int rmSky = 0;           /* the game's skydome: the backdrop is drawn in its place */
+static int rmSelf = 0;          /* the player's sub */
+static int rmShip = 0;          /* another sub (a spawner too) */
 static int rmSprite = 0;        /* the current draw is a sprite */
 static int bgFrame = -1;
 static int postFrame = -1;
@@ -114,7 +117,7 @@ static const char *WATER =
 "vec3 trans(float dist) {\n"
    /* structures: a long gentle falloff, silhouettes far out in the haze;
       creatures, ships, items: gone before they respawn (36000) */
-"  if (uLong > 0.5) return exp(-vec3(dist) * uSigma * 0.22);\n"
+"  if (uLong > 0.5) return exp(-vec3(dist) * uSigma * 0.4);\n"
 "  return exp(-pow(vec3(dist) * uSigma, vec3(2.35)));\n"
 "}\n"
 "float trans1(float dist) { return exp(-pow(dist * uSigma.g, 2.35)); }\n"
@@ -219,6 +222,8 @@ static const char *WATER =
 "  if (dc < q.z - 60.0 / uShadowDepth) { nb += 1.0; above += (q.z - dc) * uShadowDepth; }\n"
 "  if (nb < 0.5) return 1.0;\n"
 "  above /= nb;\n"
+"  vec2 ed = min(q.xy, 1.0 - q.xy);\n"
+"  float edge = smoothstep(0.0, 0.06, min(ed.x, ed.y));\n"
    /* the penumbra grows with the distance below the caster */
 "  float r = (40.0 + above * 0.2) * uShadowTexel;\n"
 "  float lit = 0.0;\n"
@@ -228,18 +233,48 @@ static const char *WATER =
 "    lit += step(q.z - 60.0 / uShadowDepth, texture2D(uShadowMap, q.xy + o).r);\n"
 "  }\n"
 "  lit /= 8.0;\n"
-"  return mix(lit, 1.0, smoothstep(6000.0, 26000.0, above));\n"
+"  return mix(1.0, mix(lit, 1.0, smoothstep(6000.0, 26000.0, above)), edge);\n"
 "}\n"
 /* light from the sub's headlight, its engines and other ships' lamps at wp */
+/* The sub's floodlights: two spot lamps on the bow (uSpotPos +- uSpotSide),
+   along its heading, about 52 degrees wide with a soft edge; the light
+   falls off with distance and is absorbed by the water on the way. A shadow
+   map from the bow (uSpotMap) stops it at whatever is in the way */
+"uniform sampler2D uSpotMap;\n"
+"uniform mat4 uSpotVP;\n"
+"uniform float uSpotOn;\n"
+"uniform vec3 uSpotPos;\n"
+"uniform vec3 uSpotSide;\n"
+"uniform vec3 uSpotDirs[2];\n"   /* each lamp's aim: a little outwards and down */
+"const vec3 FLOOD = vec3(1.0, 0.95, 0.84);\n"
+"float spotVis(vec3 p) {\n"
+"  vec4 q = uSpotVP * vec4(p, 1.0);\n"
+"  if (q.w <= 1.0) return 1.0;\n"
+"  vec3 s = q.xyz / q.w * 0.5 + 0.5;\n"
+"  if (s.x <= 0.0 || s.x >= 1.0 || s.y <= 0.0 || s.y >= 1.0 || s.z >= 1.0) return 1.0;\n"
+"  return step(s.z - 0.0008, texture2DLod(uSpotMap, s.xy, 0.0).r);\n"
+"}\n"
+/* how strongly the beams reach p (no surface term), and from which lamp */
+"float floodAt(vec3 p, out vec3 ld) {\n"
+"  ld = uSubDir;\n"
+"  if (uSubOn < 0.5) return 0.0;\n"
+"  float acc = 0.0;\n"
+"  for (int k = 0; k < 2; k++) {\n"
+"    vec3 lp = uSpotPos + uSpotSide * (k == 0 ? -1.0 : 1.0);\n"
+"    vec3 tl = p - lp; float dl = max(length(tl), 1.0); vec3 d = tl / dl;\n"
+"    float cone = smoothstep(0.951, 0.985, dot(d, uSpotDirs[k]));\n"
+"    float a = cone / (1.0 + (dl / 4500.0) * (dl / 4500.0)) * trans1(dl * 0.6) * smoothstep(60.0, 300.0, dl);\n"
+"    if (a > acc) ld = d;\n"
+"    acc += a;\n"
+"  }\n"
+"  return acc * (uSpotOn > 0.5 ? spotVis(p) : 1.0);\n"
+"}\n"
 "vec3 lamps(vec3 wp, vec3 N) {\n"
 "  vec3 acc = vec3(0.0);\n"
 "  if (uSubOn > 0.5) {\n"
-"    vec3 lp = uSub + uSubDir * 220.0;\n"
-"    vec3 tl = wp - lp; float dl = max(length(tl), 1.0); vec3 ld = tl / dl;\n"
-"    float cone = smoothstep(0.78, 0.97, dot(ld, uSubDir));\n"
-"    float att = 1.0 / (1.0 + (dl / 3400.0) * (dl / 3400.0));\n"
-"    float lam = max(dot(N, -ld), 0.0) * 0.8 + 0.2;\n"
-"    acc += vec3(1.0, 0.96, 0.86) * cone * att * lam * trans1(dl * 0.6) * 1.1;\n"
+"    vec3 ld;\n"
+"    float f = floodAt(wp + N * 20.0, ld);\n"
+"    acc += FLOOD * f * (max(dot(N, -ld), 0.0) * 0.85 + 0.15) * 2.2;\n"
 "    vec3 ep = uSub - uSubDir * 240.0; float de = length(wp - ep);\n"
 "    acc += vec3(0.25, 0.8, 1.0) * (0.12 + 0.4 * uBoost) / (1.0 + (de / 900.0) * (de / 900.0));\n"
 "  }\n"
@@ -411,63 +446,66 @@ static const char *BG_FS =
 "  gl_FragColor = vec4(c, 1.0);\n"
 "}\n";
 
-/* Marine snow and plankton */
+/* Specks in the water (like Freelancer's space dust): tiny bits hanging
+   still in the water, in a box that wraps around the camera, so they stream
+   past as the sub moves (the water would not show its motion otherwise);
+   at speed they streak. Lit by the light where they are and by the lamps;
+   where no daylight reaches, some of them glow faintly (bioluminescent).
+   Drawn twice: heads as points, then head-to-tail lines along the motion */
 static const char *SNOW_VS =
 "uniform mat4 uWorldToEye; uniform mat4 uProj; uniform float uBox; uniform float uPx;\n"
+"uniform vec3 uCamVel; uniform float uPoints;\n"
 "uniform vec3 uWake[8];\n"
 "varying vec4 vCol;\n"
-/* how much the sub stirred the water at wp: along its path (uWake: where
-   it is, then where it was), fading and widening with age */
-"float stirAt(vec3 wp) {\n"
-"  float s = 0.0;\n"
+/* the thrusters' turbulence at wp: along the jets' recent path (uWake: at
+   the nozzles now, then where they were), a churning swirl and a push out
+   from the path's middle, strongest just behind the sub, widening and
+   calming as the wake ages; boosting stirs harder */
+"vec3 churn(vec3 wp) {\n"
+"  vec3 acc = vec3(0.0);\n"
 "  for (int k = 0; k < 7; k++) {\n"
 "    vec3 a = uWake[k], ab = uWake[k + 1] - a;\n"
 "    float h = clamp(dot(wp - a, ab) / max(dot(ab, ab), 1.0), 0.0, 1.0);\n"
-"    float dl = length(wp - a - ab * h);\n"
+"    vec3 off = wp - a - ab * h;\n"
+"    float dl = length(off);\n"
 "    float age = (float(k) + h) / 7.0;\n"
-"    float wr = 190.0 + 420.0 * age;\n"
-"    s = max(s, exp(-(dl * dl) / (wr * wr)) * (1.0 - age));\n"
+"    float wr = 160.0 + 520.0 * age;\n"
+"    float A = exp(-(dl * dl) / (wr * wr)) * (1.0 - age) * (0.45 + 0.55 * uBoost);\n"
+"    if (A < 0.01) continue;\n"
+"    float t = uTime * (3.2 - 1.6 * age);\n"
+"    vec3 swirl = vec3(sin(dot(wp, vec3(0.011, 0.017, -0.013)) + t), sin(dot(wp, vec3(-0.015, 0.012, 0.016)) + t * 1.3),\n"
+"                      cos(dot(wp, vec3(0.014, -0.011, 0.012)) + t * 0.9));\n"
+"    acc += (swirl * 150.0 + off / max(dl, 1.0) * 110.0) * A;\n"
 "  }\n"
-"  return s;\n"
+"  return acc;\n"
 "}\n"
 "void main() {\n"
-"  vec4 aSeed = gl_Vertex;\n"
+"  vec4 s = gl_Vertex;\n"
+"  float tail = gl_MultiTexCoord0.x;\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
-"  vec3 centre = cam;\n"
-"  vec3 p = aSeed.xyz * uBox + vec3(uTime * 14.0, -uTime * 22.0, uTime * 9.0)\n"
-"         + vec3(sin(uTime * 0.31 + aSeed.w * 40.0), sin(uTime * 0.23 + aSeed.x * 30.0), cos(uTime * 0.27 + aSeed.y * 50.0)) * 45.0;\n"
-"  vec3 wp = centre + mod(p - centre, uBox) - uBox * 0.5;\n"
+"  vec3 p = s.xyz * uBox + vec3(sin(uTime * 0.21 + s.w * 40.0), sin(uTime * 0.17 + s.x * 30.0), cos(uTime * 0.19 + s.y * 50.0)) * 10.0;\n"
+"  vec3 wp = cam + mod(p - cam, uBox) - uBox * 0.5;\n"
+"  if (uSubOn > 0.5) wp += churn(wp);\n"
+"  float sp = length(uCamVel);\n"
+   /* cruising they hang as points; boosting, they streak */
+"  float streak = smoothstep(2600.0, 4500.0, sp);\n"
+"  wp -= (sp > 1.0 ? uCamVel / sp : vec3(0.0)) * min(sp * 0.03, 300.0) * tail;\n"
 "  vec4 eye = uWorldToEye * vec4(wp, 1.0);\n"
 "  gl_Position = uProj * eye;\n"
 "  float dist = length(eye.xyz);\n"
-"  float big = aSeed.w > 0.93 ? 2.2 : 1.0;\n"
-"  gl_PointSize = clamp(26.0 * big * uPx / max(dist, 1.0), 1.0, 9.0 * big);\n"
-"  float d = depth01(wp.y); float L = sunLight(wp.y);\n"
-"  vec3 c = mix(TEAL, ZENITH, 0.45) * sunLight3(wp.y) * 0.8;\n"
-"  c += lamps(wp, normalize(cam - wp)) * 0.55;\n"
-"  float glow = 0.0;\n"
-"  if (fract(aSeed.w * 97.0) < 0.10) {\n"
-"    glow = smoothstep(0.35, 0.8, d) * (0.5 + 0.5 * sin(uTime * (1.3 + aSeed.x * 2.0) + aSeed.y * 40.0));\n"
-"    c += vec3(0.15, 0.85, 1.0) * glow * 1.4;\n"
-"  }\n"
-   /* in the deep, plankton the sub brushes past lights up, and stays lit
-      along its path for a while */
-"  if (uSubOn > 0.5) {\n"
-"    float stir = stirAt(wp) * smoothstep(0.3, 0.7, d);\n"
-"    stir *= 0.5 + 0.5 * sin(uTime * (6.0 + aSeed.z * 8.0) + aSeed.x * 60.0);\n"
-"    c += vec3(0.1, 1.0, 0.75) * stir * 1.8;\n"
-"    glow = max(glow, stir);\n"
-"  }\n"
-"  float fade = (1.0 - smoothstep(uBox * 0.32, uBox * 0.5, dist)) * smoothstep(40.0, 220.0, dist) * step(wp.y, uSurfY - 50.0);\n"
-"  vec3 T = trans(dist);\n"
-"  vCol = vec4(c * mix(T, sqrt(T), glow), fade * (0.55 + 0.45 * glow));\n"
+"  gl_PointSize = clamp(14.0 * uPx / max(dist, 1.0), 1.2, 3.5);\n"
+"  vec3 Ls = sunLight3(wp.y);\n"
+"  vec3 c = mix(TEAL, ZENITH, 0.5) * Ls * 0.6 + lamps(wp, normalize(cam - wp)) * 0.6;\n"
+"  float dark = 1.0 - smoothstep(0.03, 0.3, Ls.g);\n"
+"  float bio = step(0.6, fract(s.w * 53.0)) * dark;\n"
+"  c += vec3(0.12, 0.72, 1.0) * bio * (0.22 + 0.16 * sin(uTime * (0.7 + s.z) + s.x * 30.0));\n"
+"  float fade = (1.0 - smoothstep(uBox * 0.3, uBox * 0.5, dist)) * smoothstep(30.0, 160.0, dist) * step(wp.y, uSurfY - 50.0);\n"
+"  fade *= uPoints > 0.5 ? 1.0 : streak * (1.0 - 0.8 * tail);\n"
+"  vCol = vec4(c * mix(trans(dist), vec3(1.0), bio * 0.5), fade * (0.45 + 0.55 * fract(s.w * 17.0)));\n"
 "}\n";
 static const char *SNOW_FS =
 "varying vec4 vCol;\n"
-"void main() {\n"
-"  float r = length(gl_PointCoord - 0.5) * 2.0;\n"
-"  gl_FragColor = vec4(vCol.rgb, vCol.a * (1.0 - smoothstep(0.2, 1.0, r)));\n"
-"}\n";
+"void main() { gl_FragColor = vCol; }\n";
 
 /* Bubbles from the sub's engines: they rise, wobble, grow and burst */
 static const char *BUBBLE_VS =
@@ -487,7 +525,7 @@ static const char *BUBBLE_VS =
 "  float r = (7.0 + aSeed * 16.0) * (1.0 + k * 1.4);\n"
 "  gl_PointSize = clamp(r * 2.0 * uPx / max(dist, 1.0), 1.0, 28.0);\n"
 "  float d = depth01(wp.y);\n"
-"  vec3 c = (ZENITH * sunLight3(wp.y) + water(vec3(0.0, 1.0, 0.0), wp.y)) * 0.5;\n"
+"  vec3 c = mix(ZENITH, TEAL, 0.3) * sunLight3(wp.y) * 0.7;\n"
 "  c += lamps(wp, normalize(uCamToWorld[3].xyz - wp)) * 0.5;\n"
 "  float a = (k < 0.0 || k > 1.0) ? 0.0 : smoothstep(0.0, 0.06, k) * (1.0 - smoothstep(0.7, 1.0, k));\n"
 "  a *= smoothstep(150.0, 450.0, dist) * step(wp.y, uSurfY - 50.0);\n"
@@ -502,36 +540,6 @@ static const char *BUBBLE_FS =
 "  float rim = smoothstep(0.55, 0.95, r) * (1.0 - smoothstep(0.95, 1.0, r));\n"
 "  float hl = (1.0 - smoothstep(0.0, 0.35, length(p - vec2(-0.35, 0.35))));\n"
 "  gl_FragColor = vec4(vCol.rgb * (0.25 + rim * 1.2 + hl * 1.5), vCol.a * (0.15 + rim * 0.85 + hl));\n"
-"}\n";
-
-/* Sparks of plankton the sub's hull stirs up in the deep: shed where it
-   passes, they hang in the water, flicker and die, tracing its wake */
-static const char *SPARK_VS =
-"uniform mat4 uWorldToEye; uniform mat4 uProj; uniform float uPx; uniform float uLife;\n"
-"varying vec4 vCol;\n"
-"void main() {\n"
-"  vec4 aS = gl_Vertex;\n"                     /* xyz: where it was shed, w: when */
-"  float seed = gl_MultiTexCoord0.x;\n"
-"  float age = uTime - aS.w;\n"
-"  float k = age / uLife;\n"
-"  vec3 wp = aS.xyz + vec3(sin(age * 1.7 + seed * 40.0), sin(age * 1.3 + seed * 23.0) * 0.6,\n"
-"                          cos(age * 1.5 + seed * 31.0)) * 35.0 * age;\n"
-"  vec4 eye = uWorldToEye * vec4(wp, 1.0);\n"
-"  gl_Position = uProj * eye;\n"
-"  float dist = length(eye.xyz);\n"
-"  gl_PointSize = clamp((40.0 + 60.0 * seed) * uPx / max(dist, 1.0), 2.0, 14.0);\n"
-"  float flick = 0.55 + 0.45 * sin(uTime * (7.0 + seed * 9.0) + seed * 50.0);\n"
-"  float a = (k < 0.0 || k > 1.0) ? 0.0 : smoothstep(0.0, 0.04, k) * (1.0 - k) * (1.0 - k);\n"
-"  vec3 c = mix(vec3(0.1, 1.0, 0.72), vec3(0.3, 0.75, 1.0), seed);\n"
-"  vCol = vec4(c * 1.8 * sqrt(trans(dist)) * spawnFade(dist), a * flick * smoothstep(60.0, 200.0, dist));\n"
-"  if (a <= 0.0) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);\n"
-"}\n";
-static const char *SPARK_FS =
-"varying vec4 vCol;\n"
-"void main() {\n"
-"  float r = length(gl_PointCoord * 2.0 - 1.0);\n"
-"  float core = 1.0 - smoothstep(0.0, 0.35, r);\n"
-"  gl_FragColor = vec4(vCol.rgb * (0.6 + core), vCol.a * exp(-r * r * 4.0));\n"
 "}\n";
 
 /* The lights themselves (flares, lamps, explosions: they replace the game's
@@ -631,7 +639,7 @@ static const char *BRIGHT_FS =
 static const char *POST_FS =
 "uniform sampler2D uScene; uniform sampler2D uDepth; uniform sampler2D uBright;\n"
 "uniform float uBloom; uniform int uPV; uniform float uClean; uniform float uSpeed;\n"
-"uniform sampler2D uLight; uniform float uRayK; uniform float uShadeK;\n"
+"uniform sampler2D uLight; uniform float uRayK; uniform float uShadeK; uniform float uBeamK;\n"
 "uniform float uRad; uniform float uPres;\n"
 "varying vec2 vUV;\n"
 "void main() {\n"
@@ -681,28 +689,18 @@ static const char *POST_FS =
 "  vec3 wrd = normalize(mat3(uCamToWorld) * rd);\n"
    /* the light from the waves in the water (shafts, brighter towards the
       light above) and the shade under everything (LIGHT_FS) */
-"  vec2 lt = texture2D(uLight, uv).rg;\n"
-"  float phase = 0.6 + 0.9 * pow(max(dot(wrd, uSunDir), 0.0), 4.0);\n"
+"  vec3 lt = texture2D(uLight, uv).rgb;\n"
+   /* water scatters light forwards (Henyey-Greenstein, g 0.55): shafts show
+      looking towards the light, hardly at all looking away (down) */
+"  float hg = 0.6975 / pow(1.3025 - 1.1 * dot(wrd, uSunDir), 1.5);\n"
+"  float phase = min(0.6 * hg / 0.4692, 4.0);\n"
 "  float rays = lt.r * uRayK * phase;\n"
 "  rays = rays / (1.0 + rays * 1.2);\n"
 "  vec3 hue = min(sunLight3(cam.y) / max(sunLight(cam.y), 1e-3), vec3(2.0));\n"
 "  c = c * (1.0 - lt.g * uShadeK) + uSunCol * hue * rays;\n"
 "  dbg.g = rays;\n"
-   /* the sub's headlight: a beam in the water */
-"  if (uSubOn > 0.5) {\n"
-"    vec3 lp = uSub + uSubDir * 220.0;\n"
-"    float tmax = min(sceneDist, 9000.0);\n"
-"    float acc = 0.0;\n"
-"    float jit = hash(uv * 911.0 + uTime) * 0.9;\n"
-"    for (int i = 0; i < 20; i++) {\n"
-"      float t = (float(i) + jit) / 20.0 * tmax;\n"
-"      vec3 p = cam + wrd * t;\n"
-"      vec3 tl = p - lp; float dl = max(length(tl), 1.0);\n"
-"      float cone = smoothstep(0.80, 0.975, dot(tl / dl, uSubDir));\n"
-"      acc += cone / (1.0 + (dl / 2600.0) * (dl / 2600.0)) * trans1((dl + t) * 0.5) * smoothstep(250.0, 1600.0, dl);\n"
-"    }\n"
-"    c += vec3(0.85, 0.93, 1.0) * acc / 20.0 * (tmax / 9000.0) * mix(0.3, 1.6, d);\n"
-"  }\n"
+   /* the floodlights' beams in the water (LIGHT_FS, shadowed) */
+"  c += FLOOD * (1.0 - exp(-lt.b * uBeamK * 2.0)) * 0.6;\n"
    /* halos of other ships' lamps in the murk */
 "  for (int k = 0; k < 8; k++) {\n"
 "    if (k >= uNumLights) break;\n"
@@ -793,24 +791,28 @@ static const char *LIGHT_FS =
 "  float sceneDist = z >= 0.99999 ? 1e9 : length(eyeFar);\n"
 "  vec3 wrd = normalize(mat3(uCamToWorld) * normalize(eyeFar));\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
-"  float tmax = min(sceneDist, 18000.0);\n"
+"  float tmax = min(sceneDist, 40000.0);\n"
 "  float jit = ign(gl_FragCoord.xy);\n"
-"  float R = 0.0, S = 0.0;\n"
-"  for (int i = 0; i < 32; i++) {\n"
-"    float t = (float(i) + jit) / 32.0 * tmax;\n"
+"  float R = 0.0, S = 0.0, B = 0.0;\n"
+"  for (int i = 0; i < 40; i++) {\n"
+"    float u = (float(i) + jit) / 40.0;\n"
+"    float t = tmax * u * u;\n"                   /* denser near, sparser far */
+"    float dt = tmax * 2.0 * u / 40.0;\n"
 "    vec3 p = cam + wrd * t;\n"
 "    float T = trans1(t * 0.55);\n"
 "    float d = depth01(p.y); float Lp = sunLight(p.y);\n"
 "    float vis = shadowAt(p, jit * 6.2832 + float(i) * 2.4);\n"
 "    float c = causticLod(p, 0.5 + 2.5 * d + t / 6000.0);\n"
-"    R += max(c - 0.6 * CAUST_MEAN, 0.0) * vis * T * min(Lp * Lp, 4.0);\n"
-"    S += (1.0 - vis) * T * Lp;\n"
+"    R += max(c - 0.6 * CAUST_MEAN, 0.0) * vis * T * min(Lp * Lp, 4.0) * dt;\n"
+"    S += (1.0 - vis) * T * Lp * dt;\n"
+"    vec3 ld; float f = floodAt(p, ld);\n"
+"    if (f > 0.0) B += f * T * (0.91 / pow(1.09 + 0.6 * dot(ld, wrd), 1.5)) * dt;\n"   /* turbid water: backscatter shows the beams from behind too; brightest looking into them */
 "  }\n"
-"  float k = tmax / 18000.0 / 32.0;\n"
+"  float k = 1.0 / 18000.0;\n"
    /* the shade: the light a shadow keeps out of the path, saturating (a
       station's shadow, a few thousand units across, reads clearly) */
-"  float shade = 1.0 - exp(-S * tmax / 32.0 / 1800.0);\n"
-"  gl_FragColor = vec4(R * k, shade, 0.0, 1.0);\n"
+"  float shade = 1.0 - exp(-S / 1800.0);\n"
+"  gl_FragColor = vec4(R * k, shade, clamp(B / 5000.0, 0.0, 1.0), 1.0);\n"
 "}\n";
 
 /* The light pass, blurred (horizontally, then vertically): a Gaussian that
@@ -838,9 +840,10 @@ struct Prog {
     GLint uCamToWorld, uInvProj, uVP, uTime, uSector, uTint, uSunDir, uSunCol, uSigma;
     GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf, uSpawner, uGlowP, uGlowC, uNumGlows;
     GLint uWave, uWaveB, uSurfY, uCaustMap, uCaustVP, uShadowMap, uShadowVP, uShadowOn, uShadowDepth, uShadowTexel, uSunAir;
+    GLint uSpotMap, uSpotVP, uSpotOn, uSpotPos, uSpotSide;
 };
 
-static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pSpark, pGlow, pCaust, pShadow, pLight, pBlur;
+static Prog pScene, pBg, pSnow, pBright, pPost, pBub, pFish, pGlow, pCaust, pShadow, pLight, pBlur;
 static GLint fiWorldToEye, fiProj;
 static GLint buWorldToEye, buProj, buPx, buLife, buBub, buSeed;
 static GLint sTex0, sTex1, sEn0, sEn1, sMode0, sMode1, sFmt0, sFmt1, sKind, sSprite;
@@ -920,6 +923,11 @@ static int link(Prog *p, const char *vs1, const char *vs2, const char *fs) {
     p->uShadowDepth = glGetUniformLocation(id, "uShadowDepth");
     p->uShadowTexel = glGetUniformLocation(id, "uShadowTexel");
     p->uSunAir = glGetUniformLocation(id, "uSunAir");
+    p->uSpotMap = glGetUniformLocation(id, "uSpotMap");
+    p->uSpotVP = glGetUniformLocation(id, "uSpotVP");
+    p->uSpotOn = glGetUniformLocation(id, "uSpotOn");
+    p->uSpotPos = glGetUniformLocation(id, "uSpotPos");
+    p->uSpotSide = glGetUniformLocation(id, "uSpotSide");
     return 1;
 }
 
@@ -934,7 +942,6 @@ static int buildPrograms() {
         || !link(&pBright, POST_VS, NULL, BRIGHT_FS)
         || !link(&pPost, POST_VS, NULL, POST_FS)
         || !link(&pBub, WATER, BUBBLE_VS, BUBBLE_FS)
-        || !link(&pSpark, WATER, SPARK_VS, SPARK_FS)
         || !link(&pGlow, WATER, GLOW_VS, GLOW_FS)
         || !link(&pFish, WATER, FISH_VS, FISH_FS)
         || !link(&pCaust, POST_VS, NULL, CAUST_FS)
@@ -1018,15 +1025,60 @@ static void initWaves() {
    camera (a little ahead of it), snapped to whole texels so the shadows and
    caustics do not crawl. One for the shadow map drawn this frame (read by
    the post pass and, the next frame, by the scene) */
-#define SH_SIZE 2048
-#define SH_HALF 18000.0f
+#define SH_SIZE 4096
+#define SH_HALF 40000.0f          /* 80 km across: shadows as far as things are seen */
+#define CA_SIZE 2048
 #define SH_RANGE 60000.0f
 #define CA_HALF 40000.0f
 static GLuint texShadow[2], fbShadow[2], texCaust, fbCaust, texLight, texLight2;
 static int shCur = 0, shHave = 0;
 static float lightVP[2][16], caustVP[16];
 
-static void lightFrame(float *m, float half) {
+/* The floodlights' frame: a perspective view from the bow along the sub's
+   heading, wide enough for both beams; its shadow map (one per frame, as
+   the sun's) stops the light at what is in the way */
+#define SPOT_SIZE 1024
+static GLuint texSpot[2], fbSpot[2];
+static float spotVP[2][16], spotPos[3], spotSide[3], spotDirs[6];
+static int spotOn = 0;
+
+static void spotFrame(float *m) {
+    const float *p = F + F_SUB, *f = F + F_SUBDIR;
+    float fn = sqrtf(f[0] * f[0] + f[1] * f[1] + f[2] * f[2]);
+    float z[3] = {-f[0] / fn, -f[1] / fn, -f[2] / fn};          /* the view looks along -z */
+    float up[3] = {0, 1, 0};
+    if (fabsf(z[1]) > 0.95f) { up[0] = 1; up[1] = 0; }
+    float x[3] = {up[1] * z[2] - up[2] * z[1], up[2] * z[0] - up[0] * z[2], up[0] * z[1] - up[1] * z[0]};
+    float xn = sqrtf(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
+    for (int j = 0; j < 3; j++) x[j] /= xn;
+    float y[3] = {z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]};
+    for (int j = 0; j < 3; j++) {
+        spotPos[j] = p[j] - z[j] * 240.0f;                       /* the bow */
+        spotSide[j] = x[j] * 280.0f;                             /* the lamps either side */
+        /* aimed 13 degrees outwards and 10 down, as a sub's floodlights are */
+        spotDirs[j] = -z[j] - x[j] * 0.23f - y[j] * 0.18f;
+        spotDirs[3 + j] = -z[j] + x[j] * 0.23f - y[j] * 0.18f;
+    }
+    for (int k = 0; k < 2; k++) {
+        float n2 = sqrtf(spotDirs[k * 3] * spotDirs[k * 3] + spotDirs[k * 3 + 1] * spotDirs[k * 3 + 1] + spotDirs[k * 3 + 2] * spotDirs[k * 3 + 2]);
+        for (int j = 0; j < 3; j++) spotDirs[k * 3 + j] /= n2;
+    }
+    float view[16] = {x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0,
+                      -(x[0] * spotPos[0] + x[1] * spotPos[1] + x[2] * spotPos[2]),
+                      -(y[0] * spotPos[0] + y[1] * spotPos[1] + y[2] * spotPos[2]),
+                      -(z[0] * spotPos[0] + z[1] * spotPos[1] + z[2] * spotPos[2]), 1};
+    /* 70 degrees, both beams and their soft edges; 60 .. 26000 units */
+    float t = 1.0f / tanf(35.0f * 0.0174533f), n = 60.0f, fa = 26000.0f;
+    float proj4[16] = {t, 0, 0, 0, 0, t, 0, 0, 0, 0, (fa + n) / (n - fa), -1, 0, 0, 2 * fa * n / (n - fa), 0};
+    for (int c = 0; c < 4; c++)
+        for (int r = 0; r < 4; r++) {
+            float v = 0;
+            for (int k = 0; k < 4; k++) v += proj4[k * 4 + r] * view[c * 4 + k];
+            m[c * 4 + r] = v;
+        }
+}
+
+static void lightFrame(float *m, float half, int size) {
     const float *L = sunDir, *c = F + F_CAM;
     float ex[3] = {L[1], -L[0], 0};
     float n = sqrtf(ex[0] * ex[0] + ex[1] * ex[1]);
@@ -1039,7 +1091,7 @@ static void lightFrame(float *m, float half) {
         cen[0] += fx / fn * SH_HALF * 0.35f;
         cen[2] += fz / fn * SH_HALF * 0.35f;
     }
-    float texel = 2.0f * half / SH_SIZE;
+    float texel = 2.0f * half / size;
     float cu = floorf((ex[0] * cen[0] + ex[1] * cen[1] + ex[2] * cen[2]) / texel) * texel;
     float cv = floorf((ey[0] * cen[0] + ey[1] * cen[1] + ey[2] * cen[2]) / texel) * texel;
     float cl = L[0] * cen[0] + L[1] * cen[1] + L[2] * cen[2];
@@ -1441,7 +1493,7 @@ static void setCommon(const Prog *p) {
     glUniform1i(p->uNumGlows, glowUseN);
     glUniform1f(p->uLong, rmStructure ? 1.0f : 0.0f);
     glUniform1f(p->uSpawner, rmSpawner ? 1.0f : 0.0f);
-    glUniform1f(p->uSelf, rmLayer >= 3 ? 1.0f : 0.0f);
+    glUniform1f(p->uSelf, rmSelf ? 1.0f : 0.0f);
     glUniform4fv(p->uWave, 8, waveA);
     glUniform4fv(p->uWaveB, 8, waveB);
     glUniform1f(p->uSurfY, surfY);
@@ -1453,6 +1505,12 @@ static void setCommon(const Prog *p) {
     glUniform1f(p->uShadowDepth, 2.0f * SH_RANGE);
     glUniform1f(p->uShadowTexel, 1.0f / (2.0f * SH_HALF));
     glUniform3fv(p->uSunAir, 1, sunAir);
+    glUniform1i(p->uSpotMap, 5);
+    glUniformMatrix4fv(p->uSpotVP, 1, GL_FALSE, spotVP[shCur ^ 1]);
+    glUniform1f(p->uSpotOn, spotOn && shHave && !noShadows() ? 1.0f : 0.0f);
+    glUniform3fv(p->uSpotPos, 1, spotPos);
+    glUniform3fv(p->uSpotSide, 1, spotSide);
+    glUniform3fv(glGetUniformLocation(p->id, "uSpotDirs"), 2, spotDirs);
 }
 
 static int invert4(const float *m, float *out) {
@@ -2004,10 +2062,26 @@ static int lightReady() {
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
     }
+    glGenTextures(2, texSpot);
+    glGenFramebuffers(2, fbSpot);
+    for (int i = 0; i < 2; i++) {
+        glBindTexture(GL_TEXTURE_2D, texSpot[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, SPOT_SIZE, SPOT_SIZE, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_LUMINANCE);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbSpot[i]);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texSpot[i], 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+    }
     glGenTextures(1, &texCaust);
     glGenFramebuffers(1, &fbCaust);
     glBindTexture(GL_TEXTURE_2D, texCaust);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, SH_SIZE, SH_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, CA_SIZE, CA_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -2026,8 +2100,10 @@ static void lightBegin() {
     pushState(&s);
     lightReady();
     shCur ^= 1;
-    lightFrame(lightVP[shCur], SH_HALF);
-    lightFrame(caustVP, CA_HALF);
+    lightFrame(lightVP[shCur], SH_HALF, SH_SIZE);
+    lightFrame(caustVP, CA_HALF, CA_SIZE);
+    spotOn = F[F_SUBON] > 0.5f;
+    spotFrame(spotVP[shCur]);
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
@@ -2039,7 +2115,11 @@ static void lightBegin() {
     glDepthMask(GL_TRUE);
     glClearDepth(1.0);
     glClear(GL_DEPTH_BUFFER_BIT);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbSpot[shCur]);
+    glViewport(0, 0, SPOT_SIZE, SPOT_SIZE);
+    glClear(GL_DEPTH_BUFFER_BIT);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbCaust);
+    glViewport(0, 0, CA_SIZE, CA_SIZE);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDepthMask(GL_FALSE);
     for (int u = 0; u < 4; u++) {
@@ -2057,13 +2137,13 @@ static void lightBegin() {
     glGenerateMipmap(GL_TEXTURE_2D);
     static const char *dump = getenv("DEEP3D_RM_CAUSTDUMP");
     if (dump && (int) F[F_FRAME] == 200) {
-        static unsigned char px[SH_SIZE * SH_SIZE];
+        std::vector<unsigned char> px(CA_SIZE * CA_SIZE);
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, px);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, px.data());
         FILE *f = fopen(dump, "wb");
         if (f) {
-            fprintf(f, "P5 %d %d 255\n", SH_SIZE, SH_SIZE);
-            fwrite(px, 1, sizeof px, f);
+            fprintf(f, "P5 %d %d 255\n", CA_SIZE, CA_SIZE);
+            fwrite(px.data(), 1, px.size(), f);
             fclose(f);
         }
     }
@@ -2071,6 +2151,8 @@ static void lightBegin() {
     /* for every draw of the frame: last frame's shadows, these caustics */
     GLint active;
     glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, texSpot[shCur ^ 1]);
     glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_2D, texShadow[shCur ^ 1]);
     glActiveTexture(GL_TEXTURE7);
@@ -2106,10 +2188,17 @@ static void castShadow(int arrays, GLenum mode, GLint first, GLsizei count, GLen
     glUniformMatrix4fv(glGetUniformLocation(pShadow.id, "uCamToWorld"), 1, GL_FALSE, F + F_CAM);
     glUniform1i(glGetUniformLocation(pShadow.id, "uTex0"), 0);
     glUniform1i(glGetUniformLocation(pShadow.id, "uCut"), cut);
-    if (arrays) {
-        glDrawArrays(mode, first, count);
-    } else {
-        glDrawElements(mode, count, type, indices);
+    for (int pass = 0; pass < (spotOn ? 2 : 1); pass++) {
+        if (pass == 1) {
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbSpot[shCur]);
+            glViewport(0, 0, SPOT_SIZE, SPOT_SIZE);
+            glUniformMatrix4fv(glGetUniformLocation(pShadow.id, "uLightVP"), 1, GL_FALSE, spotVP[shCur]);
+        }
+        if (arrays) {
+            glDrawArrays(mode, first, count);
+        } else {
+            glDrawElements(mode, count, type, indices);
+        }
     }
     glPopAttrib();
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb);
@@ -2177,6 +2266,9 @@ static int sceneBegin() {
     }
     rmDrawn++;
     castKind = -1;
+    if ((rmSelf || rmShip) && !rmSprite && glIsEnabled(GL_BLEND)) {
+        return -1;
+    }
     /* the skydome is always in view: every world frame has the backdrop,
        even when nothing else is drawn (else the game's flat fill shows) */
     if (rmSky) {
@@ -2360,7 +2452,7 @@ extern "C" void deep3d_rm_draw_elements(GLenum mode, GLsizei count, GLenum type,
     }
     glDrawElements(mode, count, type, indices);
     if (on > 0) {
-        if (castKind == 0 && rmLayer < 3) {
+        if (castKind == 0 && !rmSelf) {
             castShadow(0, mode, 0, count, type, indices);
         }
         glUseProgram(0);
@@ -2421,42 +2513,64 @@ extern "C" void deep3d_rm_pass_begin(void) {
     glPopAttrib();
 }
 
-/* Snow particles: seeds in a unit cube, wrapped around the camera */
-#define SNOW_COUNT 3200
-static GLfloat snowSeeds[SNOW_COUNT * 4];
+/* Specks: seeds in a unit cube, wrapped around the camera; each twice
+   (head, tail) for the streaks */
+#define SNOW_COUNT 6000
+static GLfloat snowSeeds[SNOW_COUNT * 2 * 4], snowTail[SNOW_COUNT * 2];
 static int snowReady = 0;
 
-/* the sub's path: where it is, then where it was every WAKE_STEP seconds */
-#define WAKE_STEP 0.16f
+/* the jets' path: at the nozzles now, then where they were every WAKE_STEP s */
+#define WAKE_STEP 0.18f
 static float wake[8][3];
 static float wakeTime = -1.0f;
 
 static void updateWake() {
     float t = F[F_TIME];
-    const float *sp = F + F_SUB;
-    float dx = sp[0] - wake[0][0], dy = sp[1] - wake[0][1], dz = sp[2] - wake[0][2];
-    if (wakeTime < 0 || F[F_SUBON] < 0.5f || dx * dx + dy * dy + dz * dz > 4000.0f * 4000.0f
-            || t < wakeTime) {
-        for (int k = 0; k < 8; k++) {
-            memcpy(wake[k], sp, sizeof wake[k]);
-        }
+    const float *sp = F + F_SUB, *f = F + F_SUBDIR;
+    float noz[3] = {sp[0] - f[0] * 260.0f, sp[1] - f[1] * 260.0f, sp[2] - f[2] * 260.0f};
+    float dx = noz[0] - wake[0][0], dy = noz[1] - wake[0][1], dz = noz[2] - wake[0][2];
+    if (wakeTime < 0 || F[F_SUBON] < 0.5f || dx * dx + dy * dy + dz * dz > 4000.0f * 4000.0f || t < wakeTime) {
+        for (int k = 0; k < 8; k++) memcpy(wake[k], noz, sizeof wake[k]);
         wakeTime = t;
         return;
     }
     if (t - wakeTime >= WAKE_STEP) {
         memmove(wake[2], wake[1], sizeof(float) * 3 * 6);
-        memcpy(wake[1], sp, sizeof wake[1]);
+        memcpy(wake[1], noz, sizeof wake[1]);
         wakeTime = t;
     }
-    memcpy(wake[0], sp, sizeof wake[0]);
+    memcpy(wake[0], noz, sizeof wake[0]);
+}
+
+/* the camera's velocity (world units / s), for the streaks */
+static float camVel[3], camPrev[3], camPrevTime = -1.0f;
+
+static void updateCamVel() {
+    const float *c = F + F_CAM + 12;
+    float t = F[F_TIME], dt = t - camPrevTime;
+    float d[3] = {c[0] - camPrev[0], c[1] - camPrev[1], c[2] - camPrev[2]};
+    float jump = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+    if (camPrevTime < 0 || dt <= 0.0f || dt > 0.5f || jump > 4000.0f * 4000.0f) {
+        camVel[0] = camVel[1] = camVel[2] = 0;
+    } else {
+        for (int j = 0; j < 3; j++) camVel[j] += (d[j] / dt - camVel[j]) * 0.35f;
+    }
+    if (dt != 0.0f) {
+        memcpy(camPrev, c, sizeof camPrev);
+        camPrevTime = t;
+    }
 }
 
 static void drawSnow() {
     if (!snowReady) {
         unsigned x = 12345;
-        for (int i = 0; i < SNOW_COUNT * 4; i++) {
-            x = x * 1664525u + 1013904223u;
-            snowSeeds[i] = (x >> 8) / 16777216.0f;
+        for (int i = 0; i < SNOW_COUNT; i++) {
+            for (int k = 0; k < 4; k++) {
+                x = x * 1664525u + 1013904223u;
+                snowSeeds[i * 8 + k] = snowSeeds[i * 8 + 4 + k] = (x >> 8) / 16777216.0f;
+            }
+            snowTail[i * 2] = 0;
+            snowTail[i * 2 + 1] = 1;
         }
         snowReady = 1;
     }
@@ -2464,6 +2578,7 @@ static void drawSnow() {
     if (!invert4(F + F_CAM, worldToEye)) {
         return;
     }
+    updateCamVel();
     Saved s;
     pushState(&s);
     glEnable(GL_DEPTH_TEST);
@@ -2475,26 +2590,36 @@ static void drawSnow() {
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_CULL_FACE);
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
-    glEnable(GL_POINT_SPRITE);
     glUseProgram(pSnow.id);
     setCommon(&pSnow);
     glUniformMatrix4fv(snWorldToEye, 1, GL_FALSE, worldToEye);
     glUniformMatrix4fv(snProj, 1, GL_FALSE, proj);
-    glUniform1f(snBox, 6000.0f);
+    glUniform1f(snBox, 3600.0f);
     /* point size scale: the projection's focal length in pixels */
     glUniform1f(snPx, proj[5] * vp[3] * 0.5f / 12.0f);
+    glUniform3fv(glGetUniformLocation(pSnow.id, "uCamVel"), 1, camVel);
     updateWake();
     glUniform3fv(glGetUniformLocation(pSnow.id, "uWake"), 8, &wake[0][0]);
+    GLint uPoints = glGetUniformLocation(pSnow.id, "uPoints");
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
-    for (int u = 0; u < 4; u++) {
+    for (int u = 1; u < 4; u++) {
         glClientActiveTexture(GL_TEXTURE0 + u);
         glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     }
+    glClientActiveTexture(GL_TEXTURE0);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_VERTEX_ARRAY);
+    /* the streaks (at speed), then the specks themselves */
+    glTexCoordPointer(1, GL_FLOAT, 0, snowTail);
     glVertexPointer(4, GL_FLOAT, 0, snowSeeds);
+    glUniform1f(uPoints, 0.0f);
+    glLineWidth(1.5f);
+    glDrawArrays(GL_LINES, 0, SNOW_COUNT * 2);
+    glTexCoordPointer(1, GL_FLOAT, 2 * sizeof(GLfloat), snowTail);
+    glVertexPointer(4, GL_FLOAT, 8 * sizeof(GLfloat), snowSeeds);
+    glUniform1f(uPoints, 1.0f);
     glDrawArrays(GL_POINTS, 0, SNOW_COUNT);
-    glDisable(GL_POINT_SPRITE);
     glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
     popState(&s);
 }
@@ -2581,90 +2706,6 @@ static void drawBubbles(const float *worldToEye) {
     glEnableClientState(GL_VERTEX_ARRAY);
     glVertexPointer(4, GL_FLOAT, 0, bubs);
     glDrawArrays(GL_POINTS, 0, BUB_COUNT);
-    glDisable(GL_POINT_SPRITE);
-    glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
-    popState(&s);
-}
-
-/* Plankton sparks: shed around the hull in the deep (many when boosting) */
-#define SPARK_COUNT 2400
-#define SPARK_LIFE 2.4f
-static GLfloat sparks[SPARK_COUNT * 4];
-static GLfloat sparkSeed[SPARK_COUNT];
-static int sparkHead = 0;
-static float sparkLastTime = -1.0f, sparkCarry = 0.0f;
-
-static void emitSparks() {
-    float now = F[F_TIME];
-    if (sparkLastTime < 0) {
-        for (int i = 0; i < SPARK_COUNT; i++) {
-            sparks[i * 4 + 3] = -1e6f;
-        }
-    }
-    float dt = sparkLastTime < 0 ? 0 : now - sparkLastTime;
-    sparkLastTime = now;
-    float d = (F[F_SECTOR] - F[F_CAM + 13] / 8.0f - 15000.0f) / 15000.0f;
-    float deep = d < 0.3f ? 0.0f : d > 0.6f ? 1.0f : (d - 0.3f) / 0.3f;
-    if (F[F_SUBON] < 0.5f || dt <= 0 || dt > 0.5f || deep <= 0) {
-        return;
-    }
-    const float *p = F + F_SUB, *f = F + F_SUBDIR;
-    /* the hull's frame: sideways (heading x up) and its own up */
-    float sx = f[2], sz = -f[0];
-    float n = sqrtf(sx * sx + sz * sz);
-    if (n < 1e-3f) {
-        sx = 1; sz = 0; n = 1;
-    }
-    sx /= n; sz /= n;
-    float ux = -sz * f[1], uy = sz * f[0] - sx * f[2], uz = sx * f[1];
-    sparkCarry += (160.0f + 600.0f * F[F_BOOST]) * deep * dt;
-    while (sparkCarry >= 1.0f) {
-        sparkCarry -= 1.0f;
-        float t = rnd() * 2.0f - 1.0f;                  /* nose .. tail */
-        float a = rnd() * 6.2832f, r = 320.0f * sqrtf(rnd()) * (1.0f - 0.4f * fabsf(t));
-        float along = -150.0f - t * 380.0f;
-        float cs = cosf(a) * r, sn = sinf(a) * r * 0.6f;
-        GLfloat *b = sparks + sparkHead * 4;
-        b[0] = p[0] + f[0] * along + sx * cs + ux * sn;
-        b[1] = p[1] + f[1] * along + uy * sn;
-        b[2] = p[2] + f[2] * along + sz * cs + uz * sn;
-        b[3] = now - rnd() * dt;
-        sparkSeed[sparkHead] = rnd();
-        sparkHead = (sparkHead + 1) % SPARK_COUNT;
-    }
-}
-
-static void drawSparks(const float *worldToEye) {
-    Saved s;
-    pushState(&s);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glDepthMask(GL_FALSE);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    glDisable(GL_ALPHA_TEST);
-    glDisable(GL_SCISSOR_TEST);
-    glDisable(GL_CULL_FACE);
-    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
-    glEnable(GL_POINT_SPRITE);
-    glUseProgram(pSpark.id);
-    setCommon(&pSpark);
-    glUniformMatrix4fv(glGetUniformLocation(pSpark.id, "uWorldToEye"), 1, GL_FALSE, worldToEye);
-    glUniformMatrix4fv(glGetUniformLocation(pSpark.id, "uProj"), 1, GL_FALSE, proj);
-    glUniform1f(glGetUniformLocation(pSpark.id, "uPx"), proj[5] * vp[3] * 0.5f);
-    glUniform1f(glGetUniformLocation(pSpark.id, "uLife"), SPARK_LIFE);
-    glDisableClientState(GL_NORMAL_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-    for (int u = 1; u < 4; u++) {
-        glClientActiveTexture(GL_TEXTURE0 + u);
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    }
-    glClientActiveTexture(GL_TEXTURE0);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glTexCoordPointer(1, GL_FLOAT, 0, sparkSeed);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(4, GL_FLOAT, 0, sparks);
-    glDrawArrays(GL_POINTS, 0, SPARK_COUNT);
     glDisable(GL_POINT_SPRITE);
     glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
     popState(&s);
@@ -2856,6 +2897,10 @@ static void post(int w, int h) {
     glUniform1i(glGetUniformLocation(pLight.id, "uDepth"), 1);
     glUniformMatrix4fv(pLight.uShadowVP, 1, GL_FALSE, lightVP[shCur]);
     glUniform1f(pLight.uShadowOn, noShadows() ? 0.0f : 1.0f);
+    glUniformMatrix4fv(pLight.uSpotVP, 1, GL_FALSE, spotVP[shCur]);
+    glUniform1f(pLight.uSpotOn, spotOn && !noShadows() ? 1.0f : 0.0f);
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, texSpot[shCur]);
     glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_2D, texShadow[shCur]);
     drawQuad(0);
@@ -2886,6 +2931,7 @@ static void post(int w, int h) {
     glUniform1i(glGetUniformLocation(pPost.id, "uLight"), 3);
     glUniform1f(glGetUniformLocation(pPost.id, "uRayK"), 0.8f);
     glUniform1f(glGetUniformLocation(pPost.id, "uShadeK"), 0.8f);
+    glUniform1f(glGetUniformLocation(pPost.id, "uBeamK"), 0.9f);
     glUniform1f(poBloom, 0.42f + 0.12f * d);
     static int pv = getenv("DEEP3D_RM_POSTVIS") ? atoi(getenv("DEEP3D_RM_POSTVIS")) : 0;
     glUniform1i(glGetUniformLocation(pPost.id, "uPV"), pv);
@@ -2917,8 +2963,10 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
     }
     static const char *shDump = getenv("DEEP3D_RM_SHADOWDUMP");
     if (shDump && (int) F[F_FRAME] == 200 && texCaust) {
-        static float px[SH_SIZE * SH_SIZE];
-        static unsigned char out[SH_SIZE * SH_SIZE];
+        std::vector<float> pxv(SH_SIZE * SH_SIZE);
+        std::vector<unsigned char> outv(SH_SIZE * SH_SIZE);
+        float *px = pxv.data();
+        unsigned char *out = outv.data();
         GLint active;
         glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
         glActiveTexture(GL_TEXTURE5);
@@ -2938,7 +2986,7 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
         FILE *f = fopen(shDump, "wb");
         if (f) {
             fprintf(f, "P5 %d %d 255\n", SH_SIZE, SH_SIZE);
-            fwrite(out, 1, sizeof out, f);
+            fwrite(out, 1, outv.size(), f);
             fclose(f);
         }
     }
@@ -2958,12 +3006,10 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
         drawFish();
     }
     emitBubbles();
-    emitSparks();
     if (!getenv("DEEP3D_RM_NOBUB") && !clean) {
         float worldToEye[16];
         if (invert4(F + F_CAM, worldToEye)) {
             drawBubbles(worldToEye);
-            drawSparks(worldToEye);
         }
     }
     {
@@ -2996,13 +3042,17 @@ Java_javax_microedition_m3g_Platform__1remaster(JNIEnv *env, jclass, jfloatArray
     rmStructure = 0;
     rmSpawner = 0;
     rmSky = 0;
+    rmSelf = 0;
+    rmShip = 0;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_javax_microedition_m3g_Platform__1remasterObject(JNIEnv *, jclass, jint kind) {
     rmStructure = kind == 1;
-    rmSpawner = kind == 2;
+    rmSpawner = kind == 2 || kind == 5;
     rmSky = kind == 3;
+    rmSelf = kind == 4;
+    rmShip = kind == 5;
 }
 
 extern "C" JNIEXPORT void JNICALL

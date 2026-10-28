@@ -377,7 +377,7 @@ void class_96::method_805(int64_t var1) {
 }
 
 void class_96::method_809() {
-    class_4::deep3dKind = 2;
+    class_4::deep3dKind = 5;
     this->deep3dRender();
     class_4::deep3dKind = 0;
 }
