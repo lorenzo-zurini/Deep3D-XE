@@ -90,12 +90,22 @@ static const char *WATER =
 /* depth below the surface, 0 (the shallowest stations) .. 1 (the abyss):
    the game's own scale, its depth = station depth - height / 8 */
 "float depth01(float y) { return clamp((uSector - y / 8.0 - 15000.0) / 15000.0, 0.0, 1.0); }\n"
-/* The light from above at height y: one gradient over the game's depth
-   (its sector depth - height / 8), from the surface (3.2: blinding) through
-   the shallowest stations (15000: 1, bright but comfortable) to the deepest
-   (30000: pitch black). Lamps, station lights and living light are added to
-   it, so in the deep they are all there is */
-"float sunLight(float y) { float z = clamp((uSector - y / 8.0) / 30000.0, 0.0, 1.0); return 3.2 * pow(1.0 - z, 1.7); }\n"
+/* The light from above at height y, as the water lets it through: it fades
+   with the game's depth (its sector depth - height / 8), red first, then
+   green, blue last (Beer-Lambert, per colour), so it turns blue as it dims.
+   The shallowest stations (15000) see it as the original did (1); the
+   surface is blinding (green 3.2, warmer); Gosu (22500) about 0.55; the
+   deepest stations (30000) see none: the water there is turbid as well.
+   Lamps, station lights and living light are added to it, so in the deep
+   they are all there is */
+"const vec3 ABSORB = vec3(1.6, 1.0, 0.7);\n"
+"vec3 sunLight3(float y) {\n"
+"  float z = max(uSector - y / 8.0, 0.0);\n"
+"  float t = clamp((z - 15000.0) / 15000.0, 0.0, 1.0);\n"
+"  float above = exp(7.754e-5 * max(15000.0 - z, 0.0));\n"   /* white light, stronger up to the surface */
+"  return above * exp(-7.754e-5 * ABSORB * max(z - 15000.0, 0.0)) * (1.0 - smoothstep(0.45, 1.0, t));\n"
+"}\n"
+"float sunLight(float y) { return sunLight3(y).g; }\n"
 "uniform float uLong;\n"
 "uniform float uSelf;\n"
 "uniform float uSpawner;\n"   /* creatures, ships, items; else (uLong, uSelf: 0) weapons, effects */
@@ -132,14 +142,15 @@ static const char *WATER =
 "  c *= 1.0 - smoothstep(0.44, 0.88, v);\n"
 "  return c + TEAL * 0.035;\n"
 "}\n"
-/* the water's light along dir, seen from height y: the dome, bluer the
-   deeper, and as bright as the light from above there; what distant things
+/* the water's light along dir, seen from height y: the dome, as bright and
+   as blue as the light where the line of sight goes (some 2000 m up or down
+   it: the fading is seen, lighter above, darker below); what distant things
    melt into */
 "vec3 water(vec3 dir, float y) {\n"
 "  float d = depth01(y);\n"
 "  vec3 c = dome(dir);\n"
 "  c = mix(c, TEAL * 0.35 * (0.6 + 0.4 * smoothstep(-0.8, 0.6, dir.y)), d * d * 0.5);\n"
-"  return c * sunLight(y);\n"
+"  return c * sunLight3(y + dir.y * 16000.0);\n"
 "}\n"
 "float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n"
 /* interleaved gradient noise: an even, fixed dither per pixel (it does not
@@ -315,7 +326,7 @@ static const char *SCENE_FS =
    /* the models are pre-lit: light from above gives them shape, the depth
       dims them, and a rim of water colour sits them in the water */
 "  float sky = N.y * 0.5 + 0.5;\n"
-"  col *= mix(0.76, 1.1, sky) * L;\n"
+"  col *= mix(0.76 - 0.3 * d, 1.1, sky) * sunLight3(wp.y);\n"
 "  float rim = pow(1.0 - abs(dot(N, V)), 3.0);\n"
 "  col += water(-N, wp.y) * rim * 0.22;\n"
 "  float up = smoothstep(-0.15, 0.85, N.y);\n"
@@ -432,7 +443,7 @@ static const char *SNOW_VS =
 "  float big = aSeed.w > 0.93 ? 2.2 : 1.0;\n"
 "  gl_PointSize = clamp(26.0 * big * uPx / max(dist, 1.0), 1.0, 9.0 * big);\n"
 "  float d = depth01(wp.y); float L = sunLight(wp.y);\n"
-"  vec3 c = mix(TEAL, ZENITH, 0.45) * L * 0.8;\n"
+"  vec3 c = mix(TEAL, ZENITH, 0.45) * sunLight3(wp.y) * 0.8;\n"
 "  c += lamps(wp, normalize(cam - wp)) * 0.55;\n"
 "  float glow = 0.0;\n"
 "  if (fract(aSeed.w * 97.0) < 0.10) {\n"
@@ -476,7 +487,7 @@ static const char *BUBBLE_VS =
 "  float r = (7.0 + aSeed * 16.0) * (1.0 + k * 1.4);\n"
 "  gl_PointSize = clamp(r * 2.0 * uPx / max(dist, 1.0), 1.0, 28.0);\n"
 "  float d = depth01(wp.y);\n"
-"  vec3 c = (ZENITH * sunLight(wp.y) + water(vec3(0.0, 1.0, 0.0), wp.y)) * 0.5;\n"
+"  vec3 c = (ZENITH * sunLight3(wp.y) + water(vec3(0.0, 1.0, 0.0), wp.y)) * 0.5;\n"
 "  c += lamps(wp, normalize(uCamToWorld[3].xyz - wp)) * 0.5;\n"
 "  float a = (k < 0.0 || k > 1.0) ? 0.0 : smoothstep(0.0, 0.06, k) * (1.0 - smoothstep(0.7, 1.0, k));\n"
 "  a *= smoothstep(150.0, 450.0, dist) * step(wp.y, uSurfY - 50.0);\n"
@@ -585,7 +596,7 @@ static const char *FISH_FS =
 "  alb = mix(alb, cTail, smoothstep(0.75, 0.9, vUV.x));\n"
 "  alb *= 0.9 + 0.2 * seed;\n"
 "  float sky = N.y * 0.5 + 0.5;\n"
-"  vec3 col = alb * (0.3 + 0.7 * sky) * L;\n"
+"  vec3 col = alb * (0.3 + 0.7 * sky) * sunLight3(vWp.y);\n"
    /* silver: the flanks mirror the water and the light above */
 "  vec3 R = reflect(V, N);\n"
 "  vec3 env = water(R, cam.y) + uSunCol * pow(max(dot(R, uSunDir), 0.0), 20.0) * min(L * L, 4.0) * 1.6;\n"
@@ -674,7 +685,8 @@ static const char *POST_FS =
 "  float phase = 0.6 + 0.9 * pow(max(dot(wrd, uSunDir), 0.0), 4.0);\n"
 "  float rays = lt.r * uRayK * phase;\n"
 "  rays = rays / (1.0 + rays * 1.2);\n"
-"  c = c * (1.0 - lt.g * uShadeK) + uSunCol * rays;\n"
+"  vec3 hue = min(sunLight3(cam.y) / max(sunLight(cam.y), 1e-3), vec3(2.0));\n"
+"  c = c * (1.0 - lt.g * uShadeK) + uSunCol * hue * rays;\n"
 "  dbg.g = rays;\n"
    /* the sub's headlight: a beam in the water */
 "  if (uSubOn > 0.5) {\n"

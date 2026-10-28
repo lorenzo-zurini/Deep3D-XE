@@ -1688,13 +1688,13 @@ void class_26::method_271() {
 
 void class_26::deep3dSurface() {
     int32_t var1 = ((class_21::method_180() != nullptr) ? class_21::method_180()->field_1140 : 21000) * 8;
-    jrt::Ref<jrt::Array<jrt::Ref<jrt::Array<jrt::Ref<class_91>>>>> var2 = jrt::arrayOf<jrt::Ref<jrt::Array<jrt::Ref<class_91>>>>({this->field_273, this->field_274});
+    jrt::Ref<jrt::Array<jrt::Ref<jrt::Array<jrt::Ref<class_91>>>>> var2 = jrt::arrayOf<jrt::Ref<jrt::Array<jrt::Ref<class_91>>>>({this->field_273, this->field_274, this->field_275});
     for (int32_t var3 = 0; var3 < var2->length; var3++) {
         if (var2->at(var3) != nullptr) {
             for (int32_t var4 = 0; var4 < var2->at(var3)->length; var4++) {
                 jrt::Ref<class_91> var5 = var2->at(var3)->at(var4);
-                if (((var5 != nullptr) && (var5->field_1226 != nullptr)) && (var5->field_1226->method_853() > (var1 - 2000))) {
-                    var5->field_1226->method_845(var5->field_1226->method_852(), (var1 - 2000), var5->field_1226->method_854());
+                if (((var5 != nullptr) && (var5->field_1226 != nullptr)) && (var5->field_1226->method_853() > (var1 - 3000))) {
+                    var5->field_1226->method_845(var5->field_1226->method_852(), (var1 - 3000), var5->field_1226->method_854());
                 }
             }
         }

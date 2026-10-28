@@ -769,8 +769,17 @@ void class_51::method_428() {
     this->field_564 = true;
 }
 
+bool class_51::deep3dRow(int32_t var1) {
+    org::deep3d::GameUi::rowIndex(var1);
+    return this->field_559 == var1;
+}
+
 void class_51::method_429() {
     org::deep3d::GameUi::controls(1, (-6), (-7), 0);
+    {
+        jrt::Ref<class_51> deep3dSelf(this);
+        org::deep3d::GameUi::menuSelect([deep3dSelf](int32_t var1) { deep3dSelf->field_559 = var1; });
+    }
     if (this->field_560 == 5) {
         org::deep3d::GameUi::pauseMenuShown();
     }
@@ -784,16 +793,16 @@ void class_51::method_429() {
         case 0:
             this->field_558 = (class_21::method_212() > int64_t(0)) ? this->field_557 : 0;
             class_67::method_591(class_84::field_1116->method_4(67), class_51::field_552, class_51::field_553, class_51::field_554, ((((class_21::method_212() > int64_t(0)) ? class_51::field_555->at(this->field_560) : (class_51::field_555->at(this->field_560) - 1)) + 2) * this->field_557));
-            class_67::method_584(class_84::field_1116->method_4(0), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, (this->field_559 == 0));
-            class_67::method_584(class_84::field_1116->method_4(1), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, (this->field_559 == 1));
+            class_67::method_584(class_84::field_1116->method_4(0), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, this->deep3dRow(0));
+            class_67::method_584(class_84::field_1116->method_4(1), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, this->deep3dRow(1));
             if (class_21::method_212() > int64_t(0)) {
-                class_67::method_584(class_84::field_1116->method_4(2), class_51::field_552, ((class_51::field_553 + 12) + (2 * this->field_557)), class_51::field_554, (this->field_559 == 2));
+                class_67::method_584(class_84::field_1116->method_4(2), class_51::field_552, ((class_51::field_553 + 12) + (2 * this->field_557)), class_51::field_554, this->deep3dRow(2));
             }
-            class_67::method_584(class_84::field_1116->method_4(3), class_51::field_552, (((class_51::field_553 + 12) + (2 * this->field_557)) + this->field_558), class_51::field_554, (this->field_559 == 3));
-            class_67::method_584(class_84::field_1116->method_4(4), class_51::field_552, (((class_51::field_553 + 12) + (3 * this->field_557)) + this->field_558), class_51::field_554, (this->field_559 == 4));
-            class_67::method_584(class_84::field_1116->method_4(5), class_51::field_552, (((class_51::field_553 + 12) + (4 * this->field_557)) + this->field_558), class_51::field_554, (this->field_559 == 5));
+            class_67::method_584(class_84::field_1116->method_4(3), class_51::field_552, (((class_51::field_553 + 12) + (2 * this->field_557)) + this->field_558), class_51::field_554, this->deep3dRow(3));
+            class_67::method_584(class_84::field_1116->method_4(4), class_51::field_552, (((class_51::field_553 + 12) + (3 * this->field_557)) + this->field_558), class_51::field_554, this->deep3dRow(4));
+            class_67::method_584(class_84::field_1116->method_4(5), class_51::field_552, (((class_51::field_553 + 12) + (4 * this->field_557)) + this->field_558), class_51::field_554, this->deep3dRow(5));
             if (this->field_578) {
-                class_67::method_584(this->field_581, class_51::field_552, (((class_51::field_553 + 12) + (5 * this->field_557)) + this->field_558), class_51::field_554, (this->field_559 == 6));
+                class_67::method_584(this->field_581, class_51::field_552, (((class_51::field_553 + 12) + (5 * this->field_557)) + this->field_558), class_51::field_554, this->deep3dRow(6));
             }
             break;
         case 1:
@@ -817,28 +826,28 @@ void class_51::method_429() {
                         this->field_561 = jrt::concat(this->field_561, JRT_LIT(u" "), this->field_566);
                     }
                 }
-                class_67::method_584(class_67::method_600(this->field_561, (class_51::field_554 - 12)), class_51::field_552, ((class_51::field_553 + 12) + (var2 * this->field_557)), class_51::field_554, (this->field_559 == var2));
+                class_67::method_584(class_67::method_600(this->field_561, (class_51::field_554 - 12)), class_51::field_552, ((class_51::field_553 + 12) + (var2 * this->field_557)), class_51::field_554, this->deep3dRow(var2));
             }
             break;
         case 3:
             class_67::method_591(class_84::field_1116->method_4(3), class_51::field_552, class_51::field_553, class_51::field_554, ((class_51::field_555->at(this->field_560) + 2) * this->field_557));
-            class_67::method_584(([&]() { jrt::Ref<java::lang::String> __c1 = class_84::field_1116->method_4(6); jrt::Ref<java::lang::String> __c2 = JRT_LIT(u"    "); jrt::Ref<java::lang::String> __c3 = class_84::field_1116->method_4(int32_t(class_1::field_4->at(this->field_576))); return jrt::concat(__c1, __c2, __c3); }()), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, (this->field_559 == 0));
-            class_67::method_584(([&]() { jrt::Ref<java::lang::String> __c4 = class_84::field_1116->method_4(10); jrt::Ref<java::lang::String> __c5 = JRT_LIT(u"    "); jrt::Ref<java::lang::String> __c6 = class_84::field_1116->method_4((class_84::field_1081 ? 14 : 15)); return jrt::concat(__c4, __c5, __c6); }()), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, (this->field_559 == 1));
-            class_67::method_584(([&]() { jrt::Ref<java::lang::String> __c7 = class_84::field_1116->method_4(13); jrt::Ref<java::lang::String> __c8 = JRT_LIT(u"    "); jrt::Ref<java::lang::String> __c9 = class_84::field_1116->method_4((class_84::field_1082 ? 14 : 15)); return jrt::concat(__c7, __c8, __c9); }()), class_51::field_552, ((class_51::field_553 + 12) + (2 * this->field_557)), class_51::field_554, (this->field_559 == 2));
+            class_67::method_584(([&]() { jrt::Ref<java::lang::String> __c1 = class_84::field_1116->method_4(6); jrt::Ref<java::lang::String> __c2 = JRT_LIT(u"    "); jrt::Ref<java::lang::String> __c3 = class_84::field_1116->method_4(int32_t(class_1::field_4->at(this->field_576))); return jrt::concat(__c1, __c2, __c3); }()), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, this->deep3dRow(0));
+            class_67::method_584(([&]() { jrt::Ref<java::lang::String> __c4 = class_84::field_1116->method_4(10); jrt::Ref<java::lang::String> __c5 = JRT_LIT(u"    "); jrt::Ref<java::lang::String> __c6 = class_84::field_1116->method_4((class_84::field_1081 ? 14 : 15)); return jrt::concat(__c4, __c5, __c6); }()), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, this->deep3dRow(1));
+            class_67::method_584(([&]() { jrt::Ref<java::lang::String> __c7 = class_84::field_1116->method_4(13); jrt::Ref<java::lang::String> __c8 = JRT_LIT(u"    "); jrt::Ref<java::lang::String> __c9 = class_84::field_1116->method_4((class_84::field_1082 ? 14 : 15)); return jrt::concat(__c7, __c8, __c9); }()), class_51::field_552, ((class_51::field_553 + 12) + (2 * this->field_557)), class_51::field_554, this->deep3dRow(2));
             break;
         case 4:
             class_67::method_591(class_84::field_1116->method_4(4), class_51::field_552, class_51::field_553, class_51::field_554, ((class_51::field_555->at(this->field_560) + 2) * this->field_557));
-            class_67::method_584(class_84::field_1116->method_4(18), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, (this->field_559 == 0));
-            class_67::method_584(class_84::field_1116->method_4(19), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, (this->field_559 == 1));
-            class_67::method_584(class_84::field_1116->method_4(20), class_51::field_552, ((class_51::field_553 + 12) + (2 * this->field_557)), class_51::field_554, (this->field_559 == 2));
+            class_67::method_584(class_84::field_1116->method_4(18), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, this->deep3dRow(0));
+            class_67::method_584(class_84::field_1116->method_4(19), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, this->deep3dRow(1));
+            class_67::method_584(class_84::field_1116->method_4(20), class_51::field_552, ((class_51::field_553 + 12) + (2 * this->field_557)), class_51::field_554, this->deep3dRow(2));
             break;
         case 5:
             class_67::method_591(class_84::field_1116->method_4(16), class_51::field_552, class_51::field_553, class_51::field_554, ((class_51::field_555->at(this->field_560) + 2) * this->field_557));
-            class_67::method_584(class_84::field_1116->method_4(3), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, (this->field_559 == 0));
-            class_67::method_584(class_84::field_1116->method_4(4), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, (this->field_559 == 1));
-            class_67::method_584(class_84::field_1116->method_4(75), class_51::field_552, ((class_51::field_553 + 12) + (2 * this->field_557)), class_51::field_554, (this->field_559 == 2));
-            class_67::method_584(class_84::field_1116->method_4(266), class_51::field_552, ((class_51::field_553 + 12) + (3 * this->field_557)), class_51::field_554, (this->field_559 == 3));
-            class_67::method_584(class_84::field_1116->method_4(5), class_51::field_552, ((class_51::field_553 + 12) + (4 * this->field_557)), class_51::field_554, (this->field_559 == 4));
+            class_67::method_584(class_84::field_1116->method_4(3), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, this->deep3dRow(0));
+            class_67::method_584(class_84::field_1116->method_4(4), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, this->deep3dRow(1));
+            class_67::method_584(class_84::field_1116->method_4(75), class_51::field_552, ((class_51::field_553 + 12) + (2 * this->field_557)), class_51::field_554, this->deep3dRow(2));
+            class_67::method_584(class_84::field_1116->method_4(266), class_51::field_552, ((class_51::field_553 + 12) + (3 * this->field_557)), class_51::field_554, this->deep3dRow(3));
+            class_67::method_584(class_84::field_1116->method_4(5), class_51::field_552, ((class_51::field_553 + 12) + (4 * this->field_557)), class_51::field_554, this->deep3dRow(4));
             break;
         case 6:
             class_67::method_591(class_84::field_1116->method_4(18), class_51::field_552, class_51::field_553, class_51::field_554, (((class_84::field_1121 - class_51::field_553) - class_67::method_577()) - 10));
@@ -869,8 +878,8 @@ void class_51::method_429() {
             break;
         case 9:
             class_67::method_591(class_84::field_1116->method_4(0), class_51::field_552, class_51::field_553, class_51::field_554, ((class_51::field_555->at(this->field_560) + 2) * this->field_557));
-            class_67::method_584(class_84::field_1116->method_4(232), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, (this->field_559 == 0));
-            class_67::method_584(class_84::field_1116->method_4(231), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, (this->field_559 == 1));
+            class_67::method_584(class_84::field_1116->method_4(232), class_51::field_552, (class_51::field_553 + 12), class_51::field_554, this->deep3dRow(0));
+            class_67::method_584(class_84::field_1116->method_4(231), class_51::field_552, ((class_51::field_553 + 12) + this->field_557), class_51::field_554, this->deep3dRow(1));
         case 10:
             ;
         default:
@@ -895,12 +904,12 @@ void class_51::method_429() {
             } else if ((this->field_574 != nullptr) && (this->field_574->field_592 != nullptr)) {
                 class_84::field_1117->drawImage(this->field_574->field_592, ((class_51::field_552 + (class_51::field_554 >> 1)) + 1), (((var1 + 12) + this->field_557) + 6), 17);
             }
-            class_67::method_586(class_84::field_1116->method_4(302), class_51::field_552, ((((var1 + 12) + (2 * this->field_557)) + 6) + class_119::field_1459), class_51::field_554, (this->field_559 == 0), true);
+            class_67::method_586(class_84::field_1116->method_4(302), class_51::field_552, ((((var1 + 12) + (2 * this->field_557)) + 6) + class_119::field_1459), class_51::field_554, this->deep3dRow(0), true);
             if (this->field_574 != nullptr) {
-                class_67::method_586(class_84::field_1116->method_4(303), class_51::field_552, ((((var1 + 12) + (3 * this->field_557)) + 6) + class_119::field_1459), class_51::field_554, (this->field_559 == 1), true);
-                class_67::method_586(class_84::field_1116->method_4(74), class_51::field_552, ((((var1 + 12) + (4 * this->field_557)) + 6) + class_119::field_1459), class_51::field_554, (this->field_559 == 2), true);
+                class_67::method_586(class_84::field_1116->method_4(303), class_51::field_552, ((((var1 + 12) + (3 * this->field_557)) + 6) + class_119::field_1459), class_51::field_554, this->deep3dRow(1), true);
+                class_67::method_586(class_84::field_1116->method_4(74), class_51::field_552, ((((var1 + 12) + (4 * this->field_557)) + 6) + class_119::field_1459), class_51::field_554, this->deep3dRow(2), true);
             } else {
-                class_67::method_586(class_84::field_1116->method_4(74), class_51::field_552, ((((var1 + 12) + (3 * this->field_557)) + 6) + class_119::field_1459), class_51::field_554, (this->field_559 == 1), true);
+                class_67::method_586(class_84::field_1116->method_4(74), class_51::field_552, ((((var1 + 12) + (3 * this->field_557)) + 6) + class_119::field_1459), class_51::field_554, this->deep3dRow(1), true);
             }
             break;
         case 13:

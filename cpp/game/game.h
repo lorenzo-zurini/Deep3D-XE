@@ -2262,6 +2262,7 @@ public:
     virtual bool method_426();
     virtual void method_427(int32_t var1);
     virtual void method_428();
+    bool deep3dRow(int32_t var1);
     virtual void method_429();
     virtual void method_430(int32_t var1);
     bool __dumpable() override { return true; }

@@ -260,6 +260,11 @@ public:
     static void suspend(bool on);
     static void registerItem(Ref<String> text, int32_t x, int32_t y, int32_t w, int32_t h, bool selected);
     static void row(int32_t x, int32_t y, int32_t w, int32_t h, bool selected, bool selectable);
+    /** The index the next row registered has in its menu (see menuSelect). */
+    static void rowIndex(int32_t index);
+    /** This frame's menu can be selected directly: hovering a row with an
+        index selects it at once (the game's own menus move once per 150 ms). */
+    static void menuSelect(std::function<void(int32_t)> select);
     static void tab(int32_t x, int32_t y, int32_t w, int32_t h, bool selected);
     static void button(int32_t x, int32_t y, int32_t w, int32_t h, bool selected);
     static void zone(int32_t x, int32_t y, int32_t w, int32_t h, int32_t code);

@@ -34,6 +34,7 @@ struct Item {
     bool selected, selectable;
     int32_t layer;
     int32_t code;   // ZONE: key or ACT_*; SCROLL: 1 vertical, 2 horizontal
+    int32_t index = -1;   // ROW: its index in a menu that can be selected directly
     bool contains(int32_t gx, int32_t gy) const { return gx >= x && gx < x + w && gy >= y && gy < y + h; }
 };
 
@@ -41,6 +42,8 @@ using Profile = GameUi::Profile;
 
 std::mutex gBuild;
 std::vector<Item> gBuilding;
+int32_t gBuildIndex = -1;
+std::function<void(int32_t)> gBuildSelect, gSelect;
 int32_t gBuildLayer = GameUi::SCREEN;
 std::optional<Profile> gBuildProfile;
 bool gBuildPauseMenu = false;
@@ -80,6 +83,21 @@ std::optional<Pulse> current;
 int32_t frames = 0;
 bool released = false;
 
+/* Straight to the game, on the thread that presents its frames (between
+   them): it sees the key at its next update. Through the event thread a
+   step through a menu took about 8 frames; this way it takes 2. */
+void deliver(int32_t code, bool pressed) {
+    if (Det::queueKey(code, pressed)) return;   // deterministic runs: at the loop's start
+    auto d = Runtime::getCurrent();
+    if (auto* c = dynamic_cast<javax::microedition::lcdui::Canvas*>(d.get())) {
+        if (pressed) {
+            c->keyPressed(code);
+        } else {
+            c->keyReleased(code);
+        }
+    }
+}
+
 void pulse(int32_t code, int32_t hold, int32_t gap) {
     std::lock_guard<std::mutex> g(lock);
     queue.push_back({code, hold, gap});
@@ -98,17 +116,27 @@ void frame() {
         queue.pop_front();
         frames = 0;
         released = false;
-        Input::sendMidpKey(current->code, true);
+        deliver(current->code, true);
         return;
     }
     frames++;
     if (!released && frames >= current->hold) {
-        Input::sendMidpKey(current->code, false);
+        deliver(current->code, false);
         released = true;
         frames = 0;
     } else if (released && frames >= current->gap) {
         current.reset();
     }
+}
+
+/** The next queued pulse begins now (not a frame later). */
+void startNext() {
+    bool start;
+    {
+        std::lock_guard<std::mutex> g(lock);
+        start = !current && !queue.empty();
+    }
+    if (start) frame();
 }
 }  // namespace sequencer
 
@@ -121,7 +149,8 @@ void add(Kind kind, std::optional<std::string> text, int32_t x, int32_t y, int32
          bool selectable, int32_t code) {
     if (gSuspended) return;
     std::lock_guard<std::mutex> g(gBuild);
-    gBuilding.push_back({kind, std::move(text), x, y, w, h, selected, selectable, gBuildLayer, code});
+    gBuilding.push_back({kind, std::move(text), x, y, w, h, selected, selectable, gBuildLayer, code, gBuildIndex});
+    gBuildIndex = -1;
 }
 
 void fire(int32_t code);
@@ -325,7 +354,13 @@ void applyMouse(const std::vector<Item>& items) {
             break;
         case Kind::ROW:
         case Kind::BUTTON:
-            if (!hit->selected) {
+            if (!hit->selected && hit->index >= 0 && gSelect) {
+                // the game's menu, selected at once (the frame after shows it)
+                if (click || millis() - gLastMouseMove < 1500) {
+                    gSelect(hit->index);
+                    if (click) fire(GameUi::ACT_CONFIRM);
+                }
+            } else if (!hit->selected) {
                 // hovering highlights; a click also confirms on arrival
                 if (click || millis() - gLastMouseMove < 1500) startWalk(*hit, click);
             } else if (click) {
@@ -403,6 +438,14 @@ void GameUi::registerItem(Ref<String> text, int32_t x, int32_t y, int32_t w, int
 void GameUi::row(int32_t x, int32_t y, int32_t w, int32_t h, bool selected, bool selectable) {
     add(Kind::ROW, std::nullopt, x, y, w, h, selected, selectable, 0);
 }
+void GameUi::rowIndex(int32_t index) {
+    std::lock_guard<std::mutex> g(gBuild);
+    gBuildIndex = index;
+}
+void GameUi::menuSelect(std::function<void(int32_t)> select) {
+    std::lock_guard<std::mutex> g(gBuild);
+    gBuildSelect = std::move(select);
+}
 void GameUi::tab(int32_t x, int32_t y, int32_t w, int32_t h, bool selected) {
     add(Kind::TAB, std::nullopt, x, y, w, h, selected, true, 0);
 }
@@ -462,6 +505,9 @@ void GameUi::commitFrame() {
     {
         std::lock_guard<std::mutex> g(gBuild);
         snapshot.swap(gBuilding);
+        gSelect = std::move(gBuildSelect);
+        gBuildSelect = nullptr;
+        gBuildIndex = -1;
         p = gBuildProfile;
         gBuildProfile.reset();
         gBuildLayer = SCREEN;
@@ -491,6 +537,7 @@ void GameUi::commitFrame() {
         if (walk != NONE) fire(walk);
         applySelectTarget(active);
         applyMouse(active);
+        sequencer::startNext();
     }
     if (gWalkTarget) {
         // the mouse snaps: the frames stepping through rows are not shown
