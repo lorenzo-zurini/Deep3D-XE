@@ -185,7 +185,12 @@ static const char *WATER =
 "const float CAUST_MEAN = 0.143;\n"
 "float causticAt(vec3 p, float blur) {\n"
 "  vec2 uv = (uCaustVP * vec4(p, 1.0)).xy * 0.5 + 0.5;\n"
+   /* vertex shaders (WATER is their head too) have no bias: a level */
+"#ifdef RM_VERTEX\n"
+"  float c = texture2DLod(uCaustMap, uv, blur).r;\n"
+"#else\n"
 "  float c = texture2D(uCaustMap, uv, blur).r;\n"
+"#endif\n"
 "  vec2 e = min(uv, 1.0 - uv);\n"
 "  return mix(CAUST_MEAN, c, smoothstep(0.0, 0.12, min(e.x, e.y)));\n"
 "}\n"
@@ -206,38 +211,53 @@ static const char *WATER =
 "uniform float uShadowOn;\n"
 "uniform float uShadowDepth;\n"   /* world units per unit of stored depth */
 "uniform float uShadowTexel;\n"   /* map uv per world unit */
-"float shadowAt(vec3 p, float rot) {\n"
-"  if (uShadowOn < 0.5) return 1.0;\n"
-"  vec3 q = (uShadowVP * vec4(p, 1.0)).xyz * 0.5 + 0.5;\n"
-"  if (q.x <= 0.002 || q.x >= 0.998 || q.y <= 0.002 || q.y >= 0.998 || q.z >= 1.0) return 1.0;\n"
+/* one map's answer at q (its texture coordinates and depth): 1 lit */
+"float shadowIn(sampler2D map, vec3 q, float depthK, float texel, float rot) {\n"
 "  vec2 a = vec2(cos(rot), sin(rot)), b = vec2(-a.y, a.x);\n"
    /* the casters around: how far above p they are */
-"  float sr = 700.0 * uShadowTexel, nb = 0.0, above = 0.0;\n"
+"  float sr = 700.0 * texel, nb = 0.0, above = 0.0, bias = 60.0 / depthK;\n"
 "  for (int k = 0; k < 4; k++) {\n"
 "    vec2 o = (k == 0 ? a : k == 1 ? -a : k == 2 ? b : -b) * sr * (k < 2 ? 0.5 : 1.0);\n"
-"    float d = texture2D(uShadowMap, q.xy + o).r;\n"
-"    if (d < q.z - 60.0 / uShadowDepth) { nb += 1.0; above += (q.z - d) * uShadowDepth; }\n"
+"    float d = texture2D(map, q.xy + o).r;\n"
+"    if (d < q.z - bias) { nb += 1.0; above += (q.z - d) * depthK; }\n"
 "  }\n"
-"  float dc = texture2D(uShadowMap, q.xy).r;\n"
-"  if (dc < q.z - 60.0 / uShadowDepth) { nb += 1.0; above += (q.z - dc) * uShadowDepth; }\n"
+"  float dc = texture2D(map, q.xy).r;\n"
+"  if (dc < q.z - bias) { nb += 1.0; above += (q.z - dc) * depthK; }\n"
 "  if (nb < 0.5) return 1.0;\n"
 "  above /= nb;\n"
-"  vec2 ed = min(q.xy, 1.0 - q.xy);\n"
-"  float edge = smoothstep(0.0, 0.06, min(ed.x, ed.y));\n"
    /* the penumbra grows with the distance below the caster */
-"  float r = (40.0 + above * 0.2) * uShadowTexel;\n"
+"  float r = (40.0 + above * 0.2) * texel;\n"
 "  float lit = 0.0;\n"
 "  for (int k = 0; k < 8; k++) {\n"
 "    float ang = float(k) * 2.39996 + rot;\n"
 "    vec2 o = vec2(cos(ang), sin(ang)) * r * sqrt((float(k) + 0.5) / 8.0);\n"
-"    lit += step(q.z - 60.0 / uShadowDepth, texture2D(uShadowMap, q.xy + o).r);\n"
+"    lit += step(q.z - bias, texture2D(map, q.xy + o).r);\n"
 "  }\n"
-"  lit /= 8.0;\n"
-"  return mix(1.0, mix(lit, 1.0, smoothstep(6000.0, 26000.0, above)), edge);\n"
+"  return mix(lit / 8.0, 1.0, smoothstep(6000.0, 26000.0, above));\n"
+"}\n"
+/* the near map where it reaches (fine), the far one beyond it (coarse:
+   the shadows of distant stations), each fading out at its edge */
+"uniform sampler2D uShadowFarMap;\n"
+"uniform mat4 uShadowFarVP;\n"
+"uniform float uShadowFarDepth;\n"
+"uniform float uShadowFarTexel;\n"
+"float shadowAt(vec3 p, float rot) {\n"
+"  if (uShadowOn < 0.5) return 1.0;\n"
+"  vec3 q = (uShadowVP * vec4(p, 1.0)).xyz * 0.5 + 0.5;\n"
+"  vec2 e = min(q.xy, 1.0 - q.xy);\n"
+"  float nearW = smoothstep(0.0, 0.06, min(e.x, e.y)) * step(q.z, 0.999);\n"
+"  float near = nearW > 0.0 ? shadowIn(uShadowMap, q, uShadowDepth, uShadowTexel, rot) : 1.0;\n"
+"  if (nearW >= 1.0) return near;\n"
+"  vec3 qf = (uShadowFarVP * vec4(p, 1.0)).xyz * 0.5 + 0.5;\n"
+"  vec2 ef = min(qf.xy, 1.0 - qf.xy);\n"
+"  float farW = smoothstep(0.0, 0.05, min(ef.x, ef.y)) * step(qf.z, 0.999);\n"
+"  float far = farW > 0.0 ? mix(1.0, shadowIn(uShadowFarMap, qf, uShadowFarDepth, uShadowFarTexel, rot), farW) : 1.0;\n"
+"  return mix(far, near, nearW);\n"
 "}\n"
 /* light from the sub's headlight, its engines and other ships' lamps at wp */
-/* The sub's floodlights: two spot lamps on the bow (uSpotPos +- uSpotSide),
-   along its heading, about 52 degrees wide with a soft edge; the light
+/* The sub's floodlights: two spot lamps where the model's light cones were
+   (uSpotPos +- uSpotSide), aimed as they were (uSpotDirs), about 16 degrees
+   wide with a soft edge to 26; the light
    falls off with distance and is absorbed by the water on the way. A shadow
    map from the bow (uSpotMap) stops it at whatever is in the way */
 "uniform sampler2D uSpotMap;\n"
@@ -262,7 +282,7 @@ static const char *WATER =
 "  for (int k = 0; k < 2; k++) {\n"
 "    vec3 lp = uSpotPos + uSpotSide * (k == 0 ? -1.0 : 1.0);\n"
 "    vec3 tl = p - lp; float dl = max(length(tl), 1.0); vec3 d = tl / dl;\n"
-"    float cone = smoothstep(0.951, 0.985, dot(d, uSpotDirs[k]));\n"
+"    float cone = smoothstep(0.974, 0.990, dot(d, uSpotDirs[k]));\n"
 "    float a = cone / (1.0 + (dl / 4500.0) * (dl / 4500.0)) * trans1(dl * 0.6) * smoothstep(60.0, 300.0, dl);\n"
 "    if (a > acc) ld = d;\n"
 "    acc += a;\n"
@@ -697,10 +717,16 @@ static const char *POST_FS =
 "  float rays = lt.r * uRayK * phase;\n"
 "  rays = rays / (1.0 + rays * 1.2);\n"
 "  vec3 hue = min(sunLight3(cam.y) / max(sunLight(cam.y), 1e-3), vec3(2.0));\n"
-"  c = c * (1.0 - lt.g * uShadeK) + uSunCol * hue * rays;\n"
+   /* the shade takes away the light the water scatters inside the shadow,
+      no more than the water between here and what is seen holds: things
+      lit outside the shadow stay lit */
+"  float sceneT = z >= 0.99999 ? 0.0 : trans1(sceneDist);\n"
+"  c = max(c - water(wrd, cam.y) * (1.0 - sceneT) * lt.g * uShadeK, c * 0.3) + uSunCol * hue * rays;\n"
 "  dbg.g = rays;\n"
    /* the floodlights' beams in the water (LIGHT_FS, shadowed) */
-"  c += FLOOD * (1.0 - exp(-lt.b * uBeamK * 2.0)) * 0.6;\n"
+   /* a lamp's beam is faint beside sunlit water, plain in the dark */
+"  float amb = dot(water(wrd, cam.y), vec3(0.3, 0.5, 0.2));\n"
+"  c += FLOOD * (1.0 - exp(-lt.b * uBeamK * 2.0)) * 0.6 / (1.0 + amb * 4.0);\n"
    /* halos of other ships' lamps in the murk */
 "  for (int k = 0; k < 8; k++) {\n"
 "    if (k >= uNumLights) break;\n"
@@ -793,7 +819,7 @@ static const char *LIGHT_FS =
 "  vec3 cam = uCamToWorld[3].xyz;\n"
 "  float tmax = min(sceneDist, 40000.0);\n"
 "  float jit = ign(gl_FragCoord.xy);\n"
-"  float R = 0.0, S = 0.0, B = 0.0;\n"
+"  float R = 0.0, S = 0.0, W = 0.0, B = 0.0;\n"
 "  for (int i = 0; i < 40; i++) {\n"
 "    float u = (float(i) + jit) / 40.0;\n"
 "    float t = tmax * u * u;\n"                   /* denser near, sparser far */
@@ -805,13 +831,16 @@ static const char *LIGHT_FS =
 "    float c = causticLod(p, 0.5 + 2.5 * d + t / 6000.0);\n"
 "    R += max(c - 0.6 * CAUST_MEAN, 0.0) * vis * T * min(Lp * Lp, 4.0) * dt;\n"
 "    S += (1.0 - vis) * T * Lp * dt;\n"
+"    W += T * Lp * dt;\n"
 "    vec3 ld; float f = floodAt(p, ld);\n"
 "    if (f > 0.0) B += f * T * (0.91 / pow(1.09 + 0.6 * dot(ld, wrd), 1.5)) * dt;\n"   /* turbid water: backscatter shows the beams from behind too; brightest looking into them */
 "  }\n"
 "  float k = 1.0 / 18000.0;\n"
-   /* the shade: the light a shadow keeps out of the path, saturating (a
-      station's shadow, a few thousand units across, reads clearly) */
-"  float shade = 1.0 - exp(-S / 1800.0);\n"
+   /* the shade: the share of the light scattered along the path that the
+      shadows keep out. Looking out of a shadow it is the short stretch
+      inside it, so what is outside stays lit; looking along one, most.
+      Steepened, so a column of shadow far off still reads */
+"  float shade = 1.0 - exp(-3.0 * S / max(W, 1e-6));\n"
 "  gl_FragColor = vec4(R * k, shade, clamp(B / 5000.0, 0.0, 1.0), 1.0);\n"
 "}\n";
 
@@ -855,8 +884,15 @@ static int programsReady = 0;
 
 static GLuint compile(GLenum type, const char *a, const char *b) {
     GLuint s = glCreateShader(type);
-    const char *src[2] = {a, b};
-    glShaderSource(s, b ? 2 : 1, src, NULL);
+    static const char VERSION[] = "#version 120\n";
+    if (type == GL_VERTEX_SHADER && a == WATER) {
+        /* WATER marked as a vertex shader's head */
+        const char *src[3] = {"#version 120\n#define RM_VERTEX\n", a + sizeof VERSION - 1, b};
+        glShaderSource(s, 3, src, NULL);
+    } else {
+        const char *src[2] = {a, b};
+        glShaderSource(s, b ? 2 : 1, src, NULL);
+    }
     glCompileShader(s);
     GLint ok = 0;
     glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
@@ -1026,13 +1062,16 @@ static void initWaves() {
    caustics do not crawl. One for the shadow map drawn this frame (read by
    the post pass and, the next frame, by the scene) */
 #define SH_SIZE 4096
-#define SH_HALF 40000.0f          /* 80 km across: shadows as far as things are seen */
+#define SH_HALF 40000.0f          /* 80 km across: the near shadows */
+#define SHF_SIZE 2048
+#define SHF_HALF 120000.0f        /* 240 km, coarse: distant stations' shadows */
+#define SHF_RANGE 120000.0f
 #define CA_SIZE 2048
 #define SH_RANGE 60000.0f
 #define CA_HALF 40000.0f
-static GLuint texShadow[2], fbShadow[2], texCaust, fbCaust, texLight, texLight2;
+static GLuint texShadow[2], fbShadow[2], texShadowFar[2], fbShadowFar[2], texCaust, fbCaust, texLight, texLight2;
 static int shCur = 0, shHave = 0;
-static float lightVP[2][16], caustVP[16];
+static float lightVP[2][16], lightVPFar[2][16], caustVP[16];
 
 /* The floodlights' frame: a perspective view from the bow along the sub's
    heading, wide enough for both beams; its shadow map (one per frame, as
@@ -1052,12 +1091,13 @@ static void spotFrame(float *m) {
     float xn = sqrtf(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
     for (int j = 0; j < 3; j++) x[j] /= xn;
     float y[3] = {z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]};
+    /* where the model's light cones were (measured): apexes 146 to each side
+       and 119 ahead of the sub's centre, each aimed 2.3 degrees outwards */
     for (int j = 0; j < 3; j++) {
-        spotPos[j] = p[j] - z[j] * 240.0f;                       /* the bow */
-        spotSide[j] = x[j] * 280.0f;                             /* the lamps either side */
-        /* aimed 13 degrees outwards and 10 down, as a sub's floodlights are */
-        spotDirs[j] = -z[j] - x[j] * 0.23f - y[j] * 0.18f;
-        spotDirs[3 + j] = -z[j] + x[j] * 0.23f - y[j] * 0.18f;
+        spotPos[j] = p[j] - z[j] * 119.0f;
+        spotSide[j] = x[j] * 146.0f;
+        spotDirs[j] = -z[j] - x[j] * 0.041f;
+        spotDirs[3 + j] = -z[j] + x[j] * 0.041f;
     }
     for (int k = 0; k < 2; k++) {
         float n2 = sqrtf(spotDirs[k * 3] * spotDirs[k * 3] + spotDirs[k * 3 + 1] * spotDirs[k * 3 + 1] + spotDirs[k * 3 + 2] * spotDirs[k * 3 + 2]);
@@ -1078,7 +1118,7 @@ static void spotFrame(float *m) {
         }
 }
 
-static void lightFrame(float *m, float half, int size) {
+static void lightFrame(float *m, float half, int size, float range = SH_RANGE) {
     const float *L = sunDir, *c = F + F_CAM;
     float ex[3] = {L[1], -L[0], 0};
     float n = sqrtf(ex[0] * ex[0] + ex[1] * ex[1]);
@@ -1098,12 +1138,12 @@ static void lightFrame(float *m, float half, int size) {
     for (int j = 0; j < 3; j++) {
         m[j * 4] = ex[j] / half;
         m[j * 4 + 1] = ey[j] / half;
-        m[j * 4 + 2] = -L[j] / SH_RANGE;
+        m[j * 4 + 2] = -L[j] / range;
         m[j * 4 + 3] = 0;
     }
     m[12] = -cu / half;
     m[13] = -cv / half;
-    m[14] = cl / SH_RANGE;
+    m[14] = cl / range;
     m[15] = 1;
 }
 
@@ -1511,6 +1551,10 @@ static void setCommon(const Prog *p) {
     glUniform3fv(p->uSpotPos, 1, spotPos);
     glUniform3fv(p->uSpotSide, 1, spotSide);
     glUniform3fv(glGetUniformLocation(p->id, "uSpotDirs"), 2, spotDirs);
+    glUniform1i(glGetUniformLocation(p->id, "uShadowFarMap"), 4);
+    glUniformMatrix4fv(glGetUniformLocation(p->id, "uShadowFarVP"), 1, GL_FALSE, lightVPFar[shCur ^ 1]);
+    glUniform1f(glGetUniformLocation(p->id, "uShadowFarDepth"), 2.0f * SHF_RANGE);
+    glUniform1f(glGetUniformLocation(p->id, "uShadowFarTexel"), 1.0f / (2.0f * SHF_HALF));
 }
 
 static int invert4(const float *m, float *out) {
@@ -2062,6 +2106,22 @@ static int lightReady() {
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
     }
+    glGenTextures(2, texShadowFar);
+    glGenFramebuffers(2, fbShadowFar);
+    for (int i = 0; i < 2; i++) {
+        glBindTexture(GL_TEXTURE_2D, texShadowFar[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, SHF_SIZE, SHF_SIZE, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_LUMINANCE);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbShadowFar[i]);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texShadowFar[i], 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+    }
     glGenTextures(2, texSpot);
     glGenFramebuffers(2, fbSpot);
     for (int i = 0; i < 2; i++) {
@@ -2101,6 +2161,7 @@ static void lightBegin() {
     lightReady();
     shCur ^= 1;
     lightFrame(lightVP[shCur], SH_HALF, SH_SIZE);
+    lightFrame(lightVPFar[shCur], SHF_HALF, SHF_SIZE, SHF_RANGE);
     lightFrame(caustVP, CA_HALF, CA_SIZE);
     spotOn = F[F_SUBON] > 0.5f;
     spotFrame(spotVP[shCur]);
@@ -2117,6 +2178,9 @@ static void lightBegin() {
     glClear(GL_DEPTH_BUFFER_BIT);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbSpot[shCur]);
     glViewport(0, 0, SPOT_SIZE, SPOT_SIZE);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbShadowFar[shCur]);
+    glViewport(0, 0, SHF_SIZE, SHF_SIZE);
     glClear(GL_DEPTH_BUFFER_BIT);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbCaust);
     glViewport(0, 0, CA_SIZE, CA_SIZE);
@@ -2151,6 +2215,8 @@ static void lightBegin() {
     /* for every draw of the frame: last frame's shadows, these caustics */
     GLint active;
     glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, texShadowFar[shCur ^ 1]);
     glActiveTexture(GL_TEXTURE5);
     glBindTexture(GL_TEXTURE_2D, texSpot[shCur ^ 1]);
     glActiveTexture(GL_TEXTURE6);
@@ -2188,8 +2254,12 @@ static void castShadow(int arrays, GLenum mode, GLint first, GLsizei count, GLen
     glUniformMatrix4fv(glGetUniformLocation(pShadow.id, "uCamToWorld"), 1, GL_FALSE, F + F_CAM);
     glUniform1i(glGetUniformLocation(pShadow.id, "uTex0"), 0);
     glUniform1i(glGetUniformLocation(pShadow.id, "uCut"), cut);
-    for (int pass = 0; pass < (spotOn ? 2 : 1); pass++) {
+    for (int pass = 0; pass < (spotOn ? 3 : 2); pass++) {
         if (pass == 1) {
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbShadowFar[shCur]);
+            glViewport(0, 0, SHF_SIZE, SHF_SIZE);
+            glUniformMatrix4fv(glGetUniformLocation(pShadow.id, "uLightVP"), 1, GL_FALSE, lightVPFar[shCur]);
+        } else if (pass == 2) {
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbSpot[shCur]);
             glViewport(0, 0, SPOT_SIZE, SPOT_SIZE);
             glUniformMatrix4fv(glGetUniformLocation(pShadow.id, "uLightVP"), 1, GL_FALSE, spotVP[shCur]);
@@ -2899,6 +2969,9 @@ static void post(int w, int h) {
     glUniform1f(pLight.uShadowOn, noShadows() ? 0.0f : 1.0f);
     glUniformMatrix4fv(pLight.uSpotVP, 1, GL_FALSE, spotVP[shCur]);
     glUniform1f(pLight.uSpotOn, spotOn && !noShadows() ? 1.0f : 0.0f);
+    glUniformMatrix4fv(glGetUniformLocation(pLight.id, "uShadowFarVP"), 1, GL_FALSE, lightVPFar[shCur]);
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, texShadowFar[shCur]);
     glActiveTexture(GL_TEXTURE5);
     glBindTexture(GL_TEXTURE_2D, texSpot[shCur]);
     glActiveTexture(GL_TEXTURE6);
