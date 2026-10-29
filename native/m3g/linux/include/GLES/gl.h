@@ -143,15 +143,32 @@ static inline unsigned char *deep3d_quantize_texels(GLenum fmt, const void *src,
 
 /*
  * Gradient strips (the skybox: a few texels wide, a long ramp of colour and
- * alpha) band in solid steps of equal height: every DEEP3D_BAND_ROWS rows
- * (16 bands to each 64-row ramp, as many as the phone's 4-bit levels) become
- * their average, colour weighted by alpha. Quantising values instead gave
+ * alpha) band in solid steps of equal height and equal change: each 64-row
+ * ramp becomes 16 bands (the phone's 4-bit levels) stepping evenly from its
+ * first row towards its last, blended with premultiplied alpha, so a ramp
+ * that fades out and the next that fades in meet in one plain band. Quantising values instead gave
  * bands as thick as the ramp is flat - twice as thick by the horizon - and
- * the texels' colour noise made a band's rows and columns differ.
+ * averaging the rows kept the ramp's S-curve, so bands near its ends barely
+ * differed and their edges faded out. Row ends are averaged across the strip
+ * because the texels carry colour noise.
  */
 #define DEEP3D_BAND_ROWS 4
+#define DEEP3D_RAMP_ROWS 64
 static inline int deep3d_is_strip(int w, int h) {
-    return w <= 8 && h >= 64;
+    return w <= 8 && h >= DEEP3D_RAMP_ROWS;
+}
+
+/* row y averaged across the strip, colour premultiplied by alpha */
+static inline void deep3d_strip_row(const unsigned char *in, int comps, int w, int y, double p[4]) {
+    p[0] = p[1] = p[2] = p[3] = 0;
+    for (int x = 0; x < w; x++) {
+        const unsigned char *t = in + ((size_t) y * w + x) * comps;
+        double a = comps == 4 ? t[3] / 255.0 : 1.0;
+        for (int k = 0; k < 3; k++) {
+            p[k] += t[k] * a / w;
+        }
+        p[3] += a / w;
+    }
 }
 
 static inline unsigned char *deep3d_band_strip(GLenum fmt, const void *src, int w, int h) {
@@ -161,32 +178,29 @@ static inline unsigned char *deep3d_band_strip(GLenum fmt, const void *src, int 
     }
     const unsigned char *in = (const unsigned char *) src;
     unsigned char *out = (unsigned char *) malloc((size_t) w * h * comps);
-    for (int y0 = 0; y0 < h; y0 += DEEP3D_BAND_ROWS) {
-        int y1 = y0 + DEEP3D_BAND_ROWS < h ? y0 + DEEP3D_BAND_ROWS : h;
-        double sum[4] = {0, 0, 0, 0}, plain[3] = {0, 0, 0}, wsum = 0;
-        int n = 0;
-        for (int y = y0; y < y1; y++) {
-            for (int x = 0; x < w; x++) {
-                const unsigned char *t = in + ((size_t) y * w + x) * comps;
-                double a = comps == 4 ? t[3] : 255.0;
-                for (int k = 0; k < 3; k++) {
-                    sum[k] += t[k] * a;
-                    plain[k] += t[k];
-                }
-                sum[3] += a;
-                wsum += a;
-                n++;
+    const int bands = DEEP3D_RAMP_ROWS / DEEP3D_BAND_ROWS;
+    for (int r0 = 0; r0 < h; r0 += DEEP3D_RAMP_ROWS) {
+        int r1 = r0 + DEEP3D_RAMP_ROWS < h ? r0 + DEEP3D_RAMP_ROWS : h;
+        double a[4], b[4];
+        deep3d_strip_row(in, comps, w, r0, a);
+        deep3d_strip_row(in, comps, w, r1 - 1, b);
+        for (int i = 0; i * DEEP3D_BAND_ROWS < r1 - r0; i++) {
+            double t = (double) i / bands, p[4];
+            for (int k = 0; k < 4; k++) {
+                p[k] = a[k] + (b[k] - a[k]) * t;
             }
-        }
-        unsigned char v[4];
-        for (int k = 0; k < 3; k++) {
-            double c = wsum > 0 ? sum[k] / wsum : plain[k] / n;
-            v[k] = (unsigned char) (c + 0.5);
-        }
-        v[3] = (unsigned char) (sum[3] / n + 0.5);
-        for (int y = y0; y < y1; y++) {
-            for (int x = 0; x < w; x++) {
-                memcpy(out + ((size_t) y * w + x) * comps, v, comps);
+            unsigned char v[4];
+            for (int k = 0; k < 3; k++) {
+                /* fully transparent: the colour it fades towards */
+                double c = p[3] > 1e-6 ? p[k] / p[3] : (a[3] > b[3] ? a[k] / a[3] : b[3] > 0 ? b[k] / b[3] : 0);
+                v[k] = (unsigned char) (c < 0 ? 0 : c > 255 ? 255 : c + 0.5);
+            }
+            v[3] = (unsigned char) (p[3] * 255 + 0.5);
+            int y0 = r0 + i * DEEP3D_BAND_ROWS;
+            for (int y = y0; y < y0 + DEEP3D_BAND_ROWS && y < r1; y++) {
+                for (int x = 0; x < w; x++) {
+                    memcpy(out + ((size_t) y * w + x) * comps, v, comps);
+                }
             }
         }
     }
