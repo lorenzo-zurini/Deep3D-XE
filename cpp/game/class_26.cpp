@@ -1727,7 +1727,7 @@ void class_26::deep3dRemaster() {
         this->deep3dCam->at(11) = float(deep3dCamM->field_700 - (deep3dOZ << 16));
     }
     org::deep3d::Remaster::world(this->deep3dCam, ((class_21::method_180() != nullptr) ? class_21::method_180()->field_1140 : 21000), (float(this->field_298) / 255.0f), (float(this->field_299) / 255.0f), (float(this->field_300) / 255.0f));
-    org::deep3d::Remaster::origin(deep3dOX, deep3dOZ);
+    org::deep3d::Remaster::origin(deep3dOX + OpenSea::shiftCellsX(), deep3dOZ + OpenSea::shiftCellsZ());
     if ((this->field_272 != nullptr) && (this->field_272->field_970 != nullptr)) {
         this->field_272->field_970->method_849(this->deep3dPos);
         jrt::Ref<class_3> var2 = this->field_272->field_970->method_855(jrt::New<class_3>());

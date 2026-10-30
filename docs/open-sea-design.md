@@ -68,7 +68,7 @@ The map is the whole planet (decided 2026-10-30): a sphere of **4,140 km radius*
 ### 1. Coordinates
 
 The game's positions are a flat chart of the planet (phase 2), in world units at 50 u/m,
-32-bit: the sub stays within reach of int32 (±43,000 km of chart) for well over a lap.
+32-bit; the world shifts back with each re-centre, so they stay within a few hundred km.
 
 ### 2. 64-bit intermediates instead of a floating origin
 
@@ -167,8 +167,16 @@ station's waters does count as a visit (discovered, and added to the map's trail
    of light out to about 10 km; the hull, about 1.5 km. Tested: Charon to Hephaistos
    (419 km) and docked; 43 jumps of 600 km in one direction come back to Charon after
    26,012 km; docked at Alpha VII after three re-centres (Remastered). `detcheck` identical.
-   Limit: the sub's chart position is 32-bit, so a little over one and a half laps without
-   docking or a S.T.R.E.A.M. jump (each rebuilds the chart around the station).
+   With each re-centre the whole level shifts back by whole cells of 65,536 units, the sub
+   to within a cell of the origin, so coordinates never grow however far you fly
+   (`shiftWorld` in `OpenSea.cpp`). It moves every place the level keeps a position: the sub
+   and its particles, trail and route; the camera's node and smoothed place; ships (home,
+   target, wake, trail), creatures, items, mines and their zones; routes and waypoints;
+   impact and death effects; shots in flight (not the parked ones, which are sentinels);
+   the shots' hit cube; stations, gates and the chart. The renderer is told the shifted
+   cells, so to it nothing moved. Tested: 43 re-centres round the planet, coordinates back
+   within a kilometre each time; a boosted flight across a shift in Remastered shows no
+   change between frames.
 3. **Continuous environment.** Tint and creature mix from the map position.
 4. **Travel and UI.** S.T.R.E.A.M. into the continuous world, map marker, HUD distances,
    `Scale::km`.

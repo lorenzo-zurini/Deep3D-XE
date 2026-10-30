@@ -18,6 +18,9 @@ public:
     static void step(class_26* world, int64_t dt, bool update);
     /** The level goes. */
     static void end(class_26* world);
+    /** How far the world has been shifted back, in cells of 65536 units (the renderer adds it). */
+    static int32_t shiftCellsX();
+    static int32_t shiftCellsZ();
     /** The station whose waters these are (null: not on the open sea). */
     static jrt::Ref<class_86> nearest();
     /** Docking: the nearest station becomes the current one first. */

@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <unordered_set>
 #include <vector>
 
 using jrt::Ref;
@@ -114,6 +115,7 @@ struct Spot {
 
 std::vector<Spot> gSea;
 Chart gChart;
+int64_t gShiftX = 0, gShiftZ = 0;          // how far the world has been shifted back (whole cells of 65536)
 class_26* gWorld = nullptr;
 int gNear = -1;                            // whose objects are in the level's slots
 int gHome = -1;                            // the current station's (built by the level)
@@ -168,6 +170,157 @@ void seat(class_26* w, int i) {
 }
 
 bool seated(int i) { return i == gNear; }
+
+/* The world shift: when the chart re-centres, everything in the level moves
+   back by whole cells of 65,536 units, the sub to within a cell of the
+   origin, so the game's coordinates never grow however far you fly. Every
+   place the level keeps a position is moved once (docs: the inventory in
+   docs/open-sea-design.md); the renderer is told the cells, so to it the
+   world did not move at all */
+namespace move {
+int32_t DX, DZ;
+std::unordered_set<const void*> seen;
+
+bool once(const void* p) { return p && seen.insert(p).second; }
+void node(class_102* n) {
+    if (!once(n)) return;
+    n->method_843(-DX, 0, -DZ);
+    n->method_839(true);
+}
+void vec(class_3* v) {
+    if (!once(v)) return;
+    v->field_37 -= DX, v->field_39 -= DZ;
+}
+void points(jrt::Array<int32_t>* a) {
+    if (!once(a)) return;
+    for (int32_t i = 0; i + 2 < a->length; i += 3) a->at(i) -= DX, a->at(i + 2) -= DZ;
+}
+void zone(class_29* z) {
+    if (!once(z)) return;
+    z->method_286(z->field_307 - DX, z->field_308, z->field_309 - DZ);
+}
+void puffs(class_25* b) {
+    if (!b) return;
+    if (b->field_255) points(b->field_255.get());
+}
+void puffs(class_60* b) {
+    if (b && b->field_718) points(b->field_718.get());
+}
+void trail(class_83* t) {
+    if (!t || !once(t)) return;
+    if (t->field_1074) points(t->field_1074.get());
+    if (t->field_1076) node(t->field_1076.get());
+    if (t->field_1077) vec(t->field_1077.get());
+}
+void blast(class_116* b) {
+    if (!b || !once(b)) return;
+    if (b->field_1435 && b->field_1435->field_250) node(b->field_1435->field_250.get());
+}
+void death(class_85* d) {
+    if (!d || !once(d)) return;
+    if (d->field_1132) node(d->field_1132.get());
+    if (d->field_1131)
+        for (int32_t i = 0; i < d->field_1131->length; i++) blast(d->field_1131->at(i).get());
+}
+void route(class_18* r) {
+    if (!r || !once(r) || !r->field_162) return;
+    for (int32_t i = 0; i < r->field_162->length; i++) {
+        class_97* w = r->field_162->at(i).get();
+        if (w && once(w)) w->field_1295 -= DX, w->field_1297 -= DZ;
+    }
+}
+void shots(class_9* w) {
+    if (!w || !once(w) || !w->field_78 || !w->field_83) return;
+    for (int32_t i = 0; i < w->field_78->length && i < w->field_83->length; i++)
+        if (w->field_83->at(i) > 0) vec(w->field_78->at(i).get());   // (parked ones are sentinels)
+}
+void weapons(jrt::Array<Ref<class_108>>* list) {
+    if (!list) return;
+    for (int32_t i = 0; i < list->length; i++) {
+        auto* r = dynamic_cast<class_112*>(list->at(i).get());
+        if (!r) continue;
+        shots(r->field_1409.get());
+        if (auto* t = dynamic_cast<class_113*>(r)) {
+            puffs(t->field_1413.get());
+            trail(t->field_1414.get());
+        }
+    }
+}
+void object(class_91* o) {
+    if (!o || !once(o)) return;
+    if (dynamic_cast<class_99*>(o)) return;   // stations and gates: the sea moves those
+    if (o->field_1226) node(o->field_1226.get());
+    o->field_1234 -= DX, o->field_1236 -= DZ;
+    route(o->field_1230.get());
+    death(o->field_1231.get());
+    if (auto* s = dynamic_cast<class_96*>(o)) {
+        if (s->field_1271) vec(s->field_1271.get());
+        if (s->field_1272) vec(s->field_1272.get());
+        puffs(s->field_1269.get());
+        trail(s->field_1287.get());
+    }
+    if (auto* s = dynamic_cast<class_95*>(o)) {
+        for (class_3* v : {s->field_1256.get(), s->field_1257.get(), s->field_1258.get()}) if (v) vec(v);
+        if (s->field_1253)
+            for (int32_t i = 0; i < s->field_1253->length; i++) zone(s->field_1253->at(i).get());
+    }
+    if (auto* s = dynamic_cast<class_92*>(o)) s->field_1243 -= DX, s->field_1245 -= DZ;
+    if (auto* s = dynamic_cast<class_93*>(o)) {
+        if (s->field_1246) vec(s->field_1246.get());
+        blast(s->field_1251.get());
+    }
+    if (auto* s = dynamic_cast<class_98*>(o)) s->field_1300 -= DX, s->field_1302 -= DZ;
+    if (auto* s = dynamic_cast<class_101*>(o)) {
+        if (s->field_1317) node(s->field_1317.get());
+    }
+}
+void objects(jrt::Array<Ref<class_91>>* list) {
+    if (!list) return;
+    for (int32_t i = 0; i < list->length; i++) object(list->at(i).get());
+}
+}  // namespace move
+
+void shiftWorld(class_26* w, class_64* flight, int32_t dx, int32_t dz) {
+    move::DX = dx, move::DZ = dz;
+    move::seen.clear();
+    // the sub
+    if (class_70* sub = w->field_272.get()) {
+        if (sub->field_970) move::node(sub->field_970.get());
+        if (sub->field_1000) move::vec(sub->field_1000.get());
+        move::puffs(sub->field_980.get());
+        move::puffs(sub->field_976.get());
+        move::death(sub->field_979.get());
+        move::route(sub->field_982.get());
+    }
+    // the camera: its smoothed place, and its node (under an identity group)
+    if (flight->field_790 && flight->field_790->field_457) move::vec(flight->field_790->field_457.get());
+    if (flight->field_788) move::node(flight->field_788.get());
+    // the level's objects, routes, effects, weapons in flight
+    move::objects(w->field_273.get());
+    move::objects(w->field_274.get());
+    move::objects(w->field_275.get());
+    move::route(w->field_277.get());
+    move::route(w->field_278.get());
+    move::route(w->field_279.get());
+    move::blast(w->field_266.get());
+    move::blast(w->field_268.get());
+    move::weapons(w->field_269.get());
+    move::weapons(w->field_270.get());
+    move::weapons(w->field_271.get());
+    if (class_26::field_263) move::zone(class_26::field_263.get());   // the shots' hit cube about the home station
+    // the stations, gates and the chart
+    for (Spot& s : gSea) {
+        s.x -= dx, s.z -= dz;
+        if (s.station) {
+            s.station->deep3dPlace(s.station->deep3dOX - dx, s.y, s.station->deep3dOZ - dz);
+            s.out->deep3dMove(-dx, 0, -dz);
+            s.in->deep3dMove(-dx, 0, -dz);
+        }
+    }
+    gChart.tx -= dx, gChart.tz -= dz;
+    gShiftX += dx >> 16, gShiftZ += dz >> 16;
+    move::seen.clear();
+}
 
 /* Re-centre the chart under the sub (in open water: nothing built is near).
    The new chart is matched to the old one at the sub, its direction and
@@ -240,6 +393,8 @@ void OpenSea::begin(class_26* w) {
     // the chart about the current station (at the origin, where the level
     // built it), turned so the map's directions there are the sea's: the
     // orthogonal fit of its neighbours' map offsets onto the projection's
+    gShiftX = gShiftZ = 0;
+    if (class_26::field_263) class_26::field_263->method_286(0, 0, 0);
     gChart = Chart();
     gChart.centre(gSea[gHome].p);
     double cov[4] = {0, 0, 0, 0};
@@ -297,7 +452,13 @@ void OpenSea::step(class_26* w, int64_t dt, bool update) {
             if (nearD < VISIT * VISIT) gSea[near].st->method_746();
         }
         double cx = px - gChart.tx, cz = pz - gChart.tz;
-        if (!anyNear && !built && cx * cx + cz * cz > RECENTRE * RECENTRE) recentre(px, pz);
+        auto* flight = dynamic_cast<class_64*>(class_84::field_1126 ? class_84::field_1126->field_595.get() : nullptr);
+        if (!anyNear && !built && cx * cx + cz * cz > RECENTRE * RECENTRE && flight && !flight->field_795) {
+            recentre(px, pz);
+            // and the world back by whole cells, the sub within one of the origin
+            int32_t dx = int32_t(std::lround(px / 65536.0)) << 16, dz = int32_t(std::lround(pz / 65536.0)) << 16;
+            shiftWorld(w, flight, dx, dz);
+        }
     }
     // the ones not in the level's slots: the level updates and draws those
     for (int i = 0; i < int(gSea.size()); i++) {
@@ -321,6 +482,9 @@ void OpenSea::end(class_26* w) {
     gWorld = nullptr;
     gNear = gHome = -1;
 }
+
+int32_t OpenSea::shiftCellsX() { return int32_t(gShiftX); }
+int32_t OpenSea::shiftCellsZ() { return int32_t(gShiftZ); }
 
 Ref<class_86> OpenSea::nearest() {
     return gNear >= 0 && gNear < int(gSea.size()) ? gSea[gNear].st : Ref<class_86>(nullptr);
