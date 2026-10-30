@@ -757,9 +757,9 @@ std::atomic<bool> gVsyncApplied{false};
 std::atomic<int32_t> gRenderW{1280}, gRenderH{720};
 std::atomic<int32_t> gDstX{0}, gDstY{0}, gDstW{1280}, gDstH{720};
 std::atomic<float> gMouseScaleX{1}, gMouseScaleY{1};
-GLuint gFrameFbo = 0, gFrameTex = 0;
+GLuint gFrameTex = 0;
 int32_t gFrameTexW = 0, gFrameTexH = 0;
-GLuint gUnderlayFbo = 0, gUnderlayTex = 0;
+GLuint gUnderlayTex = 0;
 int32_t gUnderlayW = 0, gUnderlayH = 0;
 std::vector<GLsync> gUnderlayFences;
 
@@ -965,10 +965,68 @@ void updateMouseCapture() {
     MouseFlight::setCaptured(want);
 }
 
+}  // namespace
+}  // namespace org::deep3d::gl
+
+/* deep3d_egl.cpp: the context the engine's GLX mode goes back to when it
+   releases its own (instead of none) */
+extern "C" void deep3d_egl_set_home(void* display, unsigned long drawable, void* context);
+
+namespace org::deep3d::gl {
+namespace {
+
+/* GLX: the game loop's thread keeps the window's context current for good,
+   and the engine's passes switch from it and back. A frame switched contexts
+   six times (claim, release, the engine's bind and release, claim, release:
+   some 130 us on a GTX 1070); now twice. Other presenting threads (the
+   loading screens', a new thread each time) take turns with a second context
+   sharing the window's objects, claimed and released as before: holding the
+   window's context there would stop the loading screen until the game
+   thread let go, and it does not while it loads. Elsewhere (EGL, Wayland)
+   the context follows the presenter as before. */
+bool gKeepContexts = false;
+Display* gGlxDpy = nullptr;
+GLXDrawable gGlxWin = 0;
+GLXContext gWinCtx = nullptr;
+GLXContext gOtherCtx = nullptr;
+int64_t gOtherAt = 0;                    // the last time the second context was used
+GLsync gSectionFence = nullptr;          // the last section's work, for the next one in the other context
+bool gSectionOther = false;              // ... made in the second context
+GLuint gFrameFbos[2], gUnderlayFbos[2];  // framebuffer objects are per context
+int gCtxIndex = 0;                       // the context in use (under gGlLock): 1 = the second
+thread_local bool tHome = false;
+
+GLXContext newSharedContext() {
+    int id = 0;
+    glXQueryContext(gGlxDpy, gWinCtx, GLX_FBCONFIG_ID, &id);
+    const int attribs[] = {GLX_FBCONFIG_ID, id, None};
+    int n = 0;
+    GLXFBConfig* cfg = glXChooseFBConfig(gGlxDpy, DefaultScreen(gGlxDpy), attribs, &n);
+    GLXContext c = cfg && n > 0 ? glXCreateNewContext(gGlxDpy, cfg[0], GLX_RGBA_TYPE, gWinCtx, True) : nullptr;
+    if (cfg) XFree(cfg);
+    return c;
+}
+
 /** The game presents from more than one thread: the context follows the presenter. */
 void claimContext() {
     auto me = std::this_thread::get_id();
-    if (gCtxOwner != me) {
+    if (gKeepContexts) {
+        bool home = jrt::onSafePointThread();   // the game loop's thread
+        if (home && !tHome) {
+            tHome = true;
+            glfwMakeContextCurrent(gWindow);    // GLFW's own record of it (swap interval)
+            deep3d_egl_set_home(gGlxDpy, gGlxWin, gWinCtx);
+        }
+        if (!home && !gOtherCtx) gOtherCtx = newSharedContext();
+        GLXContext ctx = home ? gWinCtx : gOtherCtx;
+        if (!ctx || (glXGetCurrentContext() != ctx && !glXMakeContextCurrent(gGlxDpy, gGlxWin, gGlxWin, ctx)))
+            fprintf(stderr, "[gl] could not make the context current\n");
+        gCtxOwner = me;
+        gCtxIndex = home ? 0 : 1;
+        // the other context's last section first
+        if (gSectionFence && gSectionOther == home) glWaitSync(gSectionFence, 0, GL_TIMEOUT_IGNORED);
+        if (!home) gOtherAt = millis();
+    } else if (gCtxOwner != me) {
         glfwMakeContextCurrent(gWindow);
         gCtxOwner = me;
         if (glfwGetCurrentContext() != gWindow) fprintf(stderr, "[gl] could not make the context current\n");
@@ -983,33 +1041,58 @@ void claimContext() {
         gContextReady = true;
         printf("[gl] renderer: %s / %s\n", glGetString(GL_RENDERER), glGetString(GL_VERSION));
     }
-    if (!gVsyncApplied) {
+    // GLFW sets the swap interval through its current context: the window's own
+    if (!gVsyncApplied && (!gKeepContexts || gCtxIndex == 0)) {
         glfwSwapInterval(Config::vsync ? 1 : 0);
         gVsyncApplied = true;
     }
 }
 
-/** Always released: a context stuck on a thread blocks every other presenter. */
+/** Always released (unless kept, GLX): a context stuck on a thread blocks every other presenter. */
 void releaseContext() {
+    if (gKeepContexts) {
+        // while the second context is in use, the next section may be in the other one: it waits for this one
+        bool other = gCtxIndex == 1;
+        if (gSectionFence) {
+            glDeleteSync(gSectionFence);
+            gSectionFence = nullptr;
+        }
+        if (other || millis() - gOtherAt < 2000) {
+            gSectionFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+            gSectionOther = other;
+            glFlush();
+        }
+        if (other) {
+            glXMakeContextCurrent(gGlxDpy, None, None, nullptr);
+            gCtxOwner = std::thread::id();
+        }
+        return;
+    }
     glfwMakeContextCurrent(nullptr);
     gCtxOwner = std::thread::id();
 }
 
-void ensureFrameTarget(int32_t w, int32_t h) {
-    if (gFrameFbo == 0) {
-        glGenFramebuffers(1, &gFrameFbo);
-        glGenTextures(1, &gFrameTex);
+/** This context's framebuffer object for the shared texture (made and attached once). */
+GLuint contextFbo(GLuint& fbo, GLuint tex) {
+    if (fbo == 0) {
+        glGenFramebuffers(1, &fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
+    return fbo;
+}
+
+void ensureFrameTarget(int32_t w, int32_t h) {
+    if (gFrameTex == 0) glGenTextures(1, &gFrameTex);
     if (gFrameTexW != w || gFrameTexH != h) {
         glBindTexture(GL_TEXTURE_2D, gFrameTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindTexture(GL_TEXTURE_2D, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, gFrameFbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gFrameTex, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         gFrameTexW = w;
         gFrameTexH = h;
     }
+    contextFbo(gFrameFbos[gCtxIndex], gFrameTex);
 }
 
 /* The FPS counter as the Java build drew it: AWT's Dialog bold, which is
@@ -1127,7 +1210,7 @@ void renderFrame(const Draw2D& frame, const Draw2D* menu) {
        phone's screen buffer did (the game presents from two threads while
        loading and only one of them draws) */
     if (!frame.empty() || menu || !sized) {
-        glBindFramebuffer(GL_FRAMEBUFFER, gFrameFbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, gFrameFbos[gCtxIndex]);
         glViewport(0, 0, rw, rh);
         glDisable(GL_SCISSOR_TEST);
         glClearColor(0, 0, 0, 1);
@@ -1403,6 +1486,10 @@ void GLBackend::init() {
             javax::microedition::m3g::Platform::setShareContext(int64_t(reinterpret_cast<intptr_t>(dpy)),
                                                                 int64_t(reinterpret_cast<intptr_t>(ctx)));
             printf("[gl] 3D engine shares the window's GLX context\n");
+            gGlxDpy = dpy;
+            gWinCtx = ctx;
+            gGlxWin = glfwGetGLXWindow(gWindow);
+            gKeepContexts = gGlxWin != 0 && !getenv("DEEP3D_GL_RELEASE");   // DEEP3D_GL_RELEASE=1: as before
         }
     }
     if (glfwGetPlatform() == GLFW_PLATFORM_X11 && getenv("DEEP3D_XSYNC")) {
@@ -1503,21 +1590,17 @@ void GLBackend::applyVsync() { gVsyncApplied = false; }
 Ref<jrt::Array<int64_t>> GLBackend::renderUnderlay(int32_t w, int32_t h) {
     std::lock_guard<std::recursive_mutex> g(gGlLock);
     claimContext();
-    if (gUnderlayFbo == 0) {
-        glGenFramebuffers(1, &gUnderlayFbo);
-        glGenTextures(1, &gUnderlayTex);
-    }
-    glBindTexture(GL_TEXTURE_2D, gUnderlayTex);
+    if (gUnderlayTex == 0) glGenTextures(1, &gUnderlayTex);
     if (gUnderlayW != w || gUnderlayH != h) {
+        glBindTexture(GL_TEXTURE_2D, gUnderlayTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glBindTexture(GL_TEXTURE_2D, 0);
         gUnderlayW = w;
         gUnderlayH = h;
     }
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glBindFramebuffer(GL_FRAMEBUFFER, gUnderlayFbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gUnderlayTex, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, contextFbo(gUnderlayFbos[gCtxIndex], gUnderlayTex));
     glViewport(0, 0, w, h);
     glDisable(GL_SCISSOR_TEST);
     glClearColor(0, 0, 0, 1);
@@ -1536,7 +1619,7 @@ void GLBackend::readUnderlay(int32_t w, int32_t h, Ref<java::nio::ByteBuffer> ou
     std::lock_guard<std::recursive_mutex> g(gGlLock);
     renderUnderlay(w, h);
     claimContext();
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, gUnderlayFbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gUnderlayFbos[gCtxIndex]);
     std::vector<uint8_t> tmp(size_t(w) * h * 4);
     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, tmp.data());
     uint8_t* dst = static_cast<uint8_t*>(out->address());

@@ -471,10 +471,24 @@ EGLBoolean deep3d_eglDestroySurface(EGLDisplay, EGLSurface surf) {
     return eglDestroySurface(eglDeviceDisplay(), surf);
 }
 
+/* The calling thread's own context on the game window (gl.cpp keeps one
+   current on every presenting thread): releasing the engine's context goes
+   straight back to it, one switch instead of two */
+static __thread GLXDrawable homeDrawable = None;
+static __thread GLXContext homeContext = NULL;
+
+void deep3d_egl_set_home(void *display, unsigned long drawable, void *context) {
+    (void) display;
+    homeDrawable = (GLXDrawable) drawable;
+    homeContext = (GLXContext) context;
+}
+
 EGLBoolean deep3d_eglMakeCurrent(EGLDisplay, EGLSurface draw, EGLSurface read, EGLContext ctx) {
     if (glxMode()) {
         Bool ok;
-        if (ctx == EGL_NO_CONTEXT) {
+        if (ctx == EGL_NO_CONTEXT && homeContext) {
+            ok = glXMakeContextCurrent(glxDisplay, homeDrawable, homeDrawable, homeContext);
+        } else if (ctx == EGL_NO_CONTEXT) {
             ok = glXMakeContextCurrent(glxDisplay, None, None, NULL);
         } else {
             ok = glXMakeContextCurrent(glxDisplay, glxDrawable(draw), glxDrawable(read),

@@ -1237,6 +1237,15 @@ static EGLConfig m3gEGLConfigForConfigID(EGLDisplay display, GLint configID)
 {
 	EGLConfig configs[1024];
 	EGLint numConfigs = 0;
+	/* Deep3D-PC: every bind asked for the same config; the scan over every
+	 * config (a query each) is remembered (a display's configs never change) */
+	static __thread EGLDisplay lastDisplay = NULL;
+	static __thread GLint lastID = -1;
+	static __thread EGLConfig lastConfig = NULL;
+
+	if (display == lastDisplay && configID == lastID && lastConfig) {
+		return lastConfig;
+	}
 
 	if (EGL_FALSE == eglGetConfigs(display, configs, 1024, &numConfigs) )
 	{
@@ -1250,6 +1259,9 @@ static EGLConfig m3gEGLConfigForConfigID(EGLDisplay display, GLint configID)
 		eglGetConfigAttrib(display, configs[i], EGL_CONFIG_ID, &value);
 		if (value == configID)
 		{
+			lastDisplay = display;
+			lastID = configID;
+			lastConfig = configs[i];
 			return configs[i];
 		}
 	}
