@@ -235,13 +235,59 @@ public:
         return y;
     }
 
+    /* The last opaque M3G pass that covers the whole screen with no clip:
+       what is drawn before it is all overdrawn (the scene's backdrop fill
+       went to the underlay and again to the frame). 0: none. */
+    size_t coveredUpTo(const Draw2D& d) {
+        const std::vector<int32_t>& o = d.ops;
+        const std::set<int32_t>& skip = skipOps();
+        bool clipped = false;
+        size_t found = 0, i = 0;
+        while (i < o.size()) {
+            size_t at = i;
+            int32_t op = o[i++];
+            if (op == Draw2D::OP_CLIP) {
+                int32_t x = o[i], y = o[i + 1], w = std::max(0, o[i + 2]), h = std::max(0, o[i + 3]);
+                clipped = !(x <= 0 && y <= 0 && x + w >= screenW && y + h >= screenH);
+            } else if ((op == Draw2D::OP_M3G_TEX || op == Draw2D::OP_M3G) && !clipped && o[i + 11] != 0 &&
+                       !(!skip.empty() && skip.count(op))) {
+                bool drawn = o[i + 1] > 0 && o[i + 2] > 0 && o[i + 5] > 0 && o[i + 6] > 0;
+                if (op == Draw2D::OP_M3G_TEX) {
+                    auto* slot = static_cast<M3GTargets_TexSlot*>(d.objects[size_t(o[i])].get());
+                    drawn = drawn && slot && slot->texture != 0;
+                }
+                if (drawn && o[i + 7] <= 0 && o[i + 8] <= 0 && o[i + 7] + o[i + 9] >= screenW && o[i + 8] + o[i + 10] >= screenH)
+                    found = at;
+            }
+            i += size_t(opArgLen(op));
+        }
+        return found;
+    }
+
     void replay(const Draw2D& d) {
+        struct End {
+            GL2D* g;
+            ~End() { g->endBatches(); }
+        } end{this};   // however it ends
         const std::vector<int32_t>& o = d.ops;
         size_t i = 0;
         const std::set<int32_t>& skip = skipOps();
+        size_t covered = coveredUpTo(d);
         while (i < o.size()) {
             int32_t op = o[i++];
             if (!skip.empty() && skip.count(op)) {
+                i += size_t(opArgLen(op));
+                continue;
+            }
+            if (i - 1 < covered && op != Draw2D::OP_COLOR && op != Draw2D::OP_CLIP) {
+                // overdrawn: only an M3G pass's fence is let go
+                if (op == Draw2D::OP_M3G_TEX) {
+                    auto* slot = static_cast<M3GTargets_TexSlot*>(d.objects[size_t(o[i])].get());
+                    if (slot && slot->fence != 0) {
+                        glDeleteSync(reinterpret_cast<GLsync>(slot->fence));
+                        slot->fence = 0;
+                    }
+                }
                 i += size_t(opArgLen(op));
                 continue;
             }
@@ -448,28 +494,50 @@ public:
     }
 
     void upload(GLuint tex, const uint32_t* argb, int32_t offset, int32_t scan, int32_t w, int32_t h, bool opaque) {
-        std::vector<uint8_t> buf(size_t(w) * h * 4);
-        for (int32_t yy = 0; yy < h; yy++) {
-            const uint32_t* row = argb + offset + size_t(yy) * scan;
-            uint8_t* out = &buf[size_t(yy) * w * 4];
-            for (int32_t xx = 0; xx < w; xx++) {
-                uint32_t p = row[xx];
-                out[xx * 4] = uint8_t(p >> 16);
-                out[xx * 4 + 1] = uint8_t(p >> 8);
-                out[xx * 4 + 2] = uint8_t(p);
-                out[xx * 4 + 3] = opaque ? 0xFF : uint8_t(p >> 24);
+        /* ARGB ints are B, G, R, A bytes in memory: GL takes them as they
+           are (GL_BGRA); only an opaque upload (alpha forced) converts */
+        constexpr bool little = __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__;
+        std::vector<uint8_t> buf;
+        if (opaque || !little) {
+            buf.resize(size_t(w) * h * 4);
+            for (int32_t yy = 0; yy < h; yy++) {
+                const uint32_t* row = argb + offset + size_t(yy) * scan;
+                uint8_t* out = &buf[size_t(yy) * w * 4];
+                for (int32_t xx = 0; xx < w; xx++) {
+                    uint32_t p = row[xx];
+                    out[xx * 4] = uint8_t(p >> 16);
+                    out[xx * 4 + 1] = uint8_t(p >> 8);
+                    out[xx * 4 + 2] = uint8_t(p);
+                    out[xx * 4 + 3] = opaque ? 0xFF : uint8_t(p >> 24);
+                }
             }
         }
         glBindTexture(GL_TEXTURE_2D, tex);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, buf.empty() ? scan : 0);
         glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
         glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf.data());
+        if (buf.empty()) {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, argb + offset);
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        } else {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf.data());
+        }
+    }
+
+    /** A rectangle of a texture upload() made, from the same ARGB pixels. */
+    void uploadRect(GLuint tex, const uint32_t* argb, int32_t scan, int32_t x, int32_t y, int32_t w, int32_t h) {
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, scan);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, GL_BGRA, GL_UNSIGNED_BYTE, argb + size_t(y) * scan + x);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     }
 
     void image(Image* img, int32_t x, int32_t y, int32_t anchor) {
@@ -593,11 +661,15 @@ public:
         }
     }
 
-    void drawOverlay(GLuint tex, int32_t w, int32_t h) {
+    /** The window-sized layer texture, or only its rectangle x y rw rh (the rest is clear). */
+    void drawOverlay(GLuint tex, int32_t w, int32_t h, int32_t x = 0, int32_t y = 0, int32_t rw = -1, int32_t rh = -1) {
+        if (rw < 0) rw = w, rh = h;
         flush();
         glDisable(GL_SCISSOR_TEST);
-        texQuad(tex, 0, 0, float(w), float(h), 0, 0, 1, 1, 0xFFFFFFFF);
+        texQuad(tex, float(x), float(y), float(rw), float(rh), float(x) / w, float(y) / h, float(x + rw) / w,
+                float(y + rh) / h, 0xFFFFFFFF);
         flushWith(float(w), float(h));
+        endBatches();
         if (scissorOn) glEnable(GL_SCISSOR_TEST);
     }
 
@@ -609,35 +681,60 @@ public:
         noBlendOnce = false;
     }
 
+    /* A batch's fixed state is set for the first batch of a replay and stays
+       until endBatches: only what differs between batches is sent */
+    bool batchState = false;
+    float batchW = 0, batchH = 0;
+    int batchBlend = -1;
+
     void flushWith(float vw, float vh) {
         if (verts.empty()) return;
-        glUseProgram(program);
-        glUniform2f(uViewport, vw, vh);
-        glDisable(GL_DEPTH_TEST);
-        glDepthMask(GL_FALSE);
-        if (noBlendOnce) {
-            glDisable(GL_BLEND);
-        } else {
-            glEnable(GL_BLEND);
+        if (!batchState) {
+            batchState = true;
+            glUseProgram(program);
+            glDisable(GL_DEPTH_TEST);
+            glDepthMask(GL_FALSE);
+            glBlendEquation(GL_FUNC_ADD);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glActiveTexture(GL_TEXTURE0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glEnableVertexAttribArray(GLuint(aPos));
+            glEnableVertexAttribArray(GLuint(aUV));
+            glEnableVertexAttribArray(GLuint(aColor));
+            // verts never reallocates (reserved to MAX_VERTS)
+            const char* base = reinterpret_cast<const char*>(verts.data());
+            glVertexAttribPointer(GLuint(aPos), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), base);
+            glVertexAttribPointer(GLuint(aUV), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), base + 8);
+            glVertexAttribPointer(GLuint(aColor), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), base + 16);
+            batchW = batchH = -1;
+            batchBlend = -1;
         }
-        glBlendEquation(GL_FUNC_ADD);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glActiveTexture(GL_TEXTURE0);
+        if (vw != batchW || vh != batchH) {
+            glUniform2f(uViewport, vw, vh);
+            batchW = vw;
+            batchH = vh;
+        }
+        int blend = noBlendOnce ? 0 : 1;
+        if (blend != batchBlend) {
+            if (blend) {
+                glEnable(GL_BLEND);
+            } else {
+                glDisable(GL_BLEND);
+            }
+            batchBlend = blend;
+        }
         glBindTexture(GL_TEXTURE_2D, batchTex == 0 ? whiteTex : batchTex);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glEnableVertexAttribArray(GLuint(aPos));
-        glEnableVertexAttribArray(GLuint(aUV));
-        glEnableVertexAttribArray(GLuint(aColor));
-        const char* base = reinterpret_cast<const char*>(verts.data());
-        glVertexAttribPointer(GLuint(aPos), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), base);
-        glVertexAttribPointer(GLuint(aUV), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), base + 8);
-        glVertexAttribPointer(GLuint(aColor), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), base + 16);
         glDrawArrays(batchPrim, 0, GLsizei(verts.size()));
+        verts.clear();
+    }
+
+    void endBatches() {
+        if (!batchState) return;
+        batchState = false;
         glDisableVertexAttribArray(GLuint(aPos));
         glDisableVertexAttribArray(GLuint(aUV));
         glDisableVertexAttribArray(GLuint(aColor));
         glDepthMask(GL_TRUE);
-        verts.clear();
     }
 
     /** Forgets cached textures of objects only the cache still holds. */
@@ -775,6 +872,7 @@ std::atomic<bool> gOverlayDirty{true};
 std::vector<uint32_t> gOverlayPixels;
 int32_t gOverlayW = 0, gOverlayH = 0;
 GLuint gOverlayTex = 0;
+bool gOverlayFpsOnly = false;   // the layer holds the FPS counter and nothing else
 int64_t gLastFpsStamp = 0;
 
 std::atomic<bool> gScreenshotRequested{false};
@@ -1173,12 +1271,14 @@ private:
 /* GLBackend.renderOverlayLayer: Overlay.render and the FPS counter at window
    resolution, in a texture over the frame */
 void renderOverlayLayer(int32_t w, int32_t h) {
-    bool wantLayer = Overlay::isOpen() || Overlay::hasToast() || Config::showFps;
+    bool menuOrToast = Overlay::isOpen() || Overlay::hasToast();
+    bool wantLayer = menuOrToast || Config::showFps;
     if (!wantLayer) return;
     int64_t now = Det::millis();
+    bool fpsTick = false;
     if (Config::showFps && now - gLastFpsStamp >= 500) {
         gLastFpsStamp = now;
-        gOverlayDirty = true;
+        fpsTick = true;
     }
     if (Overlay::hasToast()) gOverlayDirty = true;   // toasts fade by time
     if (gOverlayW != w || gOverlayH != h) {
@@ -1187,19 +1287,36 @@ void renderOverlayLayer(int32_t w, int32_t h) {
         gOverlayH = h;
         gOverlayDirty = true;
     }
-    if (gOverlayDirty.exchange(false)) {
+    /* the FPS counter's corner: all the layer holds without a menu or a
+       toast (Overlay::render draws nothing then) */
+    int32_t size = std::max(12, h / 50);
+    int32_t fx = 0, fw = std::min(w, size * 12), fh = std::min(h, size * 2 + 16), fy = h - fh;
+    auto drawFps = [&] {
+        std::string fps = std::to_string(Runtime::getDisplayFps()) + " FPS";
+        AwtText::get().drawString(gOverlayPixels.data(), w, h, fps, 9, h - 8, size, 0xFF000000u);
+        AwtText::get().drawString(gOverlayPixels.data(), w, h, fps, 8, h - 9, size, 0xFF53C8EFu);
+    };
+    constexpr bool little = __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__;
+    if (gOverlayDirty.exchange(false) || (fpsTick && (!little || !gOverlayFpsOnly || menuOrToast))) {
         std::fill(gOverlayPixels.begin(), gOverlayPixels.end(), 0);
         Overlay::render(gOverlayPixels.data(), w, h);
-        if (Config::showFps) {
-            int32_t size = std::max(12, h / 50);
-            std::string fps = std::to_string(Runtime::getDisplayFps()) + " FPS";
-            AwtText::get().drawString(gOverlayPixels.data(), w, h, fps, 9, h - 8, size, 0xFF000000u);
-            AwtText::get().drawString(gOverlayPixels.data(), w, h, fps, 8, h - 9, size, 0xFF53C8EFu);
-        }
+        if (Config::showFps) drawFps();
         if (gOverlayTex == 0) glGenTextures(1, &gOverlayTex);
         gl2d->upload(gOverlayTex, gOverlayPixels.data(), 0, w, w, h, false);
+        gOverlayFpsOnly = !menuOrToast;
+    } else if (fpsTick) {
+        // only the counter changed: its corner again (the same pixels a
+        // whole new layer would have), not the window-sized layer
+        for (int32_t y = fy; y < h; y++) std::fill_n(&gOverlayPixels[size_t(y) * w + fx], fw, 0u);
+        drawFps();
+        gl2d->uploadRect(gOverlayTex, gOverlayPixels.data(), w, fx, fy, fw, fh);
     }
-    if (gOverlayTex) gl2d->drawOverlay(gOverlayTex, w, h);
+    if (!gOverlayTex) return;
+    if (gOverlayFpsOnly) {
+        gl2d->drawOverlay(gOverlayTex, w, h, fx, fy, fw, fh);   // the rest of the layer is clear
+    } else {
+        gl2d->drawOverlay(gOverlayTex, w, h);
+    }
 }
 
 void renderFrame(const Draw2D& frame, const Draw2D* menu) {

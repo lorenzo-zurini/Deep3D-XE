@@ -1207,7 +1207,14 @@ void Diagnostics::frame() {
     int64_t now = nowMillis();
     gLastFrameAt = now;
     gFrames++;
-    std::string name = java::lang::Thread::currentThread()->getName()->utf8();
+    // the thread's name as text, again only when it is another string (names are immutable)
+    thread_local Ref<String> nameObj;
+    thread_local std::string name;
+    Ref<String> n = java::lang::Thread::currentThread()->getName();
+    if (n.get() != nameObj.get()) {
+        nameObj = n;
+        name = n->utf8();
+    }
     std::lock_guard<std::mutex> g(gPresentersLock);
     gPresenters[name] = now;
     gPresenterFrames[name]++;
