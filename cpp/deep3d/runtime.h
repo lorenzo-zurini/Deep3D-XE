@@ -24,6 +24,8 @@ public:
     static void beforeDock();
     /** Tests: where the named station stands (false: not on the open sea). */
     static bool where(const std::string& name, int32_t& x, int32_t& y, int32_t& z);
+    /** Tests: the nearest stations to the sub and their distances, as text. */
+    static std::string report();
 };
 
 /** Debug options and test hooks on the game side (Java: game/src/Deep3dDebug.java). */

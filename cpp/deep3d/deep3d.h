@@ -366,6 +366,7 @@ public:
     virtual bool move(int32_t dx, int32_t dy, int32_t dz, bool absolute) = 0;
     /** Open Sea tests: where the named station stands. */
     virtual bool seaStation(const std::string& name, int32_t& x, int32_t& y, int32_t& z) = 0;
+    virtual std::string seaReport() = 0;
 };
 
 class Cheats {

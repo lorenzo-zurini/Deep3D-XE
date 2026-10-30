@@ -44,6 +44,7 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `pin creature\|ship\|off [dist] [dx] [dy]` | hold the nearest creature / ship in front of the camera |
 | `chase creature\|ship <frames>` | steer at the nearest one ahead, as a player would (nothing is moved) |
 | `near <dx> <dy> <dz> <station>` | Open Sea: put the sub by a station |
+| `sea` | Open Sea: log the nearest stations and their distances along the planet |
 | `move <dx> <dy> <dz>`, `moveto <x> <y> <z>` | move the sub and its camera by, or to, world units (Open Sea tests: far from the origin) |
 | `mouse on\|off`, `mouse <dx> <dy>` | mouse flight (on: without the window's focus), its motion |
 | `god on\|off`, `setf <class> <field> <value>` | cheats, game state (`setf class_21 field_209 12`: story step, cutscenes skippable) |

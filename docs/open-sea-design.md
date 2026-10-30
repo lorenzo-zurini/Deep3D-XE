@@ -17,19 +17,25 @@ position, whose station changes when you get close to another one.
 It is an option for Enhanced and Remastered: **World: Sectors / Open Sea**. Original stays
 exactly as it is (and `detcheck` with it).
 
-## Scale
+## Scale and the planet
 
-| | Value | Why |
-|---|---|---|
-| World units | **50 per metre** (decided 2026-10-30) | the sub (362 units) is a 7.2 m deep-sea craft, like DeepSea Challenger or Alvin; station modules are 120-160 m |
-| Depth | 0.16 m per game depth unit | 8 world units per depth unit, the same 50 u/m vertically |
-| Station depths | 2,160 m (Contact One) .. 4,776 m (Wagoll), 5,160 m at the deepest map value | `15000 + pct*150` game units x 0.16: deep-research-sub territory (Alvin is rated to 6.5 km) |
-| Map | 1 grid step = 18.85 game-km x 10 x 0.2133 = **40.2 km** (2,010,700 world units) | "distances x10" against believable |
-| Neighbours | median 160 km, closest 80 km, farthest 520 km; the map is about 3,600 km across | from stations.txt with `class_38::method_362` |
-| HUD | `Scale::dist` unchanged (local, x0.2133); `Scale::km` x10 (map distances, range) | missions compare km with km, so logic is unchanged |
+The map is the whole planet (decided 2026-10-30): a sphere of **4,140 km radius**.
 
-Travel at the game's own speeds: 40 m/s cruising and 100 m/s boosting
-(2,000 / 5,000 u/s), so 27-67 minutes to the nearest neighbour. The visible range is about 680 m.
+- **Size from pressure.** At 50 world units per metre the stations sit 2.2–4.8 km
+  down. A 4,140 km rock-and-water world (Earth's density) pulls 0.65 g, so Wagoll
+  (4,776 m) feels about 300 atm and Contact One (2,160 m) about 140 atm: the deepest
+  stations a step beyond commercial subs, as discussed.
+- **Placement.** No flat map fits a sphere exactly. `tools/opensea/globe_fit.py` lays
+  the 200 stations onto it, keeping each one's distances to its 8 nearest neighbours as
+  close to the map's (in ratio) as it can, with a weak spreading force so they cover
+  the globe about as evenly as they cover the map. 80% of neighbour distances stay
+  within −7%..+13% of the map's; the stretched ones are near the map's old edges, where
+  the planet closes. Wrapping the map's edges was tried and is worse (a doughnut cannot
+  become a sphere without tearing). Neighbours: about 300–650 km apart; once round the
+  planet: 26,000 km.
+- **Balance.** The game's rules keep the map's own distances (`class_38::method_362`):
+  mission distances and rewards, range on the map screen, prices, mission targets,
+  habitats. Only flying between stations, which the original never had, uses the planet.
 
 ## What the code allows (findings)
 
@@ -59,12 +65,10 @@ Travel at the game's own speeds: 40 m/s cruising and 100 m/s boosting
 
 ## Design
 
-### 1. True map coordinates
+### 1. Coordinates
 
-Positions **are** map coordinates, in world units at 50 u/m. Station S sits at
-`((x_S - 50) * G, -depth_S * 8, (y_S - 50) * G)` with G = 2,010,700, with the surface at
-Y = 0. The whole map spans about ±9e7 units, and int32 holds ±2.1e9 (±43,000 km at 50 u/m). So
-**positions stay 32-bit and fit**.
+The game's positions are a flat chart of the planet (phase 2), in world units at 50 u/m,
+32-bit: the sub stays within reach of int32 (±43,000 km of chart) for well over a lap.
 
 ### 2. 64-bit intermediates instead of a floating origin
 
@@ -149,17 +153,22 @@ station's waters does count as a visit (discovered, and added to the map's trail
    `deep3d_remaster.cpp`). Tested at 50, 400 and 1,800 km out: Enhanced and Remastered draw
    normally, 30 s of boosted flight across an origin step shows no seam, and `detcheck` is
    identical.
-2. **Every station on one map** (decided 2026-10-30: no handoff). *Done:* `cpp/deep3d/OpenSea.cpp`.
-   The level is built around the current station at the origin; all 200 stations stand at
-   their map positions relative to it (`class_100::deep3dPlace`, gates as the level makes
-   them). A station is built within 15 km of the sub and freed beyond 20 km. The level's
-   station slots (`field_276`) hold the nearest station's objects, so docking, the
-   autopilot, the gates and the HUD speak of it; docking makes it the current station
-   (`class_21::method_131`, as a S.T.R.E.A.M. arrival does), and entering its waters marks it
-   discovered. Station flares (Remastered) fade at a tenth of the murk's rate and keep a
-   minimum size, so they show as points of light out to about 10 km; the hull, about 1.5 km.
-   Tested: Charon to Hephaistos (121 km), docked there, departed with the sea laid out
-   around it; `detcheck` identical.
+2. **Every station on one planet.** *Done:* `cpp/deep3d/OpenSea.cpp`. The game flies in a
+   flat chart of the planet: depth is its height axis as ever, and across, an azimuthal
+   equidistant projection about a centre. The level is built around the current station,
+   the chart's first centre, turned to match the map's directions there. In open water
+   more than 200 km from the centre the chart re-centres under the sub, matched to the old
+   chart at the sub (place and direction), so nothing near the sub moves; only where the
+   stations stand. A station is built within 15 km of the sub and freed beyond 20 km. The
+   level's station slots (`field_276`) hold the nearest station: docking, the autopilot,
+   the gates and the HUD speak of it; docking makes it current (`class_21::method_131`,
+   as a S.T.R.E.A.M. arrival does), and entering its waters marks it discovered. Station
+   flares (Remastered) fade at a tenth of the murk's rate and keep a minimum size: points
+   of light out to about 10 km; the hull, about 1.5 km. Tested: Charon to Hephaistos
+   (419 km) and docked; 43 jumps of 600 km in one direction come back to Charon after
+   26,012 km; docked at Alpha VII after three re-centres (Remastered). `detcheck` identical.
+   Limit: the sub's chart position is 32-bit, so a little over one and a half laps without
+   docking or a S.T.R.E.A.M. jump (each rebuilds the chart around the station).
 3. **Continuous environment.** Tint and creature mix from the map position.
 4. **Travel and UI.** S.T.R.E.A.M. into the continuous world, map marker, HUD distances,
    `Scale::km`.
@@ -168,6 +177,7 @@ station's waters does count as a visit (discovered, and added to the map's trail
 ## Decisions (2026-10-30)
 
 1. **Scale**: 50 u/m in every direction (0.16 m per depth unit).
+   The planet: the whole map, a sphere of 4,140 km (see above); stations fitted onto it.
 2. **Long trips**: no transit drive. Real trips go by S.T.R.E.A.M., or you fly the
    hours yourself.
 3. **Visits**: flying into a station's waters counts as a visit. When the sector handoff

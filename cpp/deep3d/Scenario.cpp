@@ -447,6 +447,10 @@ bool run(const Args& s) {
         holdKey(Input::Action::DOCK, 4);
         return true;
     }
+    if (c == "sea") {
+        log("sea: " + (g ? g->seaReport() : std::string("no game")));
+        return true;
+    }
     if (c == "near") {
         // Open Sea tests: put the sub by a station: near <dx> <dy> <dz> <station name>
         int32_t x, y, z;

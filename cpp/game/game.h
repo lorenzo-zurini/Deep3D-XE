@@ -207,6 +207,7 @@ public:
     bool field_1305{};
     bool field_1306{};
     void __init(int32_t var1, jrt::Ref<class_108> var2, int32_t var3, int32_t var4, int32_t var5);
+    void deep3dMove(int32_t dx, int32_t dy, int32_t dz);
     virtual void method_821();
     virtual void method_822(int32_t var1);
     virtual void method_809();

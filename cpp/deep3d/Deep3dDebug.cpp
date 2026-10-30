@@ -102,6 +102,7 @@ public:
     bool inGame() override { return inGameNow(); }
 
     bool seaStation(const std::string& name, int32_t& x, int32_t& y, int32_t& z) override { return OpenSea::where(name, x, y, z); }
+    std::string seaReport() override { return OpenSea::report(); }
 
     bool move(int32_t dx, int32_t dy, int32_t dz, bool absolute) override {
         auto* flight = dynamic_cast<class_64*>(currentScene().get());

@@ -25,6 +25,16 @@ void class_99::__init(int32_t var1, jrt::Ref<class_108> var2, int32_t var3, int3
     }
 }
 
+/* Deep3D-PC: Open Sea moves a gate when the planet's chart re-centres */
+void class_99::deep3dMove(int32_t dx, int32_t dy, int32_t dz) {
+    this->class_98::field_1300 += dx, this->class_98::field_1301 += dy, this->class_98::field_1302 += dz;
+    this->class_91::field_1234 += dx, this->class_91::field_1235 += dy, this->class_91::field_1236 += dz;
+    if (this->field_1303 != nullptr) {
+        jrt::Ref<class_29> v = this->field_1303->at(0);
+        v->method_286(v->field_307 + dx, v->field_308 + dy, v->field_309 + dz);
+    }
+}
+
 void class_99::method_821() {
     this->field_1306 = true;
 }
