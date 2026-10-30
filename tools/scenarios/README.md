@@ -43,6 +43,7 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `overlay toggle\|settings\|up\|down\|left\|right\|enter\|back` | the settings menu |
 | `pin creature\|ship\|off [dist] [dx] [dy]` | hold the nearest creature / ship in front of the camera |
 | `chase creature\|ship <frames>` | steer at the nearest one ahead, as a player would (nothing is moved) |
+| `move <dx> <dy> <dz>` | move the sub and its camera by world units (Open Sea tests: far from the origin) |
 | `mouse on\|off`, `mouse <dx> <dy>` | mouse flight (on: without the window's focus), its motion |
 | `god on\|off`, `setf <class> <field> <value>` | cheats, game state (`setf class_21 field_209 12`: story step, cutscenes skippable) |
 | `mode original\|enhanced\|remastered`, `set <Config field> <value>` | graphics |
@@ -106,6 +107,7 @@ Environment variables for `run.sh` (`EXTRA_ENV="..."`):
 | `DEEP3D_RM_TEXLOG=1`, `DEEP3D_RM_DROPLOG=1` | log textures / atlas regions and their light classification, the draws replaced by lights |
 | `DEEP3D_RM_ATLASDUMP=<dir>` | dump the atlases the light classification reads |
 | `DEEP3D_LOG_CROSSHAIR=1`, `DEEP3D_LOG_HITS=1` | log the crosshair's position, weapon hits |
+| `DEEP3D_RM_ORIGINLOG=1` | log the renderer origin's steps (Open Sea) |
 | `DEEP3D_RM_DEBUG=1` | log the frame data and draw states |
 
 ## Filming switches

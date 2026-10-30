@@ -1712,11 +1712,22 @@ void class_26::deep3dRemaster() {
         return;
     }
     class_84::field_1110->field_40->field_1342->method_505(this->deep3dCam);
+    // Deep3D-PC: on the open sea, positions go to the renderer relative to an origin under the camera
+    // (cells of 65536 units), taken off in whole numbers before they become floats
+    jrt::Ref<class_57> deep3dCamM = class_84::field_1110->field_40->field_1342;
+    int32_t deep3dOX = 0, deep3dOZ = 0;
+    if (org::deep3d::Config::openSeaOn()) {
+        deep3dOX = deep3dCamM->field_698 >> 16;
+        deep3dOZ = deep3dCamM->field_700 >> 16;
+        this->deep3dCam->at(3) = float(deep3dCamM->field_698 - (deep3dOX << 16));
+        this->deep3dCam->at(11) = float(deep3dCamM->field_700 - (deep3dOZ << 16));
+    }
     org::deep3d::Remaster::world(this->deep3dCam, ((class_21::method_180() != nullptr) ? class_21::method_180()->field_1140 : 21000), (float(this->field_298) / 255.0f), (float(this->field_299) / 255.0f), (float(this->field_300) / 255.0f));
+    org::deep3d::Remaster::origin(deep3dOX, deep3dOZ);
     if ((this->field_272 != nullptr) && (this->field_272->field_970 != nullptr)) {
         this->field_272->field_970->method_849(this->deep3dPos);
         jrt::Ref<class_3> var2 = this->field_272->field_970->method_855(jrt::New<class_3>());
-        org::deep3d::Remaster::sub(float(this->deep3dPos->field_37), float(this->deep3dPos->field_38), float(this->deep3dPos->field_39), (float(var2->field_37) / 4096.0f), (float(var2->field_38) / 4096.0f), (float(var2->field_39) / 4096.0f), (this->field_272->field_994 ? 1.0f : 0.0f));
+        org::deep3d::Remaster::sub(float(this->deep3dPos->field_37 - (deep3dOX << 16)), float(this->deep3dPos->field_38), float(this->deep3dPos->field_39 - (deep3dOZ << 16)), (float(var2->field_37) / 4096.0f), (float(var2->field_38) / 4096.0f), (float(var2->field_39) / 4096.0f), (this->field_272->field_994 ? 1.0f : 0.0f));
     }
     jrt::Ref<jrt::Array<jrt::Ref<jrt::Array<jrt::Ref<class_91>>>>> var3 = jrt::arrayOf<jrt::Ref<jrt::Array<jrt::Ref<class_91>>>>({this->field_273, this->field_274});
     for (int32_t var4 = 0; var4 < var3->length; var4++) {
@@ -1725,7 +1736,7 @@ void class_26::deep3dRemaster() {
                 jrt::Ref<class_91> var6 = var3->at(var4)->at(var5);
                 if (((jrt::isInstance<class_96>(var6) && (var6->field_1226 != nullptr)) && (int32_t(var6->field_1224) != 3)) && (int32_t(var6->field_1224) != 4)) {
                     var6->field_1226->method_849(this->deep3dPos);
-                    org::deep3d::Remaster::light(float(this->deep3dPos->field_37), float(this->deep3dPos->field_38), float(this->deep3dPos->field_39), 1);
+                    org::deep3d::Remaster::light(float(this->deep3dPos->field_37 - (deep3dOX << 16)), float(this->deep3dPos->field_38), float(this->deep3dPos->field_39 - (deep3dOZ << 16)), 1);
                 }
             }
         }

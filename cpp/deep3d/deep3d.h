@@ -90,6 +90,8 @@ public:
     static bool showFps;
     /** The numbers shown at a believable scale (see Scale). */
     static bool believableScale;
+    /** Open Sea: every station at its place on one continuous map (docs/open-sea-design.md). */
+    static bool openSea;
     static int32_t masterVolume;
     static int32_t musicVolume;
     static int32_t sfxVolume;
@@ -103,6 +105,7 @@ public:
     static bool smoothTexturesOn() { return enhanced && textureFilter; }
     static bool antialiasingOn() { return enhanced && antialiasing; }
     static bool fullColourOn() { return enhanced && fullColour; }
+    static bool openSeaOn() { return enhanced && openSea; }
     static int32_t flightFov() { return int32_t(float(fov) * 4096.0f / 360.0f); }
 
     static void load();
@@ -359,6 +362,8 @@ public:
     virtual bool pin(const std::string& what, int32_t dist, int32_t dx, int32_t dy) = 0;
     /** Stick input that turns toward the nearest creature or ship ahead (none: false). */
     virtual bool aim(const std::string& what, float& x, float& y) = 0;
+    /** Tests: move the sub and its camera by (dx, dy, dz) world units (Open Sea: far places). */
+    virtual bool move(int32_t dx, int32_t dy, int32_t dz) = 0;
 };
 
 class Cheats {
@@ -431,11 +436,13 @@ class Remaster {
 public:
     static constexpr int32_t CAM = 0, TIME = 16, SECTOR_DEPTH = 17, TINT = 18, SUB = 21, SUB_DIR = 24,
                              SUB_ON = 27, FRAME = 28, BOOST = 29, NLIGHTS = 30, CLEAN = 31, LIGHTS = 32,
-                             MAX_LIGHTS = 8, HAZARD = LIGHTS + MAX_LIGHTS * 4, SIZE = HAZARD + 2;
+                             MAX_LIGHTS = 8, HAZARD = LIGHTS + MAX_LIGHTS * 4, ORIGIN = HAZARD + 2, SIZE = ORIGIN + 2;
     static bool on();
     static void testClean(bool on);
     static void forceDepth(int32_t depth);
     static void world(Ref<Array<float>> camRowMajor, int32_t sectorDepth, float tr, float tg, float tb);
+    /** Open Sea: the renderer's origin, in cells of 65536 units (positions handed over are relative to it). */
+    static void origin(int32_t cellX, int32_t cellZ);
     static void sub(float x, float y, float z, float dx, float dy, float dz, float boost);
     static void hazard(float rad, float pres);
     /** The world is frozen this frame (a dialog in flight): so are the effects. */

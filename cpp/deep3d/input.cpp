@@ -741,6 +741,12 @@ void Remaster::sub(float x, float y, float z, float dx, float dy, float dz, floa
 
 void Remaster::frozen() { gFrozen = true; }
 
+void Remaster::origin(int32_t cellX, int32_t cellZ) {
+    clinit();
+    float* d = gFrameData->data;
+    d[ORIGIN] = float(cellX), d[ORIGIN + 1] = float(cellZ);
+}
+
 void Remaster::hazard(float rad, float pres) {
     clinit();
     gRadiation = rad;

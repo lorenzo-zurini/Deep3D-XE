@@ -41,7 +41,7 @@
 enum {
     F_CAM = 0, F_TIME = 16, F_SECTOR = 17, F_TINT = 18, F_SUB = 21, F_SUBDIR = 24,
     F_SUBON = 27, F_FRAME = 28, F_BOOST = 29, F_NLIGHTS = 30, F_CLEAN = 31, F_LIGHTS = 32,
-    F_MAXLIGHTS = 8, F_HAZARD = F_LIGHTS + F_MAXLIGHTS * 4, F_SIZE = F_HAZARD + 2
+    F_MAXLIGHTS = 8, F_HAZARD = F_LIGHTS + F_MAXLIGHTS * 4, F_ORIGIN = F_HAZARD + 2, F_SIZE = F_ORIGIN + 2
 };
 
 static float F[F_SIZE];
@@ -155,7 +155,12 @@ static const char *WATER =
 "  c = mix(c, TEAL * 0.35 * (0.6 + 0.4 * smoothstep(-0.8, 0.6, dir.y)), d * d * 0.5);\n"
 "  return c * sunLight3(y + dir.y * 16000.0);\n"
 "}\n"
-"float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n"
+/* Open Sea: positions here are relative to the renderer's origin (it
+   moves under the camera in steps); what the patterns need of it, exact:
+   uOrigA (the glow's and the wake's phases), uOrigN (the chop's noise
+   lattice, modulo its period), uOrigS (the snow box) */
+"uniform vec4 uOrigA; uniform vec4 uOrigN; uniform vec3 uOrigS;\n"
+"float hash(vec2 p) { p = mod(p, 1024.0); return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n"
 /* interleaved gradient noise: an even, fixed dither per pixel (it does not
    crawl from frame to frame, and a small blur removes it) */
 "float ign(vec2 px) { return fract(52.9829189 * fract(dot(px, vec2(0.06711056, 0.00583715)))); }\n"
@@ -400,7 +405,7 @@ static const char *SCENE_FS =
 "  col += alb.rgb * uSelf * 0.22 * (1.0 - min(L, 1.0));\n"
    /* the deep's creatures and ships carry a faint glow on their edges */
 "  if (uLong < 0.5 && uSelf < 0.5) {\n"
-"    float bio = smoothstep(0.45, 0.9, d) * (0.6 + 0.4 * sin(uTime * 2.1 + wp.x * 0.003 + wp.z * 0.002));\n"
+"    float bio = smoothstep(0.45, 0.9, d) * (0.6 + 0.4 * sin(uTime * 2.1 + wp.x * 0.003 + wp.z * 0.002 + uOrigA.x));\n"
 "    col += vec3(0.1, 0.75, 1.0) * rim * bio * 0.9;\n"
 "  }\n"
 "  vec3 T = trans(dist * (reachK < 1.0 ? 0.45 : 1.0));\n"
@@ -433,7 +438,7 @@ static const char *BG_FS =
 "    vec2 sxz = cam.xz + dir.xz * t;\n"
 "    vec2 g = surfGrad(sxz);\n"
      /* chop on the swells (seen, not in the caustics) */
-"    vec2 q1 = sxz / 520.0 + vec2(uTime * 0.21, uTime * 0.13), q2 = sxz / 190.0 - vec2(uTime * 0.37, -uTime * 0.29);\n"
+"    vec2 q1 = sxz / 520.0 + uOrigN.xy + vec2(uTime * 0.21, uTime * 0.13), q2 = sxz / 190.0 + uOrigN.zw - vec2(uTime * 0.37, -uTime * 0.29);\n"
 "    g += vec2(noise(q1 + vec2(0.5, 0.0)) - noise(q1 - vec2(0.5, 0.0)), noise(q1 + vec2(0.0, 0.5)) - noise(q1 - vec2(0.0, 0.5))) * 0.22\n"
 "       + vec2(noise(q2 + vec2(0.5, 0.0)) - noise(q2 - vec2(0.5, 0.0)), noise(q2 + vec2(0.0, 0.5)) - noise(q2 - vec2(0.0, 0.5))) * 0.12;\n"
 "    vec3 N = normalize(vec3(-g.x, 1.0, -g.y));\n"
@@ -493,8 +498,8 @@ static const char *SNOW_VS =
 "    float A = exp(-(dl * dl) / (wr * wr)) * (1.0 - age) * (0.45 + 0.55 * uBoost);\n"
 "    if (A < 0.01) continue;\n"
 "    float t = uTime * (3.2 - 1.6 * age);\n"
-"    vec3 swirl = vec3(sin(dot(wp, vec3(0.011, 0.017, -0.013)) + t), sin(dot(wp, vec3(-0.015, 0.012, 0.016)) + t * 1.3),\n"
-"                      cos(dot(wp, vec3(0.014, -0.011, 0.012)) + t * 0.9));\n"
+"    vec3 swirl = vec3(sin(dot(wp, vec3(0.011, 0.017, -0.013)) + t + uOrigA.y), sin(dot(wp, vec3(-0.015, 0.012, 0.016)) + t * 1.3 + uOrigA.z),\n"
+"                      cos(dot(wp, vec3(0.014, -0.011, 0.012)) + t * 0.9 + uOrigA.w));\n"
 "    acc += (swirl * 150.0 + off / max(dl, 1.0) * 110.0) * A;\n"
 "  }\n"
 "  return acc;\n"
@@ -504,7 +509,7 @@ static const char *SNOW_VS =
 "  float tail = gl_MultiTexCoord0.x;\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
 "  vec3 p = s.xyz * uBox + vec3(sin(uTime * 0.21 + s.w * 40.0), sin(uTime * 0.17 + s.x * 30.0), cos(uTime * 0.19 + s.y * 50.0)) * 10.0;\n"
-"  vec3 wp = cam + mod(p - cam, uBox) - uBox * 0.5;\n"
+"  vec3 wp = cam + mod(p - cam - uOrigS, uBox) - uBox * 0.5;\n"
 "  if (uSubOn > 0.5) wp += churn(wp);\n"
 "  float sp = length(uCamVel);\n"
    /* cruising they hang as points; boosting, they streak */
@@ -868,6 +873,7 @@ struct Prog {
     GLuint id;
     GLint uCamToWorld, uInvProj, uVP, uTime, uSector, uTint, uSunDir, uSunCol, uSigma;
     GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf, uSpawner, uGlowP, uGlowC, uNumGlows;
+    GLint uOrigA, uOrigN, uOrigS;
     GLint uWave, uWaveB, uSurfY, uCaustMap, uCaustVP, uShadowMap, uShadowVP, uShadowOn, uShadowDepth, uShadowTexel, uSunAir;
     GLint uSpotMap, uSpotVP, uSpotOn, uSpotPos, uSpotSide;
 };
@@ -950,6 +956,9 @@ static int link(Prog *p, const char *vs1, const char *vs2, const char *fs) {
     p->uSelf = glGetUniformLocation(id, "uSelf");
     p->uWave = glGetUniformLocation(id, "uWave");
     p->uWaveB = glGetUniformLocation(id, "uWaveB");
+    p->uOrigA = glGetUniformLocation(id, "uOrigA");
+    p->uOrigN = glGetUniformLocation(id, "uOrigN");
+    p->uOrigS = glGetUniformLocation(id, "uOrigS");
     p->uSurfY = glGetUniformLocation(id, "uSurfY");
     p->uCaustMap = glGetUniformLocation(id, "uCaustMap");
     p->uCaustVP = glGetUniformLocation(id, "uCaustVP");
@@ -1035,6 +1044,13 @@ static float sunDir[3], sunCol[3], sigma[3];
 #define SURF_DEPTH 0.0f
 static float surfY;
 static float waveA[8 * 4], waveB[8 * 4];
+/* Open Sea: the renderer's origin (world units, a multiple of ORIGIN_CELL)
+   and the patterns' share of it: the waves' phases (waveBO: waveB with the
+   origin's phase added), the glow's, the wake's, the noise lattice's, the
+   snow box's */
+#define ORIGIN_CELL 65536.0
+static double originX, originZ;
+static float waveBO[8 * 4] = {0}, origA[4], origN[4], origS[3];
 
 static void initWaves() {
     /* wavelength, direction (rad), focusing: tuned so the light folds into
@@ -1535,7 +1551,10 @@ static void setCommon(const Prog *p) {
     glUniform1f(p->uSpawner, rmSpawner ? 1.0f : 0.0f);
     glUniform1f(p->uSelf, rmSelf ? 1.0f : 0.0f);
     glUniform4fv(p->uWave, 8, waveA);
-    glUniform4fv(p->uWaveB, 8, waveB);
+    glUniform4fv(p->uWaveB, 8, waveBO);
+    glUniform4fv(p->uOrigA, 1, origA);
+    glUniform4fv(p->uOrigN, 1, origN);
+    glUniform3fv(p->uOrigS, 1, origS);
     glUniform1f(p->uSurfY, surfY);
     glUniform1i(p->uCaustMap, 7);
     glUniformMatrix4fv(p->uCaustVP, 1, GL_FALSE, caustVP);
@@ -3102,6 +3121,47 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
 /* JNI                                                                 */
 /* ------------------------------------------------------------------ */
 
+/* Open Sea: the game hands over positions relative to an origin that
+   moves under the camera in whole cells (F_ORIGIN, in cells). When it
+   moves, what is kept from frame to frame moves with it, and the patterns
+   tied to the world (waves, caustics, chop, glow, snow) are given the
+   origin's share, worked out in double, so they carry on without a seam */
+static float wrapPhase(double v) { return float(fmod(v, 6.283185307179586)); }
+
+static void followOrigin() {
+    static int waves = (initWaves(), 1);
+    (void) waves;
+    double ox = double(F[F_ORIGIN]) * ORIGIN_CELL, oz = double(F[F_ORIGIN + 1]) * ORIGIN_CELL;
+    float dx = float(ox - originX), dz = float(oz - originZ);
+    if (dx != 0.0f || dz != 0.0f) {
+        for (int si = 0; si < SCHOOLS; si++) {
+            School *sc = &schools[si];
+            sc->c[0] -= dx; sc->c[2] -= dz;
+            for (int i = 0; i < sc->n; i++) { sc->f[i].p[0] -= dx; sc->f[i].p[2] -= dz; }
+        }
+        fishFocus[0] -= dx; fishFocus[2] -= dz;
+        for (int k = 0; k < 8; k++) { wake[k][0] -= dx; wake[k][2] -= dz; }
+        camPrev[0] -= dx; camPrev[2] -= dz;
+        for (int i = 0; i < BUB_COUNT; i++) { bubs[i * 4] -= dx; bubs[i * 4 + 2] -= dz; }
+        for (int i = 0; i < glowNextN; i++) { glowNext[i].p[0] -= dx; glowNext[i].p[2] -= dz; }
+        for (int i = 0; i < glowUseN; i++) { glowUseP[i * 4] -= dx; glowUseP[i * 4 + 2] -= dz; }
+        originX = ox;
+        originZ = oz;
+        static const int logOrigin = getenv("DEEP3D_RM_ORIGINLOG") != NULL;
+        if (logOrigin) printf("[rm] origin %.0f %.0f frame %.0f\n", ox, oz, double(F[F_FRAME]));
+    }
+    memcpy(waveBO, waveB, sizeof waveBO);
+    for (int i = 0; i < 8; i++)
+        waveBO[i * 4 + 2] = wrapPhase(double(waveB[i * 4 + 2]) + double(waveA[i * 4 + 2]) * (double(waveA[i * 4]) * ox + double(waveA[i * 4 + 1]) * oz));
+    origA[0] = wrapPhase(ox * 0.003 + oz * 0.002);
+    origA[1] = wrapPhase(ox * 0.011 - oz * 0.013);
+    origA[2] = wrapPhase(-ox * 0.015 + oz * 0.016);
+    origA[3] = wrapPhase(ox * 0.014 + oz * 0.012);
+    origN[0] = float(fmod(ox / 520.0, 1024.0)); origN[1] = float(fmod(oz / 520.0, 1024.0));
+    origN[2] = float(fmod(ox / 190.0, 1024.0)); origN[3] = float(fmod(oz / 190.0, 1024.0));
+    origS[0] = float(fmod(ox, 3600.0)); origS[1] = 0.0f; origS[2] = float(fmod(oz, 3600.0));
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_javax_microedition_m3g_Platform__1remaster(JNIEnv *env, jclass, jfloatArray frame) {
     if (!frame) {
@@ -3109,6 +3169,7 @@ Java_javax_microedition_m3g_Platform__1remaster(JNIEnv *env, jclass, jfloatArray
         return;
     }
     env->GetFloatArrayRegion(frame, 0, F_SIZE, F);
+    followOrigin();
     rmNext = 1;
     /* the objects' kinds start over here (Remaster.bind), not at the pass's
        start: the first object's kind comes before its draw starts the pass */

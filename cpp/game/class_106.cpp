@@ -100,11 +100,13 @@ bool class_106::method_883(jrt::Ref<class_3> var1) {
     if ((var1 = this->class_102::field_1342->method_511(var1))->field_39 > this->field_1350) {
         return false;
     } else {
-        int32_t var2 = (this->field_1361 * var1->field_39) >> 12;
-        int32_t var3 = (this->field_1360 * var1->field_39) >> 12;
+        // Deep3D-PC: in 64 bits (the same results), so a far point (the open sea's stations) can't overflow
+        int64_t var2 = (int64_t(this->field_1361) * int64_t(var1->field_39)) >> 12;
+        int64_t var3 = (int64_t(this->field_1360) * int64_t(var1->field_39)) >> 12;
         if ((var2 != 0) && (var3 != 0)) {
-            var1->field_37 = (-((jrt::div((var1->field_37 << 11), var2) * this->field_1358) >> 12)) + (this->field_1358 >> 1);
-            var1->field_38 = ((jrt::div((var1->field_38 << 11), var3) * this->field_1359) >> 12) + (this->field_1359 >> 1);
+            auto fit = [](int64_t v) { return int32_t(v < -(int64_t(1) << 30) ? -(int64_t(1) << 30) : v > (int64_t(1) << 30) ? (int64_t(1) << 30) : v); };
+            var1->field_37 = fit((-((((int64_t(var1->field_37) << 11) / var2) * this->field_1358) >> 12)) + (this->field_1358 >> 1));
+            var1->field_38 = fit(((((int64_t(var1->field_38) << 11) / var3) * this->field_1359) >> 12) + (this->field_1359 >> 1));
             return (((var1->field_37 >= 0) && (var1->field_38 >= 0)) && (var1->field_37 < this->field_1358)) && (var1->field_38 < this->field_1359);
         } else {
             return false;

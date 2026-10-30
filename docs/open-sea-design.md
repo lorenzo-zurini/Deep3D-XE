@@ -1,6 +1,6 @@
 # Open Sea: all 200 stations on one continuous map
 
-Draft design, 2026-10-30. Status: decided, nothing implemented.
+Draft design, 2026-10-30. Status: decided. Phase 1 done (2026-10-30).
 
 ## The idea
 
@@ -143,9 +143,12 @@ station's waters does count as a visit (discovered, and added to the map's trail
 
 ## Phases
 
-1. **Big coordinates in one sector.** 64-bit intermediates in `class_57` and the HUD
-   projection, no snap in Open Sea, and the renderer origin. Done when 50 km straight out from
-   a station shows no artefacts and `detcheck` is still identical.
+1. **Big coordinates in one sector.** *Done:* the option `world.open_sea` (Display: World),
+   64-bit products in `class_57::method_471/473/503/506/511` and `class_106::method_883`, no
+   snap, and the renderer origin (cells of 65,536 units; `followOrigin` in
+   `deep3d_remaster.cpp`). Tested at 50, 400 and 1,800 km out: Enhanced and Remastered draw
+   normally, 30 s of boosted flight across an origin step shows no seam, and `detcheck` is
+   identical.
 2. **Map position and sector handoff.** Stations at their map positions, nearest-station
    ownership, partial rebuild. Done when Gosu to Veill is one continuous flight ending in a
    dock.

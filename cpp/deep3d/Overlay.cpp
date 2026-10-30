@@ -171,6 +171,9 @@ std::vector<Item> buildItems() {
             items.push_back(Item::choice("Field of view", [] { return std::to_string(Config::fov); }, cycleFov));
             items.push_back(Item::choice("Scale", [] { return std::string(Config::believableScale ? "Believable" : "Original"); },
                                          [](int) { Config::believableScale = !Config::believableScale; }));
+            if (Config::enhanced)
+                items.push_back(Item::choice("World", [] { return std::string(Config::openSea ? "Open Sea" : "Sectors"); },
+                                             [](int) { Config::openSea = !Config::openSea; }));
             items.push_back(Item::toggle("Fullscreen", [] { return Config::fullscreen; }, [] { Runtime::toggleFullscreen(); }));
             items.push_back(Item::toggle("VSync", [] { return Config::vsync; }, [] {
                 Config::vsync = !Config::vsync;

@@ -310,7 +310,8 @@ void class_70::method_671(int64_t var1) {
                 this->deep3dCornerArrow();
                 this->field_973->method_839(false);
             }
-            if (this->field_1000->method_23() > 500000) {
+            // Deep3D-PC: the open sea has no edge (the game kept under its fixed-point limit here)
+            if (!org::deep3d::Config::openSeaOn() && this->field_1000->method_23() > 500000) {
                 this->field_970->method_845(20000, this->field_1000->field_38, 20000);
             }
             if (this->method_655()) {

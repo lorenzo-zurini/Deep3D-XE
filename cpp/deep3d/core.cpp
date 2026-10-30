@@ -106,6 +106,7 @@ int32_t Config::fpsCap = 60;
 int32_t Config::brightness = 100;
 bool Config::showFps = false;
 bool Config::believableScale = true;
+bool Config::openSea = false;
 int32_t Config::masterVolume = 100;
 int32_t Config::musicVolume = 80;
 int32_t Config::sfxVolume = 100;
@@ -440,6 +441,7 @@ void Config::load() {
     textureFilter = getBool("display.texture_filter", textureFilter);
     showFps = getBool("display.show_fps", showFps);
     believableScale = getBool("display.believable_scale", believableScale);
+    openSea = getBool("world.open_sea", openSea);
 }
 
 void Config::save() {
@@ -460,6 +462,7 @@ void Config::save() {
     gProps["display.texture_filter"] = b(textureFilter);
     gProps["display.show_fps"] = b(showFps);
     gProps["display.believable_scale"] = b(believableScale);
+    gProps["world.open_sea"] = b(openSea);
     gProps["display.internal_width"] = i(internalWidth);
     gProps["display.internal_height"] = i(internalHeight);
     gProps["display.fullscreen"] = b(fullscreen);
@@ -528,7 +531,7 @@ bool Config::setField(const std::string& name, const std::string& value) {
         {"mouseFlight", &mouseFlight}, {"nativeResolution", &nativeResolution}, {"textureFilter", &textureFilter},
         {"antialiasing", &antialiasing}, {"fullColour", &fullColour}, {"fullscreen", &fullscreen},
         {"integerScaling", &integerScaling}, {"showFps", &showFps}, {"gamepadEnabled", &gamepadEnabled},
-        {"believableScale", &believableScale}};
+        {"believableScale", &believableScale}, {"openSea", &openSea}};
     static const I ints[] = {{"originalLines", &originalLines}, {"internalWidth", &internalWidth},
         {"internalHeight", &internalHeight}, {"windowWidth", &windowWidth}, {"windowHeight", &windowHeight},
         {"fpsCap", &fpsCap}, {"brightness", &brightness}, {"masterVolume", &masterVolume},

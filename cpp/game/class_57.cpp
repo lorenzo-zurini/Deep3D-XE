@@ -79,9 +79,9 @@ void class_57::method_471(jrt::Ref<class_57> var1) {
     int32_t var5 = this->field_693;
     int32_t var6 = this->field_691;
     int32_t var7 = this->field_694;
-    this->field_698 = this->field_698 + ((this->field_686 * ((((this->field_689 * var1->field_698) >> 12) + ((this->field_692 * var1->field_699) >> 12)) + ((this->field_695 * var1->field_700) >> 12))) >> 12);
-    this->field_699 = this->field_699 + ((this->field_687 * ((((this->field_690 * var1->field_698) >> 12) + ((this->field_693 * var1->field_699) >> 12)) + ((this->field_696 * var1->field_700) >> 12))) >> 12);
-    this->field_700 = this->field_700 + ((this->field_688 * ((((this->field_691 * var1->field_698) >> 12) + ((this->field_694 * var1->field_699) >> 12)) + ((this->field_697 * var1->field_700) >> 12))) >> 12);
+    this->field_698 = int32_t(this->field_698 + ((this->field_686 * ((((int64_t(this->field_689) * int64_t(var1->field_698)) >> 12) + ((int64_t(this->field_692) * int64_t(var1->field_699)) >> 12)) + ((int64_t(this->field_695) * int64_t(var1->field_700)) >> 12))) >> 12));
+    this->field_699 = int32_t(this->field_699 + ((this->field_687 * ((((int64_t(this->field_690) * int64_t(var1->field_698)) >> 12) + ((int64_t(this->field_693) * int64_t(var1->field_699)) >> 12)) + ((int64_t(this->field_696) * int64_t(var1->field_700)) >> 12))) >> 12));
+    this->field_700 = int32_t(this->field_700 + ((this->field_688 * ((((int64_t(this->field_691) * int64_t(var1->field_698)) >> 12) + ((int64_t(this->field_694) * int64_t(var1->field_699)) >> 12)) + ((int64_t(this->field_697) * int64_t(var1->field_700)) >> 12))) >> 12));
     this->field_686 = (this->field_686 * var1->field_686) >> 12;
     this->field_687 = (this->field_687 * var1->field_687) >> 12;
     this->field_688 = (this->field_688 * var1->field_688) >> 12;
@@ -135,9 +135,9 @@ void class_57::method_472(jrt::Ref<class_57> var1) {
 }
 
 jrt::Ref<class_57> class_57::method_473(jrt::Ref<class_57> var1, jrt::Ref<class_57> var2) {
-    var2->field_698 = this->field_698 + ((this->field_686 * ((((this->field_689 * var1->field_698) >> 12) + ((this->field_692 * var1->field_699) >> 12)) + ((this->field_695 * var1->field_700) >> 12))) >> 12);
-    var2->field_699 = this->field_699 + ((this->field_687 * ((((this->field_690 * var1->field_698) >> 12) + ((this->field_693 * var1->field_699) >> 12)) + ((this->field_696 * var1->field_700) >> 12))) >> 12);
-    var2->field_700 = this->field_700 + ((this->field_688 * ((((this->field_691 * var1->field_698) >> 12) + ((this->field_694 * var1->field_699) >> 12)) + ((this->field_697 * var1->field_700) >> 12))) >> 12);
+    var2->field_698 = int32_t(this->field_698 + ((this->field_686 * ((((int64_t(this->field_689) * int64_t(var1->field_698)) >> 12) + ((int64_t(this->field_692) * int64_t(var1->field_699)) >> 12)) + ((int64_t(this->field_695) * int64_t(var1->field_700)) >> 12))) >> 12));
+    var2->field_699 = int32_t(this->field_699 + ((this->field_687 * ((((int64_t(this->field_690) * int64_t(var1->field_698)) >> 12) + ((int64_t(this->field_693) * int64_t(var1->field_699)) >> 12)) + ((int64_t(this->field_696) * int64_t(var1->field_700)) >> 12))) >> 12));
+    var2->field_700 = int32_t(this->field_700 + ((this->field_688 * ((((int64_t(this->field_691) * int64_t(var1->field_698)) >> 12) + ((int64_t(this->field_694) * int64_t(var1->field_699)) >> 12)) + ((int64_t(this->field_697) * int64_t(var1->field_700)) >> 12))) >> 12));
     var2->field_686 = (this->field_686 * var1->field_686) >> 12;
     var2->field_687 = (this->field_687 * var1->field_687) >> 12;
     var2->field_688 = (this->field_688 * var1->field_688) >> 12;
@@ -722,9 +722,9 @@ jrt::Ref<class_57> class_57::method_503(jrt::Ref<class_57> var1) {
     var1->field_691 = this->field_695;
     var1->field_694 = this->field_696;
     var1->field_697 = this->field_697;
-    var1->field_698 = (var1->field_686 * (((-((var1->field_689 * this->field_698) >> 12)) - ((var1->field_692 * this->field_699) >> 12)) - ((var1->field_695 * this->field_700) >> 12))) >> 12;
-    var1->field_699 = (var1->field_687 * (((-((var1->field_690 * this->field_698) >> 12)) - ((var1->field_693 * this->field_699) >> 12)) - ((var1->field_696 * this->field_700) >> 12))) >> 12;
-    var1->field_700 = (var1->field_688 * (((-((var1->field_691 * this->field_698) >> 12)) - ((var1->field_694 * this->field_699) >> 12)) - ((var1->field_697 * this->field_700) >> 12))) >> 12;
+    var1->field_698 = int32_t((var1->field_686 * (((-((int64_t(var1->field_689) * int64_t(this->field_698)) >> 12)) - ((int64_t(var1->field_692) * int64_t(this->field_699)) >> 12)) - ((int64_t(var1->field_695) * int64_t(this->field_700)) >> 12))) >> 12);
+    var1->field_699 = int32_t((var1->field_687 * (((-((int64_t(var1->field_690) * int64_t(this->field_698)) >> 12)) - ((int64_t(var1->field_693) * int64_t(this->field_699)) >> 12)) - ((int64_t(var1->field_696) * int64_t(this->field_700)) >> 12))) >> 12);
+    var1->field_700 = int32_t((var1->field_688 * (((-((int64_t(var1->field_691) * int64_t(this->field_698)) >> 12)) - ((int64_t(var1->field_694) * int64_t(this->field_699)) >> 12)) - ((int64_t(var1->field_697) * int64_t(this->field_700)) >> 12))) >> 12);
     var1->field_704 = true;
     return var1;
 }
@@ -772,9 +772,9 @@ jrt::Ref<class_3> class_57::method_506(jrt::Ref<class_3> var1) {
     int32_t var2 = var1->field_37;
     int32_t var3 = var1->field_38;
     int32_t var4 = var1->field_39;
-    var1->field_37 = ((((((this->field_686 * this->field_689) >> 12) * var2) >> 12) + ((((this->field_687 * this->field_692) >> 12) * var3) >> 12)) + ((((this->field_688 * this->field_695) >> 12) * var4) >> 12)) + this->field_698;
-    var1->field_38 = ((((((this->field_686 * this->field_690) >> 12) * var2) >> 12) + ((((this->field_687 * this->field_693) >> 12) * var3) >> 12)) + ((((this->field_688 * this->field_696) >> 12) * var4) >> 12)) + this->field_699;
-    var1->field_39 = ((((((this->field_686 * this->field_691) >> 12) * var2) >> 12) + ((((this->field_687 * this->field_694) >> 12) * var3) >> 12)) + ((((this->field_688 * this->field_697) >> 12) * var4) >> 12)) + this->field_700;
+    var1->field_37 = int32_t(((((((int64_t(this->field_686) * int64_t(this->field_689)) >> 12) * var2) >> 12) + ((((int64_t(this->field_687) * int64_t(this->field_692)) >> 12) * var3) >> 12)) + ((((int64_t(this->field_688) * int64_t(this->field_695)) >> 12) * var4) >> 12)) + this->field_698);
+    var1->field_38 = int32_t(((((((int64_t(this->field_686) * int64_t(this->field_690)) >> 12) * var2) >> 12) + ((((int64_t(this->field_687) * int64_t(this->field_693)) >> 12) * var3) >> 12)) + ((((int64_t(this->field_688) * int64_t(this->field_696)) >> 12) * var4) >> 12)) + this->field_699);
+    var1->field_39 = int32_t(((((((int64_t(this->field_686) * int64_t(this->field_691)) >> 12) * var2) >> 12) + ((((int64_t(this->field_687) * int64_t(this->field_694)) >> 12) * var3) >> 12)) + ((((int64_t(this->field_688) * int64_t(this->field_697)) >> 12) * var4) >> 12)) + this->field_700);
     return var1;
 }
 
@@ -818,15 +818,15 @@ jrt::Ref<class_3> class_57::method_511(jrt::Ref<class_3> var1) {
     int32_t var2 = jrt::div(16777216, this->field_686);
     int32_t var3 = jrt::div(16777216, this->field_687);
     int32_t var4 = jrt::div(16777216, this->field_688);
-    int32_t var5 = (var2 * (((-((this->field_689 * this->field_698) >> 12)) - ((this->field_690 * this->field_699) >> 12)) - ((this->field_691 * this->field_700) >> 12))) >> 12;
-    int32_t var6 = (var3 * (((-((this->field_692 * this->field_698) >> 12)) - ((this->field_693 * this->field_699) >> 12)) - ((this->field_694 * this->field_700) >> 12))) >> 12;
-    int32_t var7 = (var4 * (((-((this->field_695 * this->field_698) >> 12)) - ((this->field_696 * this->field_699) >> 12)) - ((this->field_697 * this->field_700) >> 12))) >> 12;
+    int32_t var5 = int32_t((var2 * (((-((int64_t(this->field_689) * int64_t(this->field_698)) >> 12)) - ((int64_t(this->field_690) * int64_t(this->field_699)) >> 12)) - ((int64_t(this->field_691) * int64_t(this->field_700)) >> 12))) >> 12);
+    int32_t var6 = int32_t((var3 * (((-((int64_t(this->field_692) * int64_t(this->field_698)) >> 12)) - ((int64_t(this->field_693) * int64_t(this->field_699)) >> 12)) - ((int64_t(this->field_694) * int64_t(this->field_700)) >> 12))) >> 12);
+    int32_t var7 = int32_t((var4 * (((-((int64_t(this->field_695) * int64_t(this->field_698)) >> 12)) - ((int64_t(this->field_696) * int64_t(this->field_699)) >> 12)) - ((int64_t(this->field_697) * int64_t(this->field_700)) >> 12))) >> 12);
     int32_t var8 = var1->field_37;
     int32_t var9 = var1->field_38;
     int32_t var10 = var1->field_39;
-    var1->field_37 = ((((((var2 * this->field_689) >> 12) * var8) >> 12) + ((((var3 * this->field_690) >> 12) * var9) >> 12)) + ((((var4 * this->field_691) >> 12) * var10) >> 12)) + var5;
-    var1->field_38 = ((((((var2 * this->field_692) >> 12) * var8) >> 12) + ((((var3 * this->field_693) >> 12) * var9) >> 12)) + ((((var4 * this->field_694) >> 12) * var10) >> 12)) + var6;
-    var1->field_39 = ((((((var2 * this->field_695) >> 12) * var8) >> 12) + ((((var3 * this->field_696) >> 12) * var9) >> 12)) + ((((var4 * this->field_697) >> 12) * var10) >> 12)) + var7;
+    var1->field_37 = int32_t(((((((int64_t(var2) * int64_t(this->field_689)) >> 12) * var8) >> 12) + ((((int64_t(var3) * int64_t(this->field_690)) >> 12) * var9) >> 12)) + ((((int64_t(var4) * int64_t(this->field_691)) >> 12) * var10) >> 12)) + var5);
+    var1->field_38 = int32_t(((((((int64_t(var2) * int64_t(this->field_692)) >> 12) * var8) >> 12) + ((((int64_t(var3) * int64_t(this->field_693)) >> 12) * var9) >> 12)) + ((((int64_t(var4) * int64_t(this->field_694)) >> 12) * var10) >> 12)) + var6);
+    var1->field_39 = int32_t(((((((int64_t(var2) * int64_t(this->field_695)) >> 12) * var8) >> 12) + ((((int64_t(var3) * int64_t(this->field_696)) >> 12) * var9) >> 12)) + ((((int64_t(var4) * int64_t(this->field_697)) >> 12) * var10) >> 12)) + var7);
     return var1;
 }
 

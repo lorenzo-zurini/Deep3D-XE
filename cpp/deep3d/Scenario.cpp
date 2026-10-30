@@ -447,6 +447,12 @@ bool run(const Args& s) {
         holdKey(Input::Action::DOCK, 4);
         return true;
     }
+    if (c == "move") {
+        // tests: move the sub and its camera (Open Sea: far from the origin)
+        bool ok = g && g->move(arg(s, 1, 0), arg(s, 2, 0), arg(s, 3, 0));
+        log(std::string("move") + (ok ? "" : " (not in flight)"));
+        return true;
+    }
     if (c == "chase") {
         // fly at the nearest creature (or ship) ahead, as a player would: chase <kind> <frames>
         int n = arg(s, 2, 120);
