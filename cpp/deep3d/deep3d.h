@@ -179,7 +179,7 @@ public:
 class Input {
 public:
     enum class Action { UP, DOWN, LEFT, RIGHT, FIRE, OK, BACK, CLEAR, GAME_PAUSE, KEY1, BOOST, DOCK, KEY7,
-                        AUTOPILOT, STAR, HASH, COUNT };
+                        AUTOPILOT, STAR, HASH, THRUST_UP, THRUST_DOWN, COUNT };
     static const char* name(Action a);
     static const char* label(Action a);
     static int32_t midpCode(Action a);
@@ -413,6 +413,16 @@ public:
     static void draw(Ref<Graphics> g, int32_t w, int32_t h);
 };
 
+/** The sub's thrust (a PC addition): 0..100% of the cruising speed, held
+    keys move it; boosting is always full. 100% is the game as it was. */
+class Thrust {
+public:
+    static void held(int32_t direction, bool pressed);
+    static float level();
+    /** a cruising step of the sub, scaled by the thrust (boosting: as it is) */
+    static int32_t move(int32_t units, bool boosting);
+};
+
 /** Remastered graphics: the frame block handed to the native renderer. */
 /**
  * The game's numbers at a believable scale (Config::believableScale, on by
@@ -439,13 +449,15 @@ class Remaster {
 public:
     static constexpr int32_t CAM = 0, TIME = 16, SECTOR_DEPTH = 17, TINT = 18, SUB = 21, SUB_DIR = 24,
                              SUB_ON = 27, FRAME = 28, BOOST = 29, NLIGHTS = 30, CLEAN = 31, LIGHTS = 32,
-                             MAX_LIGHTS = 8, HAZARD = LIGHTS + MAX_LIGHTS * 4, ORIGIN = HAZARD + 2, SIZE = ORIGIN + 2;
+                             MAX_LIGHTS = 8, HAZARD = LIGHTS + MAX_LIGHTS * 4, ORIGIN = HAZARD + 2, SUB_UP = ORIGIN + 2, SIZE = SUB_UP + 3;
     static bool on();
     static void testClean(bool on);
     static void forceDepth(int32_t depth);
     static void world(Ref<Array<float>> camRowMajor, int32_t sectorDepth, float tr, float tg, float tb);
     /** Open Sea: the renderer's origin, in cells of 65536 units (positions handed over are relative to it). */
     static void origin(int32_t cellX, int32_t cellZ);
+    /** The sub's up axis (its floodlights roll and pitch with it). */
+    static void subUp(float x, float y, float z);
     static void sub(float x, float y, float z, float dx, float dy, float dz, float boost);
     static void hazard(float rad, float pres);
     /** The world is frozen this frame (a dialog in flight): so are the effects. */

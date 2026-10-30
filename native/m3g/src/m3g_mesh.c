@@ -126,7 +126,7 @@ static M3Gbool m3gMeshSetupRender(Node *self,
         AABB bbox;
         m3gGetBoundingBox(mesh->vertexBuffer, &bbox);
         m3gUpdateCullingMask(s, renderQueue->camera, &bbox);
-        if (s->cullMask == 0) {
+        if (s->cullMask == 0 && !deep3d_rm_keep_unculled()) {
             m3gIncStat(M3G_INTERFACE(self),
                        M3G_STAT_RENDER_NODES_CULLED, 1);
             return M3G_TRUE;

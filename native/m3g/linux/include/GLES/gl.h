@@ -72,6 +72,8 @@ extern "C" {
 #endif
 extern int deep3d_texture_filter;
 extern int deep3d_phone_textures;
+/* Remastered: draw structures even out of view (their shadows reach into it) */
+int deep3d_rm_keep_unculled(void);
 extern int deep3d_texture_gen;
 extern unsigned deep3d_target_texture;
 extern int deep3d_target_texture_mode;

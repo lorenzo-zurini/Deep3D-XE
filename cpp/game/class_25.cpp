@@ -55,7 +55,10 @@ void class_25::method_237(int32_t var1, int32_t var2, int32_t var3, int32_t var4
 }
 
 void class_25::method_238() {
+    int32_t deep3dWas = class_4::deep3dKind;
+    if (org::deep3d::Remaster::on()) class_4::deep3dKind = 7;   // Deep3D-PC: bubbles (lit by the water they are in, not glowing)
     class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_261));
+    class_4::deep3dKind = deep3dWas;
 }
 
 void class_25::__dumpFields(jrt::Dumper& d) {

@@ -453,6 +453,27 @@ void class_55::method_451() {
         org::deep3d::GameUi::scrollArea(this->field_606, this->field_607, this->field_604, this->field_605, true);
         if (!this->field_654) {
             org::deep3d::GameUi::zone(this->field_606, this->field_607, this->field_604, this->field_605, 100);
+            // Deep3D-PC: the mouse can use the arrows at the edges and pick any station, in
+            // the depth view or in the little map below (a click selects it and asks to travel)
+            int32_t mid = this->field_607 + (this->field_605 >> 1);
+            org::deep3d::GameUi::zone(this->field_606, mid - 14, 18, 28, org::deep3d::GameUi::LEFT);
+            org::deep3d::GameUi::zone((this->field_606 + this->field_604) - 18, mid - 14, 18, 28, org::deep3d::GameUi::RIGHT);
+            if (this->field_624 != nullptr) {
+                jrt::Ref<class_55> self(this);
+                org::deep3d::GameUi::menuSelect([self](int32_t i) {
+                    if (self->field_624 != nullptr && i >= 0 && i < self->field_624->length) self->field_629 = i;
+                });
+                auto pick = [&](int32_t i, int32_t x, int32_t y) {
+                    org::deep3d::GameUi::rowIndex(i);
+                    org::deep3d::GameUi::row(x - 7, y - 7, 14, 14, i == this->field_629, true);
+                };
+                for (int32_t i = 0; i < this->field_624->length; i++) {
+                    if (this->field_627 != nullptr && (i * 2 + 1) < this->field_627->length)
+                        pick(i, this->field_627->at(i * 2), this->field_627->at(i * 2 + 1));
+                    if (this->field_628 != nullptr && (i * 2 + 1) < this->field_628->length)
+                        pick(i, jrt::f2i(this->field_628->at(i * 2)), jrt::f2i(this->field_628->at(i * 2 + 1)));
+                }
+            }
         }
     } else if (this->field_623 == 5) {
         org::deep3d::GameUi::controls(1, (-6), (-7), 0);

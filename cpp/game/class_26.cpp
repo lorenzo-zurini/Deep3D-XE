@@ -1219,7 +1219,7 @@ jrt::Ref<class_91> class_26::method_254(int32_t var1, int32_t var2, int32_t var3
             (jrt::cast<jrt::Array<jrt::Ref<java::lang::Object>>>((var22 = jrt::Ref<java::lang::Object>(jrt::newArray<jrt::Ref<class_29>>(1)))))->at(0) = jrt::Ref<java::lang::Object>(jrt::New<class_31>(var13, var14, var15, 0, 300, 0, 4000, 4000, 15000));
             (jrt::cast<class_95>(var19))->field_1253 = jrt::cast<jrt::Array<jrt::Ref<class_29>>>(var22);
             var21 = jrt::Ref<java::lang::Object>(jrt::arrayOf<int32_t>({360, 186, (-3370), (-844), (-507), 880, (-449), 437, (-983), 880, (-275), (-983), 360, 186, 4243, 0, 0, 0}));
-            (var20 = jrt::New<class_85>(((jrt::cast<jrt::Array<jrt::Ref<java::lang::Object>>>(var21))->length / 3), 0))->method_739(jrt::cast<jrt::Array<int32_t>>(var21));
+            (var20 = jrt::New<class_85>(((jrt::cast<jrt::Array<int32_t>>(var21))->length / 3), 0))->method_739(jrt::cast<jrt::Array<int32_t>>(var21));   // Deep3D-PC: an int[] (the decompile read its length as an Object[], which bytecode allows)
             break;
         case 5:
             var19 = jrt::Ref<java::lang::Object>(jrt::New<class_96>(var3, var1, var4, var18, jrt::cast<class_108>(var16), var13, var14, var15));
@@ -1731,6 +1731,8 @@ void class_26::deep3dRemaster() {
     if ((this->field_272 != nullptr) && (this->field_272->field_970 != nullptr)) {
         this->field_272->field_970->method_849(this->deep3dPos);
         jrt::Ref<class_3> var2 = this->field_272->field_970->method_855(jrt::New<class_3>());
+        jrt::Ref<class_3> deep3dUp = this->field_272->field_970->method_856(jrt::New<class_3>());
+        org::deep3d::Remaster::subUp(float(deep3dUp->field_37) / 4096.0f, float(deep3dUp->field_38) / 4096.0f, float(deep3dUp->field_39) / 4096.0f);
         org::deep3d::Remaster::sub(float(this->deep3dPos->field_37 - (deep3dOX << 16)), float(this->deep3dPos->field_38), float(this->deep3dPos->field_39 - (deep3dOZ << 16)), (float(var2->field_37) / 4096.0f), (float(var2->field_38) / 4096.0f), (float(var2->field_39) / 4096.0f), (this->field_272->field_994 ? 1.0f : 0.0f));
     }
     jrt::Ref<jrt::Array<jrt::Ref<jrt::Array<jrt::Ref<class_91>>>>> var3 = jrt::arrayOf<jrt::Ref<jrt::Array<jrt::Ref<class_91>>>>({this->field_273, this->field_274});

@@ -228,7 +228,7 @@ void class_70::method_671(int64_t var1) {
                 if ((this->field_984 == float(0)) && (this->field_985 == float(0))) {
                     this->method_677(int32_t(this->field_992));
                 }
-                this->field_970->method_847((int32_t(var1) * this->field_983));
+                this->field_970->method_847(org::deep3d::Thrust::move(int32_t(var1) * this->field_983, this->field_994));   // Deep3D-PC: thrust
             } else {
                 this->method_667(jrt::Ref<class_91>(nullptr));
             }
@@ -245,7 +245,7 @@ void class_70::method_671(int64_t var1) {
                     this->method_677(deep3dLevel);
                 }
             }
-            this->field_970->method_847((int32_t(var1) * this->field_983));
+            this->field_970->method_847(org::deep3d::Thrust::move(int32_t(var1) * this->field_983, this->field_994));   // Deep3D-PC: thrust
         }
         if (!this->field_998) {
             this->field_970->field_1364 = -this->field_986;
@@ -449,8 +449,10 @@ void class_70::method_681(bool var1) {
         }
         this->field_976->method_548();
         if ((!this->field_991) && var1) {
+            class_4::deep3dKind = org::deep3d::Remaster::on() ? 6 : 0;   // Deep3D-PC: the depth limits' markers (not lit by the lamps)
             class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_1011));
             class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_1012));
+            class_4::deep3dKind = 0;
         }
         if (this->field_994 || (!this->field_997)) {
             this->field_980->method_238();

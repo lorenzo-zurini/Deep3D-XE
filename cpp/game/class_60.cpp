@@ -60,7 +60,10 @@ void class_60::method_547(int64_t var1, jrt::Ref<class_57> var3, bool var4) {
 }
 
 void class_60::method_548() {
+    int32_t deep3dWas = class_4::deep3dKind;
+    if (org::deep3d::Remaster::on()) class_4::deep3dKind = 7;   // Deep3D-PC: bubbles (lit by the water they are in, not glowing)
     class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_723));
+    class_4::deep3dKind = deep3dWas;
 }
 
 void class_60::__dumpFields(jrt::Dumper& d) {

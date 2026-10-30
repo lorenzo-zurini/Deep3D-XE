@@ -41,18 +41,20 @@ const ActionInfo kActions[] = {
     {"DOWN", "Move down", -2, {vk::DOWN, vk::S}},
     {"LEFT", "Turn left", -3, {vk::LEFT, 65}},
     {"RIGHT", "Turn right", -4, {vk::RIGHT, vk::D}},
-    {"FIRE", "Fire / Select", -5, {vk::SPACE, vk::CONTROL}},
+    {"FIRE", "Fire / Select", -5, {vk::SPACE}},
     {"OK", "OK / Menu", -6, {vk::ENTER}},
     {"BACK", "Back", -7, {vk::BACK_SPACE, vk::X}},
     {"CLEAR", "Clear", -8, {vk::DELETE}},
     {"GAME_PAUSE", "Pause (in-game)", -11, {vk::P}},
     {"KEY1", "Key 1", '1', {vk::K1}},
-    {"BOOST", "Booster (3)", '3', {vk::SHIFT, vk::K3}},
+    {"BOOST", "Booster (3)", '3', {vk::K3, 81}},   // 81: Q
     {"DOCK", "Dock / interact (0)", '0', {vk::E, vk::K0}},
     {"KEY7", "Key 7", '7', {vk::K7}},
     {"AUTOPILOT", "Autopilot (9)", '9', {vk::TAB, vk::K9}},
     {"STAR", "Key *", '*', {vk::C}},
     {"HASH", "Key #", '#', {vk::H}},
+    {"THRUST_UP", "Thrust up", 0, {vk::SHIFT}},
+    {"THRUST_DOWN", "Thrust down", 0, {vk::CONTROL}},
 };
 constexpr int kActionCount = int(Input::Action::COUNT);
 
@@ -277,6 +279,10 @@ void Input::handleKey(int32_t code, char16_t keyChar, bool pressed, bool altDown
 }
 
 void Input::handleAction(Action a, bool pressed) {
+    if (a == Action::THRUST_UP || a == Action::THRUST_DOWN) {
+        Thrust::held(a == Action::THRUST_UP ? 1 : -1, pressed && !Overlay::isOpen());
+        return;
+    }
     if (Overlay::isOpen()) {
         if (pressed) Overlay::handleAction(a);
         return;
@@ -287,6 +293,54 @@ void Input::handleAction(Action a, bool pressed) {
         return;
     }
     sendMidpKey(midpCode(a), pressed);
+}
+
+// ---------------------------------------------------------------------
+// Thrust
+// ---------------------------------------------------------------------
+
+namespace {
+std::mutex gThrustLock;
+float gThrust = 1.0f;
+int32_t gThrustDir = 0;
+int64_t gThrustAt = 0;
+int32_t gThrustShown = 100;
+
+void thrustUpdate() {
+    int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    if (gThrustDir != 0) {
+        // 0 to full in two seconds
+        gThrust = std::max(0.0f, std::min(1.0f, gThrust + gThrustDir * float(now - gThrustAt) / 2000.0f));
+        int32_t pct = int32_t(std::lround(gThrust * 20)) * 5;
+        if (pct != gThrustShown) {
+            gThrustShown = pct;
+            Overlay::showToast("Thrust " + std::to_string(pct) + "%");
+        }
+    }
+    gThrustAt = now;
+}
+}  // namespace
+
+void Thrust::held(int32_t direction, bool pressed) {
+    std::lock_guard<std::mutex> g(gThrustLock);
+    thrustUpdate();
+    if (pressed) {
+        gThrustDir = direction;
+    } else if (gThrustDir == direction) {
+        gThrustDir = 0;
+    }
+}
+
+float Thrust::level() {
+    std::lock_guard<std::mutex> g(gThrustLock);
+    thrustUpdate();
+    return gThrust;
+}
+
+int32_t Thrust::move(int32_t units, bool boosting) {
+    float t = level();
+    if (boosting || t >= 1.0f) return units;
+    return int32_t(std::lround(units * t));
 }
 
 void Input::sendMidpKey(int32_t code, bool pressed) {
@@ -740,6 +794,12 @@ void Remaster::sub(float x, float y, float z, float dx, float dy, float dz, floa
 }
 
 void Remaster::frozen() { gFrozen = true; }
+
+void Remaster::subUp(float x, float y, float z) {
+    clinit();
+    float* d = gFrameData->data;
+    d[SUB_UP] = x, d[SUB_UP + 1] = y, d[SUB_UP + 2] = z;
+}
 
 void Remaster::origin(int32_t cellX, int32_t cellZ) {
     clinit();

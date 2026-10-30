@@ -41,7 +41,7 @@
 enum {
     F_CAM = 0, F_TIME = 16, F_SECTOR = 17, F_TINT = 18, F_SUB = 21, F_SUBDIR = 24,
     F_SUBON = 27, F_FRAME = 28, F_BOOST = 29, F_NLIGHTS = 30, F_CLEAN = 31, F_LIGHTS = 32,
-    F_MAXLIGHTS = 8, F_HAZARD = F_LIGHTS + F_MAXLIGHTS * 4, F_ORIGIN = F_HAZARD + 2, F_SIZE = F_ORIGIN + 2
+    F_MAXLIGHTS = 8, F_HAZARD = F_LIGHTS + F_MAXLIGHTS * 4, F_ORIGIN = F_HAZARD + 2, F_SUBUP = F_ORIGIN + 2, F_SIZE = F_SUBUP + 3
 };
 
 static float F[F_SIZE];
@@ -54,6 +54,8 @@ static int rmStructure = 0;     /* the draws belong to a structure (long reach) 
 static int rmSpawner = 0;       /* to something that spawns (fades out before it) */
 static int rmSky = 0;           /* the game's skydome: the backdrop is drawn in its place */
 static int rmSelf = 0;          /* the player's sub */
+static int rmMarker = 0;        /* the depth limits' markers: not lit by the lamps */
+static int rmBubble = 0;        /* the game's bubble trails: lit by the water they are in */
 static int rmShip = 0;          /* another sub (a spawner too) */
 static int rmSprite = 0;        /* the current draw is a sprite */
 static int bgFrame = -1;
@@ -111,6 +113,8 @@ static const char *WATER =
 "float sunLight(float y) { return sunLight3(y).g; }\n"
 "uniform float uLong;\n"
 "uniform float uSelf;\n"
+"uniform float uMarker;\n"
+"uniform float uBubble;\n"
 "uniform float uSpawner;\n"   /* creatures, ships, items; else (uLong, uSelf: 0) weapons, effects */
 /* how much light survives a path through the water: clear near, then
    falling away towards the phone's old far plane (uSigma = 1 / reach) */
@@ -367,6 +371,13 @@ static const char *SCENE_FS =
 "  float env = uSpawner > 0.5 ? spawnFade(dist) : 1.0;\n"
    /* weapons and effects are bright: they carry about twice as far */
 "  float reachK = uLong > 0.5 || uSelf > 0.5 || uSpawner > 0.5 ? 1.0 : 0.55;\n"
+   /* the game's bubbles: lit by the light where they are and the lamps,
+      not glowing in the dark */
+"  if (uBubble > 0.5) {\n"
+"    vec3 lit = sunLight3(wp.y) * 0.9 + lamps(wp, -V) * 0.6;\n"
+"    gl_FragColor = vec4(col * lit * trans(dist * 0.55), base.a);\n"
+"    return;\n"
+"  }\n"
 "  if (uSprite != 0 && uKind != 0) {\n"
 "    vec3 T = trans(dist * 0.3 * reachK) * env;\n"
      /* red flares burn deep red, like the warning lights on buildings */
@@ -390,17 +401,19 @@ static const char *SCENE_FS =
 "  float rim = pow(1.0 - abs(dot(N, V)), 3.0);\n"
 "  col += water(-N, wp.y) * rim * 0.22;\n"
 "  float up = smoothstep(-0.15, 0.85, N.y);\n"
-"  float near = 1.0 - smoothstep(2500.0, 17000.0, dist);\n"
+"  float near = 1.0 - smoothstep(8000.0, 36000.0, dist);\n"
    /* in the shade of what is above: less of the light from above, no caustics */
 "  float vis = uSelf > 0.5 ? 1.0 : shadowAt(wp + N * 25.0, ign(gl_FragCoord.xy) * 6.2832);\n"
 "  col *= mix(0.5, 1.0, vis);\n"
-"  float cz = causticAt(wp, 0.3 + 2.0 * d) * 2.2;\n"
+   /* caustics fade with depth (the focusing spreads out on the way down):
+      full in the shallows, gone at the deepest stations; on the sub, softer */
+"  float cz = causticAt(wp, 0.3 + 2.0 * d) * 2.2 * (1.0 - d) * (1.0 - d) * (uSelf > 0.5 ? 0.35 : 1.0);\n"
 "  col += alb.rgb * uSunCol * cz * up * near * min(L * L, 4.0) * 0.55 * vis;\n"
 "  float mx = max(alb.r, max(alb.g, alb.b)), mn = min(alb.r, min(alb.g, alb.b));\n"
    /* a structure's lamps (bright, saturated texels) keep their own light */
 "  float emis = uKind == 0 && uLong > 0.5 ? smoothstep(0.80, 0.97, mx) * smoothstep(0.30, 0.55, mx - mn) : 0.0;\n"
 "  col = mix(col, alb.rgb * 1.1, emis * 0.8);\n"
-"  col += alb.rgb * lamps(wp, N) * (1.0 - uSelf);\n"   /* the sub's own running lights and cockpit glow: it stays in sight
+"  col += alb.rgb * lamps(wp, N) * (1.0 - max(uSelf, uMarker));\n"   /* the sub's own running lights and cockpit glow: it stays in sight
       where no daylight reaches */
 "  col += alb.rgb * uSelf * 0.22 * (1.0 - min(L, 1.0));\n"
    /* the deep's creatures and ships carry a faint glow on their edges */
@@ -481,6 +494,8 @@ static const char *SNOW_VS =
 "uniform mat4 uWorldToEye; uniform mat4 uProj; uniform float uBox; uniform float uPx;\n"
 "uniform vec3 uCamVel; uniform float uPoints;\n"
 "uniform vec3 uWake[8];\n"
+"uniform float uWakeFrac;\n"   /* how far into the next wake step: the samples age smoothly */
+"uniform vec3 uCentre; uniform float uSeedShift; uniform float uSecond;\n"   /* a box about the camera, and one about the sub (its wake) */
 "varying vec4 vCol;\n"
 /* the thrusters' turbulence at wp: along the jets' recent path (uWake: at
    the nozzles now, then where they were), a churning swirl and a push out
@@ -493,24 +508,31 @@ static const char *SNOW_VS =
 "    float h = clamp(dot(wp - a, ab) / max(dot(ab, ab), 1.0), 0.0, 1.0);\n"
 "    vec3 off = wp - a - ab * h;\n"
 "    float dl = length(off);\n"
-"    float age = (float(k) + h) / 7.0;\n"
+   /* the samples' ages: now, then each a step older than the last (the
+      newest stored one uWakeFrac of a step); continuous when they shift */
+"    float a0 = k == 0 ? 0.0 : float(k) - 1.0 + uWakeFrac, a1 = float(k) + uWakeFrac;\n"
+"    float age = mix(a0, a1, h) / 7.0;\n"
 "    float wr = 160.0 + 520.0 * age;\n"
-"    float A = exp(-(dl * dl) / (wr * wr)) * (1.0 - age) * (0.45 + 0.55 * uBoost);\n"
+"    float A = exp(-(dl * dl) / (wr * wr)) * max(1.0 - age, 0.0) * (0.45 + 0.55 * uBoost);\n"
 "    if (A < 0.01) continue;\n"
 "    float t = uTime * (3.2 - 1.6 * age);\n"
 "    vec3 swirl = vec3(sin(dot(wp, vec3(0.011, 0.017, -0.013)) + t + uOrigA.y), sin(dot(wp, vec3(-0.015, 0.012, 0.016)) + t * 1.3 + uOrigA.z),\n"
 "                      cos(dot(wp, vec3(0.014, -0.011, 0.012)) + t * 0.9 + uOrigA.w));\n"
-"    acc += (swirl * 150.0 + off / max(dl, 1.0) * 110.0) * A;\n"
+"    acc += (swirl * 230.0 + off / max(dl, 1.0) * 170.0) * A;\n"
 "  }\n"
 "  return acc;\n"
 "}\n"
 "void main() {\n"
 "  vec4 s = gl_Vertex;\n"
+"  s.xyz = fract(s.xyz + uSeedShift);\n"
 "  float tail = gl_MultiTexCoord0.x;\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
 "  vec3 p = s.xyz * uBox + vec3(sin(uTime * 0.21 + s.w * 40.0), sin(uTime * 0.17 + s.x * 30.0), cos(uTime * 0.19 + s.y * 50.0)) * 10.0;\n"
-"  vec3 wp = cam + mod(p - cam - uOrigS, uBox) - uBox * 0.5;\n"
-"  if (uSubOn > 0.5) wp += churn(wp);\n"
+"  vec3 wp = uCentre + mod(p - uCentre - uOrigS, uBox) - uBox * 0.5;\n"
+   /* the sub's box leaves the camera's to the camera's */
+"  float own = uSecond > 0.5 && all(lessThan(abs(wp - cam), vec3(uBox * 0.5))) ? 0.0 : 1.0;\n"
+"  vec3 stir = uSubOn > 0.5 ? churn(wp) : vec3(0.0);\n"
+"  wp += stir;\n"
 "  float sp = length(uCamVel);\n"
    /* cruising they hang as points; boosting, they streak */
 "  float streak = smoothstep(2600.0, 4500.0, sp);\n"
@@ -524,9 +546,14 @@ static const char *SNOW_VS =
 "  float dark = 1.0 - smoothstep(0.03, 0.3, Ls.g);\n"
 "  float bio = step(0.6, fract(s.w * 53.0)) * dark;\n"
 "  c += vec3(0.12, 0.72, 1.0) * bio * (0.22 + 0.16 * sin(uTime * (0.7 + s.z) + s.x * 30.0));\n"
-"  float fade = (1.0 - smoothstep(uBox * 0.3, uBox * 0.5, dist)) * smoothstep(30.0, 160.0, dist) * step(wp.y, uSurfY - 50.0);\n"
+   /* stirred by the jets, they light up (as plankton does): brightest in the dark */
+"  float lit = smoothstep(15.0, 140.0, length(stir));\n"
+"  c += vec3(0.15, 0.8, 1.0) * lit * (0.3 + 0.7 * dark) * 1.6;\n"
+"  bio = max(bio, lit * dark);\n"
+"  gl_PointSize *= 1.0 + 1.4 * lit;\n"
+"  float fade = (1.0 - smoothstep(uBox * 0.3, uBox * 0.5, length(wp - uCentre))) * smoothstep(30.0, 160.0, dist) * step(wp.y, uSurfY - 50.0) * own;\n"
 "  fade *= uPoints > 0.5 ? 1.0 : streak * (1.0 - 0.8 * tail);\n"
-"  vCol = vec4(c * mix(trans(dist), vec3(1.0), bio * 0.5), fade * (0.45 + 0.55 * fract(s.w * 17.0)));\n"
+"  vCol = vec4(c * mix(trans(dist), vec3(1.0), max(bio * 0.5, lit * 0.85)), fade * mix(0.45 + 0.55 * fract(s.w * 17.0), 1.0, lit));\n"
 "}\n";
 static const char *SNOW_FS =
 "varying vec4 vCol;\n"
@@ -822,13 +849,13 @@ static const char *LIGHT_FS =
 "  float sceneDist = z >= 0.99999 ? 1e9 : length(eyeFar);\n"
 "  vec3 wrd = normalize(mat3(uCamToWorld) * normalize(eyeFar));\n"
 "  vec3 cam = uCamToWorld[3].xyz;\n"
-"  float tmax = min(sceneDist, 40000.0);\n"
+"  float tmax = min(sceneDist, 90000.0);\n"
 "  float jit = ign(gl_FragCoord.xy);\n"
 "  float R = 0.0, S = 0.0, W = 0.0, B = 0.0;\n"
-"  for (int i = 0; i < 40; i++) {\n"
-"    float u = (float(i) + jit) / 40.0;\n"
+"  for (int i = 0; i < 48; i++) {\n"
+"    float u = (float(i) + jit) / 48.0;\n"
 "    float t = tmax * u * u;\n"                   /* denser near, sparser far */
-"    float dt = tmax * 2.0 * u / 40.0;\n"
+"    float dt = tmax * 2.0 * u / 48.0;\n"
 "    vec3 p = cam + wrd * t;\n"
 "    float T = trans1(t * 0.55);\n"
 "    float d = depth01(p.y); float Lp = sunLight(p.y);\n"
@@ -872,7 +899,7 @@ static const char *BLUR_FS =
 struct Prog {
     GLuint id;
     GLint uCamToWorld, uInvProj, uVP, uTime, uSector, uTint, uSunDir, uSunCol, uSigma;
-    GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf, uSpawner, uGlowP, uGlowC, uNumGlows;
+    GLint uSub, uSubDir, uSubOn, uBoost, uNumLights, uLights, uLong, uSelf, uMarker, uBubble, uSpawner, uGlowP, uGlowC, uNumGlows;
     GLint uOrigA, uOrigN, uOrigS;
     GLint uWave, uWaveB, uSurfY, uCaustMap, uCaustVP, uShadowMap, uShadowVP, uShadowOn, uShadowDepth, uShadowTexel, uSunAir;
     GLint uSpotMap, uSpotVP, uSpotOn, uSpotPos, uSpotSide;
@@ -954,6 +981,8 @@ static int link(Prog *p, const char *vs1, const char *vs2, const char *fs) {
     p->uGlowC = glGetUniformLocation(id, "uGlowC");
     p->uNumGlows = glGetUniformLocation(id, "uNumGlows");
     p->uSelf = glGetUniformLocation(id, "uSelf");
+    p->uMarker = glGetUniformLocation(id, "uMarker");
+    p->uBubble = glGetUniformLocation(id, "uBubble");
     p->uWave = glGetUniformLocation(id, "uWave");
     p->uWaveB = glGetUniformLocation(id, "uWaveB");
     p->uOrigA = glGetUniformLocation(id, "uOrigA");
@@ -1101,8 +1130,12 @@ static void spotFrame(float *m) {
     const float *p = F + F_SUB, *f = F + F_SUBDIR;
     float fn = sqrtf(f[0] * f[0] + f[1] * f[1] + f[2] * f[2]);
     float z[3] = {-f[0] / fn, -f[1] / fn, -f[2] / fn};          /* the view looks along -z */
-    float up[3] = {0, 1, 0};
-    if (fabsf(z[1]) > 0.95f) { up[0] = 1; up[1] = 0; }
+    /* the sub's own up: the lamps roll and pitch with it, straight down too */
+    float up[3] = {F[F_SUBUP], F[F_SUBUP + 1], F[F_SUBUP + 2]};
+    if (up[0] * up[0] + up[1] * up[1] + up[2] * up[2] < 0.25f) {
+        up[0] = 0, up[1] = 1, up[2] = 0;
+        if (fabsf(z[1]) > 0.95f) { up[0] = 1; up[1] = 0; }
+    }
     float x[3] = {up[1] * z[2] - up[2] * z[1], up[2] * z[0] - up[0] * z[2], up[0] * z[1] - up[1] * z[0]};
     float xn = sqrtf(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
     for (int j = 0; j < 3; j++) x[j] /= xn;
@@ -1203,6 +1236,7 @@ struct Glow {
     float p[3], r, c[3];
     int drawn;                          /* drawn as a light (not a flame) */
     int beacon;                         /* a station's flare: seen from afar */
+    int effect;                         /* a shot's impact, an explosion: a flash, lights little */
 };
 static Glow glowNext[GLOW_MAX];
 static int glowNextN;
@@ -1228,6 +1262,7 @@ static void addGlow(const float *eye, float r, const float *c, int drawn) {
     g->r = r;
     g->drawn = drawn;
     g->beacon = rmStructure;
+    g->effect = !rmStructure && !rmSelf && !rmShip && !rmSpawner;
     /* the stations' blinking flares: a quarter of the light, or each blink
        floods the whole station */
     if (rmStructure) {
@@ -1263,7 +1298,7 @@ static void chooseGlows() {
         Glow *g = &glowNext[best];
         memcpy(glowUseP + n * 4, g->p, sizeof(float) * 3);
         glowUseP[n * 4 + 3] = g->r * 12.0f;    /* a light reaches 12x its core */
-        for (int j = 0; j < 3; j++) glowUseC[n * 4 + j] = g->c[j] * 2.2f;
+        for (int j = 0; j < 3; j++) glowUseC[n * 4 + j] = g->c[j] * (g->effect ? 0.7f : 2.2f);
         glowUseC[n * 4 + 3] = 0;
         glowUseN++;
     }
@@ -1552,6 +1587,8 @@ static void setCommon(const Prog *p) {
     glUniform1f(p->uLong, rmStructure ? 1.0f : 0.0f);
     glUniform1f(p->uSpawner, rmSpawner ? 1.0f : 0.0f);
     glUniform1f(p->uSelf, rmSelf ? 1.0f : 0.0f);
+    glUniform1f(p->uMarker, rmMarker ? 1.0f : 0.0f);
+    glUniform1f(p->uBubble, rmBubble ? 1.0f : 0.0f);
     glUniform4fv(p->uWave, 8, waveA);
     glUniform4fv(p->uWaveB, 8, waveBO);
     glUniform4fv(p->uOrigA, 1, origA);
@@ -2536,6 +2573,12 @@ static int sceneBegin() {
     return 1;
 }
 
+/* a structure out of view still casts its shadow (columns of shade from
+   stations behind the camera); the GPU clips its draw for next to nothing */
+extern "C" int deep3d_rm_keep_unculled(void) {
+    return (rmPass || rmNext) && rmStructure;
+}
+
 extern "C" void deep3d_rm_draw_elements(GLenum mode, GLsizei count, GLenum type, const void *indices) {
     int on = sceneBegin();
     if (on < 0) {
@@ -2644,7 +2687,8 @@ static void updateCamVel() {
     if (camPrevTime < 0 || dt <= 0.0f || dt > 0.5f || jump > 4000.0f * 4000.0f) {
         camVel[0] = camVel[1] = camVel[2] = 0;
     } else {
-        for (int j = 0; j < 3; j++) camVel[j] += (d[j] / dt - camVel[j]) * 0.35f;
+        float k = 1.0f - expf(-dt / 0.12f);   /* the same smoothing at any frame rate */
+        for (int j = 0; j < 3; j++) camVel[j] += (d[j] / dt - camVel[j]) * k;
     }
     if (dt != 0.0f) {
         memcpy(camPrev, c, sizeof camPrev);
@@ -2691,6 +2735,7 @@ static void drawSnow() {
     glUniform3fv(glGetUniformLocation(pSnow.id, "uCamVel"), 1, camVel);
     updateWake();
     glUniform3fv(glGetUniformLocation(pSnow.id, "uWake"), 8, &wake[0][0]);
+    glUniform1f(glGetUniformLocation(pSnow.id, "uWakeFrac"), fminf(fmaxf((F[F_TIME] - wakeTime) / WAKE_STEP, 0.0f), 1.0f));
     GLint uPoints = glGetUniformLocation(pSnow.id, "uPoints");
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
@@ -2701,16 +2746,25 @@ static void drawSnow() {
     glClientActiveTexture(GL_TEXTURE0);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_VERTEX_ARRAY);
-    /* the streaks (at speed), then the specks themselves */
-    glTexCoordPointer(1, GL_FLOAT, 0, snowTail);
-    glVertexPointer(4, GL_FLOAT, 0, snowSeeds);
-    glUniform1f(uPoints, 0.0f);
-    glLineWidth(1.5f);
-    glDrawArrays(GL_LINES, 0, SNOW_COUNT * 2);
-    glTexCoordPointer(1, GL_FLOAT, 2 * sizeof(GLfloat), snowTail);
-    glVertexPointer(4, GL_FLOAT, 8 * sizeof(GLfloat), snowSeeds);
-    glUniform1f(uPoints, 1.0f);
-    glDrawArrays(GL_POINTS, 0, SNOW_COUNT);
+    /* a box of specks about the camera, and one about the sub: its wake
+       (the camera trails it by more than half a box) has its own to stir */
+    GLint uCentre = glGetUniformLocation(pSnow.id, "uCentre"), uShift = glGetUniformLocation(pSnow.id, "uSeedShift"),
+          uSecond = glGetUniformLocation(pSnow.id, "uSecond");
+    for (int box = 0; box < (F[F_SUBON] > 0.5f ? 2 : 1); box++) {
+        glUniform3fv(uCentre, 1, box ? F + F_SUB : F + F_CAM + 12);
+        glUniform1f(uShift, box ? 0.37f : 0.0f);
+        glUniform1f(uSecond, float(box));
+        /* the streaks (at speed), then the specks themselves */
+        glTexCoordPointer(1, GL_FLOAT, 0, snowTail);
+        glVertexPointer(4, GL_FLOAT, 0, snowSeeds);
+        glUniform1f(uPoints, 0.0f);
+        glLineWidth(1.5f);
+        glDrawArrays(GL_LINES, 0, SNOW_COUNT * 2);
+        glTexCoordPointer(1, GL_FLOAT, 2 * sizeof(GLfloat), snowTail);
+        glVertexPointer(4, GL_FLOAT, 8 * sizeof(GLfloat), snowSeeds);
+        glUniform1f(uPoints, 1.0f);
+        glDrawArrays(GL_POINTS, 0, SNOW_COUNT);
+    }
     glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
     popState(&s);
 }
@@ -3187,6 +3241,8 @@ Java_javax_microedition_m3g_Platform__1remaster(JNIEnv *env, jclass, jfloatArray
     rmSky = 0;
     rmSelf = 0;
     rmShip = 0;
+    rmMarker = 0;
+    rmBubble = 0;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -3196,6 +3252,8 @@ Java_javax_microedition_m3g_Platform__1remasterObject(JNIEnv *, jclass, jint kin
     rmSky = kind == 3;
     rmSelf = kind == 4;
     rmShip = kind == 5;
+    rmMarker = kind == 6;
+    rmBubble = kind == 7;
 }
 
 extern "C" JNIEXPORT void JNICALL
