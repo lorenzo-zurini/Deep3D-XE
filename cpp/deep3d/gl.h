@@ -111,7 +111,7 @@ public:
     static void requestScreenshot();
     static void screenshotTo(const std::string& file);
     static void requestDump2d();
-    static void burst(const std::string& dir, const std::string& name, int32_t frames);
+    static void burst(const std::string& dir, const std::string& name, int32_t frames, bool full = false);
     static void toggleFullscreen();
 };
 

@@ -47,6 +47,7 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `mode original\|enhanced\|remastered`, `set <Config field> <value>` | graphics |
 | `depth <game depth>\|off` | Remastered: show any depth |
 | `burst <frames> <name>` | every presented frame from now (quarter size), with its mean colour in the log |
+| `record <frames> <name>` | every presented frame from now at full size (`<name>_00000.png`...): with `DEEP3D_DET=1` each is 33 ms of game time, so they make a video |
 | `hover <row text>` | the mouse onto a menu row |
 | `shot <name>` | a screenshot, logged to metrics.tsv with state, FPS and the sub's heading |
 | `pair <name>` | the same moment in Remastered and Enhanced (`<name>__alt`), without particles |
