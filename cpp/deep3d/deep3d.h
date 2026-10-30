@@ -54,6 +54,34 @@ public:
     static void present(const gl::Draw2D& frame);
 };
 
+/**
+ * Frame time. The game was tuned for one step of about 33 ms; here a frame
+ * can be 1 ms or less. Whatever one original step did, a frame does its
+ * share of, by these. In deterministic runs a frame is exactly the original
+ * step and each of these gives exactly the original result, so the game
+ * stays bit-identical there.
+ */
+class Step {
+public:
+    static constexpr double ORIGINAL_MS = 33.0;
+    /** Measures this frame (the game loop, once a pass). */
+    static void advance();
+    /** This frame's length in ms: sub-millisecond, at most 100 (33 in deterministic runs). */
+    static double ms();
+    /** The frame is exactly one original step: use the original formula. */
+    static bool exact() { return Det::ON; }
+    /** This frame as a fraction of an original step. */
+    static double scale() { return ms() / ORIGINAL_MS; }
+    /** A whole number of units for this frame out of perStep a step; what rounds away stays in carry. */
+    static int32_t share(double perStep, double& carry);
+    /** x -= (x - target) >> shift, done once a step: the same chase at any frame rate. */
+    static int32_t chase(int32_t x, int32_t target, int32_t shift);
+    /** A per-step factor (a decay of k each step) for this frame. */
+    static double factor(double perStep);
+    /** How many whole original steps have gone by (for what can only happen in steps). */
+    static int32_t steps(double& accumulated);
+};
+
 /** Where user files live: DEEP3D_HOME, the executable's folder, or the working directory. */
 class AppDirs {
 public:

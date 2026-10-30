@@ -2,6 +2,7 @@
 #include "game.h"
 
 #include <chrono>
+#include <cmath>
 #include <deque>
 #include <fstream>
 #include <mutex>
@@ -33,14 +34,70 @@ std::string outDir() {
 }
 }  // namespace
 
+namespace {
+/* the game's clock: steady, and without what a long stall or the pause menu
+   took beyond the longest frame the game is given */
+std::atomic<int64_t> gSkippedNanos{0};
+int64_t gLastNanos = -1;
+double gFrameMs = Step::ORIGINAL_MS;
+constexpr double MAX_FRAME_MS = 100.0;
+
+int64_t steadyNanos() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+}  // namespace
+
 int64_t Det::millis() {
     if (ON) return gNow;
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return (steadyNanos() - gSkippedNanos.load()) / 1000000LL;
 }
 
 int64_t Det::nanos() {
     if (ON) return gNow * 1000000LL;
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    return steadyNanos() - gSkippedNanos.load();
+}
+
+void Step::advance() {
+    if (Det::ON) {
+        gFrameMs = ORIGINAL_MS;
+        return;
+    }
+    int64_t now = steadyNanos();
+    if (gLastNanos >= 0) {
+        double ms = double(now - gLastNanos) / 1e6;
+        if (ms > MAX_FRAME_MS) {
+            gSkippedNanos += int64_t((ms - MAX_FRAME_MS) * 1e6);
+            ms = MAX_FRAME_MS;
+        }
+        gFrameMs = ms;
+    }
+    gLastNanos = now;
+}
+
+double Step::ms() { return gFrameMs; }
+
+int32_t Step::share(double perStep, double& carry) {
+    if (exact()) return int32_t(perStep);
+    double v = perStep * scale() + carry;
+    int32_t whole = int32_t(v);
+    carry = v - whole;
+    return whole;
+}
+
+int32_t Step::chase(int32_t x, int32_t target, int32_t shift) {
+    if (exact()) return x - ((x - target) >> shift);
+    double keep = std::pow(1.0 - 1.0 / double(int64_t(1) << shift), scale());
+    return target + int32_t(std::lround(double(x - target) * keep));
+}
+
+double Step::factor(double perStep) { return exact() ? perStep : std::pow(perStep, scale()); }
+
+int32_t Step::steps(double& accumulated) {
+    if (exact()) return 1;
+    accumulated += ms();
+    int32_t n = int32_t(accumulated / ORIGINAL_MS);
+    accumulated -= n * ORIGINAL_MS;
+    return n;
 }
 
 Ref<java::util::Random> Det::random(int32_t site) {
@@ -58,6 +115,7 @@ bool Det::queueKey(int32_t code, bool pressed) {
 }
 
 void Det::frame() {
+    Step::advance();
     if (!ON) return;
     if (!gHaveGame) {
         gGame = std::this_thread::get_id();
