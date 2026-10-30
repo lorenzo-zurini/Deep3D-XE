@@ -167,6 +167,11 @@ jrt::Ref<java::lang::String> class_1::method_4(int32_t var1) {
         if (class_1::field_25->at(class_1::field_29)->at(class_1::field_30) == nullptr) {
             this->method_3(class_1::field_25->at(class_1::field_29), jrt::concat(JRT_LIT(u""), class_1::field_29));
         }
+        // Deep3D-PC: DEEP3D_NO_INTRO_TEXT=1 films the new-game intro without its subtitles
+        static const bool noIntroText = getenv("DEEP3D_NO_INTRO_TEXT") != nullptr;
+        if (noIntroText && class_1::field_29 == 0) {
+            return JRT_LIT(u"");
+        }
         return class_1::field_25->at(class_1::field_29)->at(class_1::field_30);
     }
 }

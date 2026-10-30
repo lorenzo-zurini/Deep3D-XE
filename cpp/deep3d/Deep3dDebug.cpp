@@ -101,6 +101,39 @@ public:
 
     bool inGame() override { return inGameNow(); }
 
+    bool aim(const std::string& what, float& x, float& y) override {
+        Ref<class_26> w = world();
+        if (!w || !class_84::field_1110 || !class_84::field_1110->field_40) return false;
+        Ref<class_57> cam = class_84::field_1110->field_40->field_1342;
+        if (!cam) return false;
+        Ref<jrt::Array<Ref<class_91>>> lists[] = {w->field_273, w->field_274, w->field_275};
+        double best = 1e30, bx = 0, by = 0, bz = 0;
+        for (auto& list : lists) {
+            if (!list) continue;
+            for (int32_t i = 0; i < list->length; i++) {
+                Ref<class_91> o = list->at(i);
+                if (!o || !o->field_1226 || o->field_1224 == 3 || o->field_1224 == 4) continue;
+                if (what == "ship" ? !jrt::isInstance<class_96>(o) : !jrt::isInstance<class_101>(o)) continue;
+                Ref<class_57> m = o->field_1226->field_1342;
+                if (!m) continue;
+                // into the camera's frame: the axes are 4096 = 1
+                double d[3] = {double(m->field_698 - cam->field_698), double(m->field_699 - cam->field_699),
+                               double(m->field_700 - cam->field_700)};
+                double lx = (d[0] * cam->field_689 + d[1] * cam->field_690 + d[2] * cam->field_691) / 4096.0;
+                double ly = (d[0] * cam->field_692 + d[1] * cam->field_693 + d[2] * cam->field_694) / 4096.0;
+                double lz = (d[0] * cam->field_695 + d[1] * cam->field_696 + d[2] * cam->field_697) / 4096.0;
+                double dist = std::sqrt(lx * lx + ly * ly + lz * lz);
+                if (lz > -500 || dist > 30000) continue;   // ahead only, and not past the murk
+                if (dist < best) best = dist, bx = lx, by = ly, bz = lz;
+            }
+        }
+        if (best > 1e29) return false;
+        auto clamp = [](double v) { return float(v < -1 ? -1 : v > 1 ? 1 : v); };
+        x = clamp(std::atan2(bx, -bz) * 2.2);
+        y = clamp(-std::atan2(by, -bz) * 2.2);
+        return true;
+    }
+
     std::vector<std::string> stationLabels() override {
         catalog();
         return labels;

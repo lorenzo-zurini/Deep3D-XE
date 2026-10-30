@@ -262,6 +262,11 @@ bool class_69::method_637() {
 }
 
 void class_69::method_638(jrt::Ref<java::lang::String> var0) {
+    // Deep3D-PC: DEEP3D_NO_HINTS=1 films flight without the HUD's hint line
+    static const bool noHints = getenv("DEEP3D_NO_HINTS") != nullptr;
+    if (noHints) {
+        var0 = JRT_LIT(u"");
+    }
     if (var0 == JRT_LIT(u"")) {
         var0 = jrt::Ref<java::lang::String>(nullptr);
     }

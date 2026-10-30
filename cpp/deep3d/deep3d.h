@@ -357,6 +357,8 @@ public:
     virtual bool inGame() = 0;
     virtual std::string scene() = 0;
     virtual bool pin(const std::string& what, int32_t dist, int32_t dx, int32_t dy) = 0;
+    /** Stick input that turns toward the nearest creature or ship ahead (none: false). */
+    virtual bool aim(const std::string& what, float& x, float& y) = 0;
 };
 
 class Cheats {

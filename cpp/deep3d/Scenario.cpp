@@ -447,6 +447,18 @@ bool run(const Args& s) {
         holdKey(Input::Action::DOCK, 4);
         return true;
     }
+    if (c == "chase") {
+        // fly at the nearest creature (or ship) ahead, as a player would: chase <kind> <frames>
+        int n = arg(s, 2, 120);
+        float x = 0, y = 0;
+        if (g && g->aim(s[1], x, y)) AnalogInput::setMouse(x, y, true);
+        else AnalogInput::setMouse(0, 0, false);
+        if (gStepFrame >= n) {
+            AnalogInput::setMouse(0, 0, false);
+            return true;
+        }
+        return false;
+    }
     if (c == "pin") {
         if (g) {
             bool ok = g->pin(s[1], arg(s, 2, 3000), arg(s, 3, 0), arg(s, 4, 0));

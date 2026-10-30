@@ -42,6 +42,7 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `select <row text>` | walk a menu to the row and confirm it |
 | `overlay toggle\|settings\|up\|down\|left\|right\|enter\|back` | the settings menu |
 | `pin creature\|ship\|off [dist] [dx] [dy]` | hold the nearest creature / ship in front of the camera |
+| `chase creature\|ship <frames>` | steer at the nearest one ahead, as a player would (nothing is moved) |
 | `mouse on\|off`, `mouse <dx> <dy>` | mouse flight (on: without the window's focus), its motion |
 | `god on\|off`, `setf <class> <field> <value>` | cheats, game state (`setf class_21 field_209 12`: story step, cutscenes skippable) |
 | `mode original\|enhanced\|remastered`, `set <Config field> <value>` | graphics |
@@ -106,6 +107,16 @@ Environment variables for `run.sh` (`EXTRA_ENV="..."`):
 | `DEEP3D_RM_ATLASDUMP=<dir>` | dump the atlases the light classification reads |
 | `DEEP3D_LOG_CROSSHAIR=1`, `DEEP3D_LOG_HITS=1` | log the crosshair's position, weapon hits |
 | `DEEP3D_RM_DEBUG=1` | log the frame data and draw states |
+
+## Filming switches
+
+| | |
+|---|---|
+| `DEEP3D_NO_INTRO_TEXT=1` | the new-game intro without its subtitles ("presents...", the story lines) |
+| `DEEP3D_NO_HINTS=1` | flight without the HUD's hint line ("Press E to dock with the station") |
+
+Scenario runs never show the freeze toast (a slow host is not a freeze worth
+filming); the freeze dump is still written.
 
 ## Memory switches
 

@@ -1179,7 +1179,8 @@ void Diagnostics::init() {
             if (stall > FREEZE_MS && !dumped) {
                 dumped = true;
                 std::string f = dump("freeze", "no frame presented for " + std::to_string(stall) + " ms");
-                Overlay::showToast("Freeze detected - saved " + fs::path(f).filename().string());
+                // scenario runs keep their pictures clean (a slow host is not a freeze worth showing)
+                if (!getenv("DEEP3D_SCENARIO")) Overlay::showToast("Freeze detected - saved " + fs::path(f).filename().string());
             } else if (stall < FREEZE_MS) {
                 dumped = false;
             }
