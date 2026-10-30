@@ -72,7 +72,7 @@ def turned(rows):
 
 
 def turnRate(rows):
-    """Degrees per 33 ms at a steady full-stick turn: the fast decile."""
+    """Degrees per 33 ms while it turns: the median, mostly full stick."""
     rates, last, lastMs = [], None, 0
     for r in rows:
         v = vec(r['fwd'])
@@ -86,7 +86,37 @@ def turnRate(rows):
                 rates.append(d)
         last, lastMs = v, ms
     rates.sort()
-    return rates[len(rates) * 9 // 10] if rates else 0.0
+    return rates[len(rates) // 2] if rates else 0.0
+
+
+def settle(rows):
+    """The autopilot's steer: rows from half the angle left to a tenth of it.
+    It closes in by a share of the angle each step, so this is its time
+    constant, whatever the angle it starts at."""
+    def head(r):
+        v = vec(r['fwd'])
+        n = math.sqrt(sum(x * x for x in v)) or 1.0
+        return [x / n for x in v]
+
+    def between(a, b):
+        return math.degrees(math.acos(max(-1.0, min(1.0, sum(p * q for p, q in zip(a, b))))))
+
+    # the last turn before the teleport: where the heading stops changing
+    last = 0
+    for i in range(2, len(rows)):
+        if int(rows[i]['ms']) - int(rows[i - 1]['ms']) > 500:
+            last = i - 1
+            break
+    if not last:
+        return 0.0
+    end = head(rows[last])
+    left = [between(head(r), end) for r in rows[:last]]
+    top = max(left[-400:]) if len(left) >= 400 else 0.0
+    half = next((i for i in range(len(left) - 400, len(left)) if left[i] < top * 0.5), None)
+    tenth = next((i for i in range(len(left) - 400, len(left)) if left[i] < top * 0.1), None)
+    if half is None or tenth is None:
+        return 0.0
+    return (int(rows[tenth]['ms']) - int(rows[half]['ms'])) / 33.0
 
 
 def camLag(rows):
@@ -124,6 +154,20 @@ def bubble(rows):
     return sum(ds) / max(1, len(ds))
 
 
+def firing(rows):
+    """Ms between shots with the trigger held: the reload timer's restarts."""
+    times, last = [], None
+    for r in rows:
+        if r.get('reload', '-') == '-':
+            continue
+        v = int(r['reload'])
+        if last is not None and v < last:
+            times.append(int(r['ms']))
+        last = v
+    gaps = [b - a for a, b in zip(times, times[1:]) if b - a < 4000]
+    return sum(gaps) / max(1, len(gaps))
+
+
 def main():
     out, times = sys.argv[1], sys.argv[2:]
     runs = {t: load(f'{out}/{t}/trace.tsv') for t in times}
@@ -131,12 +175,14 @@ def main():
         ('sub speed', lambda r: speed(r, 'sub')),
         ('turned deg', turned),
         ('turn rate', turnRate),
+        ('autopilot steps', settle),
         ('camera-sub mean', camLag),
         ('ship speed', lambda r: usual(r, 'ship', 1)),
         ('big ship speed', lambda r: speed(r, 'big', 1)),
         ('creature speed', lambda r: speed(r, 'creature', 1)),
         ('mine speed', lambda r: speed(r, 'mine', 1)),
         ('shot speed', lambda r: speed(r, 'shot')),
+        ('ms between shots', firing),
         ('gate spin', gate),
         ('bubble rise', bubble),
     ]

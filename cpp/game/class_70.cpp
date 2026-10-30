@@ -221,10 +221,14 @@ void class_70::method_671(int64_t var1) {
                 this->field_974->method_9(this->field_970->method_855(this->field_974));
                 this->field_974->method_22();
                 this->field_975->method_17(this->field_974);
-                this->field_975->method_18(org::deep3d::Step::exact() ? jrt::f2i((float(this->field_992) * 5.0f)) : org::deep3d::Step::shareAtLeast(165.0, 16.0, this->deep3dSteer));   // Deep3D-PC: per step, its share
-                this->field_1010 = this->field_974->method_14(this->field_975, this->field_1010);
-                this->field_1010->method_22();
-                this->field_970->field_1341->method_512(this->field_1010);
+                if (org::deep3d::Step::exact()) {
+                    this->field_975->method_18(jrt::f2i((float(this->field_992) * 5.0f)));
+                    this->field_1010 = this->field_974->method_14(this->field_975, this->field_1010);
+                    this->field_1010->method_22();
+                    this->field_970->field_1341->method_512(this->field_1010);
+                } else {
+                    this->field_970->field_1341->deep3dBend(this->field_975, 165.0 * org::deep3d::Step::scale());   // Deep3D-PC
+                }
                 if ((this->field_984 == float(0)) && (this->field_985 == float(0))) {
                     this->method_677(org::deep3d::Step::once(int32_t(this->field_992)));
                 }
@@ -266,14 +270,14 @@ void class_70::method_671(int64_t var1) {
         }
         if (((this->field_1004 > class_21::method_178()->field_889) && (class_21::method_178()->field_871 > 0)) && (class_21::method_178()->field_873 > 0)) {
             this->field_988 += var1;
-            if (this->field_988 > int64_t(class_21::method_178()->field_873)) {
+            if (org::deep3d::Step::past(this->field_988, int64_t(class_21::method_178()->field_873))) {
                 this->field_988 = int64_t(0);
                 this->field_969->method_334();
             }
         }
         if (class_21::method_178()->field_883 && (this->field_969->field_363 < this->field_969->field_364)) {
             this->field_989 += var1;
-            if (this->field_989 > int64_t(600)) {
+            if (org::deep3d::Step::past(this->field_989, int64_t(600))) {
                 this->field_989 = int64_t(0);
                 this->field_969->method_335();
             }
@@ -338,10 +342,14 @@ void class_70::method_672(jrt::Ref<jrt::Array<jrt::Ref<class_91>>> var1) {
                 if (this->field_975 != nullptr) {
                     this->field_974->method_9(this->field_970->method_855(this->field_974));
                     this->field_975->method_17(this->field_974);
-                    this->field_975->method_18(org::deep3d::Step::exact() ? jrt::f2i((float(this->field_992) * 5.0f)) : org::deep3d::Step::shareAtLeast(165.0, 16.0, this->deep3dSteer));
-                    this->field_1000 = this->field_974->method_14(this->field_975, this->field_1000);
-                    this->field_1000->method_22();
-                    this->field_970->field_1341->method_512(this->field_1000);
+                    if (org::deep3d::Step::exact()) {
+                        this->field_975->method_18(jrt::f2i((float(this->field_992) * 5.0f)));
+                        this->field_1000 = this->field_974->method_14(this->field_975, this->field_1000);
+                        this->field_1000->method_22();
+                        this->field_970->field_1341->method_512(this->field_1000);
+                    } else {
+                        this->field_970->field_1341->deep3dBend(this->field_975, 165.0 * org::deep3d::Step::scale());
+                    }
                     if (org::deep3d::Step::exact()) {
                         this->field_970->method_847((int32_t(this->field_992) * this->field_983));
                     } else {

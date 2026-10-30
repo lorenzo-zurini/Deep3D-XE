@@ -2535,7 +2535,10 @@ public:
     bool field_704{};
     static jrt::Ref<class_3> field_705;
     double deep3dAxes[9]{}, deep3dGoLeft[3]{};   // Deep3D-PC: the axes in doubles, what a move left over
+    void deep3dAxesNow();
+    void deep3dAxesOut();
     void deep3dTurn(int32_t axis, double units);
+    void deep3dBend(jrt::Ref<class_3> by, double length);
     void deep3dGo(double units);
     void __init();
     void __init(jrt::Ref<class_57> var1);
@@ -3223,7 +3226,7 @@ public:
     int32_t field_1013{};
     int32_t field_1014{};
     bool field_1015{};
-    double deep3dBank{}, deep3dSteer{};   // Deep3D-PC
+    double deep3dBank{};   // Deep3D-PC
     void deep3dCruise(int64_t var1);
     void __init(jrt::Ref<class_37> var1);
     virtual void method_648(jrt::Ref<class_108> var1);
@@ -3968,7 +3971,7 @@ public:
     bool field_1292{};
     bool field_1293{};
     int32_t field_1294{};
-    double deep3dSteer{}, deep3dAvoid{}, deep3dSink{};   // Deep3D-PC
+    double deep3dSink{};   // Deep3D-PC
     void __init(int32_t var1, int32_t var2, bool var3, jrt::Ref<class_37> var4, jrt::Ref<class_108> var5, int32_t var6, int32_t var7, int32_t var8);
     virtual void method_794();
     virtual void method_814(bool var1);

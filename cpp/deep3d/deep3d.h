@@ -76,9 +76,6 @@ public:
     static double scale() { return ms() / ORIGINAL_MS; }
     /** A whole number of units for this frame out of perStep a step; what rounds away stays in carry. */
     static int32_t share(double perStep, double& carry);
-    /** A share given out only once it reaches least: for the length of a steering vector, which
-        says nothing about its direction when it is a few units long. */
-    static int32_t shareAtLeast(double perStep, double least, double& carry);
     /** x -= (x - target) >> shift, done once a step. The fraction stays in carry: it is most of a
         frame's move at high frame rates, and x would stop short without it. */
     static int32_t chase(int32_t x, int32_t target, int32_t shift, double& carry);
@@ -86,6 +83,14 @@ public:
     static double factor(double perStep);
     /** How many whole original steps have gone by (for what can only happen in steps). */
     static int32_t steps(double& accumulated);
+    /** timer > limit, for a timer of summed dt: the game looked once a step, so what fired past
+        100 ms did at 132. Looked at every 3 ms it would fire a third more often; here it waits
+        for the same whole step. */
+    static bool past(int64_t timer, int64_t limit) {
+        if (exact()) return timer > limit;
+        int64_t step = int64_t(ORIGINAL_MS);
+        return timer >= (limit / step + 1) * step;
+    }
     /** The dt of what happens once, not over a frame (a key press, a timed nudge), whose size the
         game took from the frame: as it was at one original step. */
     static int32_t once(int32_t dt) { return exact() ? dt : int32_t(ORIGINAL_MS); }

@@ -95,18 +95,6 @@ int32_t Step::share(double perStep, double& carry) {
     return whole;
 }
 
-int32_t Step::shareAtLeast(double perStep, double least, double& carry) {
-    if (exact()) return int32_t(perStep);
-    double v = perStep * scale() + carry;
-    if (v < least) {
-        carry = v;
-        return 0;
-    }
-    int32_t whole = int32_t(v);
-    carry = v - whole;
-    return whole;
-}
-
 int32_t Step::chase(int32_t x, int32_t target, int32_t shift, double& carry) {
     if (exact()) return x - ((x - target) >> shift);
     double keep = std::pow(1.0 - 1.0 / double(int64_t(1) << shift), scale());

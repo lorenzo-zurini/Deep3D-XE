@@ -325,7 +325,7 @@ void class_69::method_642(int64_t var0, jrt::Ref<class_70> var2, bool var3) {
         class_69::field_942 = true;
         float deep3dLevel = (class_69::field_941 ? 0.7f : (0.5f * java::lang::Math::min(1.0f, (float(class_69::field_937) / 5000.0f)))) + (0.3f * java::lang::Math::min(1.0f, (float((var5 ? (var4 - class_21::method_178()->field_890) : (class_21::method_178()->field_889 - var4))) / 4000.0f)));
         org::deep3d::Remaster::hazard((var5 ? 0.0f : deep3dLevel), (var5 ? deep3dLevel : 0.0f));
-        if ((class_69::field_941 && (!var3)) && (class_69::field_937 > 250)) {
+        if ((class_69::field_941 && (!var3)) && org::deep3d::Step::past(class_69::field_937, 250)) {
             class_69::field_937 = 0;
             if (var5) {
                 var2->field_969->method_339((2 + class_16::method_97(0, ((var4 - 30000) / 2000))));

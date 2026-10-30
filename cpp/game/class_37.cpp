@@ -306,7 +306,7 @@ void class_37::method_351(int32_t var1) {
 void class_37::method_352(int32_t var1, int64_t var2, bool var4) {
     if ((((this->field_359 != nullptr) && (var1 < this->field_359->length)) && (var1 >= 0)) && (this->field_359->at(var1) != nullptr)) {
         for (int32_t var5 = 0; var5 < this->field_359->at(var1)->length; var5++) {
-            if ((this->field_359->at(var1)->at(var5)->field_90 > this->field_359->at(var1)->at(var5)->field_91) && this->field_359->at(var1)->at(var5)->method_46(this->field_377, var2, var4)) {
+            if (org::deep3d::Step::past(this->field_359->at(var1)->at(var5)->field_90, this->field_359->at(var1)->at(var5)->field_91) && this->field_359->at(var1)->at(var5)->method_46(this->field_377, var2, var4)) {
                 this->field_359->at(var1)->at(var5)->field_90 = 0;
                 if (this->field_380 && this->field_359->at(var1)->at(var5)->field_97) {
                     class_84::field_1122->method_770(5);

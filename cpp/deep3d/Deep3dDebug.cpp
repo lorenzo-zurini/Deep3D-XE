@@ -230,7 +230,7 @@ static void stepTrace() {
         const char* dir = getenv("DEEP3D_SCENARIO_OUT");
         out = fopen(((dir ? std::string(dir) : std::string(".")) + "/trace.tsv").c_str(), "w");
         if (!out) return;
-        fputs("ms\tsub\tfwd\tcam\tbank\tship\tbig\tcreature\tmine\tshot\tgate\tbubble\n", out);
+        fputs("ms\tsub\tfwd\tcam\tbank\tship\tbig\tcreature\tmine\tshot\tgate\tbubble\treload\n", out);
     }
     auto triple = [](int32_t x, int32_t y, int32_t z) {
         return std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z);
@@ -249,7 +249,7 @@ static void stepTrace() {
         return "-";
     };
     Ref<class_70> me = flight->field_787;
-    Ref<class_3> fwd = me->field_970->method_857();
+    Ref<class_57> axes = me->field_970->field_1341;
     Ref<class_3> cam = flight->field_790->field_457;
     std::string shot = "-";
     Ref<class_37> guns = me->field_969;
@@ -258,6 +258,10 @@ static void stepTrace() {
         if (s && s->field_78 && s->field_83->at(0) > 0) {
             shot = triple(s->field_78->at(0)->field_37, s->field_78->at(0)->field_38, s->field_78->at(0)->field_39);
         }
+    }
+    std::string reload = "-";
+    if (guns->field_359 && guns->field_359->length > 0 && guns->field_359->at(0) && guns->field_359->at(0)->at(0)) {
+        reload = std::to_string(guns->field_359->at(0)->at(0)->field_90);
     }
     std::string gate = "-";
     if (w->field_276) {
@@ -270,15 +274,15 @@ static void stepTrace() {
     if (me->field_976 && me->field_976->field_718) {
         bubble = std::to_string(me->field_976->field_718->at(1)) + " " + std::to_string(me->field_976->field_720->at(0));
     }
-    fprintf(out, "%lld\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", (long long)org::deep3d::Det::millis(),
+    fprintf(out, "%lld\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", (long long)org::deep3d::Det::millis(),
             triple(me->field_970->method_852(), me->field_970->method_853(), me->field_970->method_854()).c_str(),
-            triple(fwd->field_37, fwd->field_38, fwd->field_39).c_str(), triple(cam->field_37, cam->field_38, cam->field_39).c_str(),
+            triple(axes->field_695, axes->field_696, axes->field_697).c_str(), triple(cam->field_37, cam->field_38, cam->field_39).c_str(),
             me->field_986,
             first([](const Ref<class_91>& o) { return jrt::isInstance<class_96>(o); }).c_str(),
             first([](const Ref<class_91>& o) { return jrt::isInstance<class_95>(o); }).c_str(),
             first([](const Ref<class_91>& o) { return jrt::isInstance<class_101>(o); }).c_str(),
             first([](const Ref<class_91>& o) { return jrt::isInstance<class_93>(o) || jrt::isInstance<class_92>(o); }).c_str(),
-            shot.c_str(), gate.c_str(), bubble.c_str());
+            shot.c_str(), gate.c_str(), bubble.c_str(), reload.c_str());
     fflush(out);
 }
 

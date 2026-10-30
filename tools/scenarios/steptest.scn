@@ -11,7 +11,7 @@ steer -0.5 0 60
 wait 30
 boost 60
 wait 60
-fire 30
+fire 150
 wait 60
 autopilot
 wait 200
