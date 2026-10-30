@@ -34,8 +34,46 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <vector>
+
+/* Uniform locations, looked up once per program and name: the per-draw and
+   per-frame lookups below (glGetUniformLocation hashes the name every time)
+   become a table probe. Names are the literals at the call sites. */
+struct RmLoc {
+    GLuint prog;
+    const char *name;
+    GLint loc;
+};
+static RmLoc rmLocs[512];
+
+static GLint rmUniformLocation(GLuint prog, const char *name) {
+    size_t h = ((size_t) prog * 0x9E3779B1u) ^ ((size_t) (uintptr_t) name >> 3);
+    for (size_t i = 0; i < 512; i++) {
+        RmLoc *e = &rmLocs[(h + i) & 511];
+        if (e->name == name && e->prog == prog) {
+            return e->loc;
+        }
+        if (!e->name) {
+            e->prog = prog;
+            e->name = name;
+            e->loc = glGetUniformLocation(prog, name);
+            return e->loc;
+        }
+    }
+    return glGetUniformLocation(prog, name);
+}
+
+static void rmUniformCacheClear() { memset(rmLocs, 0, sizeof rmLocs); }
+
+/* DEEP3D_RM_DEBUG, read once (it was looked up in the environment per draw) */
+static int rmDebugOn() {
+    static int on = getenv("DEEP3D_RM_DEBUG") != NULL;
+    return on;
+}
+
+#define glGetUniformLocation(prog, name) rmUniformLocation(prog, name)
 
 /* Frame block (org.deep3d.Remaster) */
 enum {
@@ -1010,6 +1048,7 @@ static int buildPrograms() {
     if (programsReady) {
         return glIsProgram(pScene.id) ? 1 : (programsReady = 0, buildPrograms());
     }
+    rmUniformCacheClear();   /* new programs (their names may be the old ones') */
     if (!link(&pScene, NULL, NULL, SCENE_FS)
         || !link(&pBg, BG_VS, NULL, BG_FS)
         || !link(&pSnow, WATER, SNOW_VS, SNOW_FS)
@@ -2333,6 +2372,64 @@ static void castShadow(int arrays, GLenum mode, GLint first, GLsizei count, GLen
     glUseProgram(prog);
 }
 
+/* DEEP3D_RM_TIMERS=1: what each stage of a pass takes on the GPU (timestamp
+   queries, reported as an average every 240 passes) */
+static const char *const MARK_NAMES[] = {"caustics", "scene", "specks+fish", "bubbles+glows",
+                                         "bright", "light", "blur", "post"};
+static int rmMarksOn() {
+    static int on = getenv("DEEP3D_RM_TIMERS") != NULL;
+    return on;
+}
+enum { MARKS = 11 };
+static GLuint markQ[MARKS];
+static int markSet[MARKS], markPasses = 0;
+static double markSum[MARKS];
+
+static void rmMark(int i) {
+    if (!rmMarksOn()) {
+        return;
+    }
+    if (!markQ[0]) {
+        glGenQueries(MARKS, markQ);
+    }
+    glQueryCounter(markQ[i], GL_TIMESTAMP);
+    markSet[i] = 1;
+}
+
+static void rmMarksEnd() {
+    if (!rmMarksOn()) {
+        return;
+    }
+    /* in pass order: 0 start, 10 caustics done, 2 scene (with the shadow
+       casts), 3 specks, 4 bubbles, 5 bright, 6 light, 7 blur, 9 post */
+    static const int order[] = {0, 10, 2, 3, 4, 5, 6, 7, 9};
+    GLuint64 prev = 0;
+    for (int k = 0; k < 9; k++) {
+        int i = order[k];
+        if (!markSet[i]) {
+            return;
+        }
+        GLuint64 t = 0;
+        glGetQueryObjectui64v(markQ[i], GL_QUERY_RESULT, &t);
+        if (k > 0) {
+            markSum[k - 1] += (double) (t - prev) / 1e6;
+        }
+        prev = t;
+    }
+    memset(markSet, 0, sizeof markSet);
+    if (++markPasses == 240) {
+        fprintf(stderr, "[timers] ms:");
+        double total = 0;
+        for (int k = 0; k < 8; k++) {
+            fprintf(stderr, " %s %.2f", MARK_NAMES[k], markSum[k] / markPasses);
+            total += markSum[k] / markPasses;
+            markSum[k] = 0;
+        }
+        fprintf(stderr, " total %.2f\n", total);
+        markPasses = 0;
+    }
+}
+
 /* ------------------------------------------------------------------ */
 /* Per-draw scene shader                                               */
 /* ------------------------------------------------------------------ */
@@ -2376,12 +2473,17 @@ static int envMode(GLint m) {
     }
 }
 
+static int rmProgramsChecked = 0;   /* this pass: the programs exist (asked once, not per draw) */
+
 static int sceneBegin() {
     if (!rmPass || rmBroken) {
         return 0;
     }
-    if (!buildPrograms()) {
-        return 0;
+    if (!rmProgramsChecked) {
+        if (!buildPrograms()) {
+            return 0;
+        }
+        rmProgramsChecked = 1;
     }
     captureProjection();
     if (!haveProj) {
@@ -2437,7 +2539,7 @@ static int sceneBegin() {
         kind = dst == GL_ONE ? 2 : 1;
     }
     castKind = kind;
-    if (getenv("DEEP3D_RM_DEBUG") && kind == 2 && rmLayer == 0 && ((int) F[F_FRAME]) % 120 == 1) {
+    if (rmDebugOn() && kind == 2 && rmLayer == 0 && ((int) F[F_FRAME]) % 120 == 1) {
         GLint src = 0, dst = 0, mode0 = 0, colArr = 0, fog = 0, alphaTest = 0, texfn = 0;
         GLfloat cur[4], envc[4];
         glGetIntegerv(GL_BLEND_SRC_RGB, &src);
@@ -2454,7 +2556,7 @@ static int sceneBegin() {
                 rmSprite, en[0], en[1], texfn, fmt[0], src, dst, colArr, fog, alphaTest,
                 cur[0], cur[1], cur[2], cur[3], envc[0], envc[1], envc[2], envc[3]);
     }
-    if (getenv("DEEP3D_RM_DEBUG") && kind == 1 && ((int) F[F_FRAME]) % 120 == 1) {
+    if (rmDebugOn() && kind == 1 && ((int) F[F_FRAME]) % 120 == 1) {
         GLint name = 0, ifmt = 0, a = 0, r = 0, l = 0, texfn = 0, atest = glIsEnabled(GL_ALPHA_TEST);
         glActiveTexture(GL_TEXTURE0);
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &name);
@@ -2549,7 +2651,7 @@ static int sceneBegin() {
         return 0;
     }
 
-    if (getenv("DEEP3D_RM_DEBUG") && ((int) F[F_FRAME]) % 120 == 1) {
+    if (rmDebugOn() && ((int) F[F_FRAME]) % 120 == 1) {
         GLint src = 0, dst = 0;
         glGetIntegerv(GL_BLEND_SRC_RGB, &src);
         glGetIntegerv(GL_BLEND_DST_RGB, &dst);
@@ -2612,6 +2714,7 @@ extern "C" void deep3d_rm_draw_arrays(GLenum mode, GLint first, GLsizei count) {
 
 extern "C" void deep3d_rm_pass_begin(void) {
     rmPass = rmNext && !rmBroken;
+    rmProgramsChecked = 0;
     rmDrawn = 0;
     texFrame++;
     rmLayer = 0;
@@ -2622,9 +2725,11 @@ extern "C" void deep3d_rm_pass_begin(void) {
     }
     deriveFrame();
     if (buildPrograms()) {
+        rmMark(0);
         lightBegin();
+        rmMark(10);
     }
-    if (getenv("DEEP3D_RM_DEBUG") && ((int) F[F_FRAME]) % 60 == 0) {
+    if (rmDebugOn() && ((int) F[F_FRAME]) % 60 == 0) {
         float cy = F[F_CAM + 13];
         fprintf(stderr, "[remaster] cam %.0f %.0f %.0f fwd %.2f %.2f %.2f sector %.0f depth01 %.2f tint %.2f %.2f %.2f sub %.0f at %.0f %.0f %.0f dir %.2f %.2f %.2f lights %.0f\n",
                 F[F_CAM + 12], cy, F[F_CAM + 14], -F[F_CAM + 8], -F[F_CAM + 9], -F[F_CAM + 10], F[F_SECTOR],
@@ -2632,7 +2737,7 @@ extern "C" void deep3d_rm_pass_begin(void) {
                 F[F_TINT], F[F_TINT + 1], F[F_TINT + 2], F[F_SUBON],
                 F[F_SUB], F[F_SUB + 1], F[F_SUB + 2], F[F_SUBDIR], F[F_SUBDIR + 1], F[F_SUBDIR + 2], F[F_NLIGHTS]);
     }
-    if (getenv("DEEP3D_RM_DEBUG") && ((int) F[F_FRAME]) % 60 == 0) {
+    if (rmDebugOn() && ((int) F[F_FRAME]) % 60 == 0) {
         for (int k = 0; k < (int) F[F_NLIGHTS]; k++) {
             fprintf(stderr, "[remaster]   light %d: %.0f %.0f %.0f kind %.0f\n", k,
                     F[F_LIGHTS + k * 4], F[F_LIGHTS + k * 4 + 1], F[F_LIGHTS + k * 4 + 2], F[F_LIGHTS + k * 4 + 3]);
@@ -2998,8 +3103,10 @@ static void post(int w, int h) {
     glMatrixMode(GL_MODELVIEW);
 
     /* the pass so far -> scene colour + depth textures */
-    GLuint fb[3];
-    glGenFramebuffers(3, fb);
+    static GLuint fb[3];   /* kept: framebuffer objects were made and deleted every frame */
+    if (!fb[0] || !glIsFramebuffer(fb[0])) {
+        glGenFramebuffers(3, fb);
+    }
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb[0]);
     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texScene, 0);
     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, postStencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT,
@@ -3036,6 +3143,7 @@ static void post(int w, int h) {
     d = d < 0 ? 0 : d > 1 ? 1 : d;
     glUniform1f(brThresh, 0.86f - 0.12f * d);
     drawQuad(brPos);
+    rmMark(5);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, texBright);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -3060,6 +3168,7 @@ static void post(int w, int h) {
     glBindTexture(GL_TEXTURE_2D, texShadow[shCur]);
     drawQuad(0);
     /* blurred: across, into texLight2, then down, back into texLight */
+    rmMark(6);
     glUseProgram(pBlur.id);
     setCommon(&pBlur);
     glUniform1i(glGetUniformLocation(pBlur.id, "uSrc"), 3);
@@ -3105,10 +3214,10 @@ static void post(int w, int h) {
     }
     glUniform1f(glGetUniformLocation(pPost.id, "uRad"), rad < 0.003f ? 0.0f : rad);
     glUniform1f(glGetUniformLocation(pPost.id, "uPres"), pres < 0.003f ? 0.0f : pres);
+    rmMark(7);
     drawQuad(poPos);
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glDeleteFramebuffers(3, fb);
     popState(&s);
 }
 
@@ -3149,6 +3258,7 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
     if (rmBroken || !rmDrawn || !haveProj || !programsReady) {
         return;
     }
+    rmMark(2);
     chooseGlows();
     if (postFrame == (int) F[F_FRAME] || getenv("DEEP3D_RM_NOPOST")) {
         return;
@@ -3160,6 +3270,7 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
         drawSnow();
         drawFish();
     }
+    rmMark(3);
     emitBubbles();
     if (!getenv("DEEP3D_RM_NOBUB") && !clean) {
         float worldToEye[16];
@@ -3177,7 +3288,10 @@ extern "C" void deep3d_rm_pass_end(int w, int h) {
     if (getenv("DEEP3D_RM_NOPOSTFX")) {
         return;
     }
+    rmMark(4);
     post(w, h);
+    rmMark(9);
+    rmMarksEnd();
 }
 
 /* ------------------------------------------------------------------ */
