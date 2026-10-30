@@ -51,13 +51,15 @@ void class_24::method_233() {
 void class_24::method_234(int32_t var1) {
     jrt::Ref<jrt::Array<int32_t>> var2 = (jrt::cast<class_110>(this->field_250))->method_897();
     jrt::Ref<jrt::Array<int32_t>> var3 = (jrt::cast<class_110>(this->field_250))->field_1390;
-    int32_t var4 = jrt::div((var1 * this->field_253), this->field_252);
+    // Deep3D-PC: both truncate to nothing at short frames: shares of what a step did
+    int32_t var4 = org::deep3d::Step::exact() ? jrt::div((var1 * this->field_253), this->field_252) : org::deep3d::Step::share(jrt::div((33 * this->field_253), this->field_252), this->deep3dGrow);
+    int32_t deep3dFadeNow = org::deep3d::Step::exact() ? (var1 >> 2) : org::deep3d::Step::share(8.0, this->deep3dFade);
     for (int32_t var5 = 0; var5 < var2->length; var5++) {
         if ((this->field_251->at(var5) > 0) && (this->field_251->at(var5) < this->field_252)) {
             var2->at(var5) += var4;
         } else if (this->field_251->at(var5) > (-1024)) {
             int32_t var6{};
-            var6 = ((var6 = ((var3->at(var5) >> 24) & 255) - (var1 >> 2)) < 0) ? 0 : var6;
+            var6 = ((var6 = ((var3->at(var5) >> 24) & 255) - deep3dFadeNow) < 0) ? 0 : var6;
             var3->at(var5) = (var6 << 24) | 16777215;
         } else {
             var2->at(var5) = 0;
