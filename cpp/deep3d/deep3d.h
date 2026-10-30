@@ -184,6 +184,8 @@ public:
     static void setGamePaused(bool paused);
     static bool isGamePaused();
     static void framePace();
+    /** The game loop's rest between passes (the phone build's Thread.sleep). */
+    static void loopRest(int64_t millis);
     static void tickFpsCounter();
     static int32_t getDisplayFps();
     static int32_t framesSinceStats();

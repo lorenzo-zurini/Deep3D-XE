@@ -110,7 +110,7 @@ void DeepMIDlet::run() {
                 }
                 {
                     try {
-                        java::lang::Thread::sleep(int64_t(2));
+                        org::deep3d::Runtime::loopRest(int64_t(2));   // Deep3D-PC: Thread.sleep(2)
                     } catch (const jrt::Thrown& __ex1) {
                         if (jrt::isInstance<java::lang::InterruptedException>(__ex1.t)) {
                             jrt::Ref<java::lang::InterruptedException> var2 = jrt::cast<java::lang::InterruptedException>(__ex1.t);

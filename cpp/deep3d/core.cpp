@@ -993,6 +993,16 @@ void Runtime::framePace() {
     gLastFrameNanos = deadline;
 }
 
+/* The phone build rested 2 ms after every loop pass, to leave the handset's
+   CPU to its other threads. Here frames are paced where they are presented
+   (vsync, the FPS limit: flushGraphics), and the rest only took 2 ms from
+   every frame (it alone kept the game under 500 FPS). The pass's safe point
+   (freeing, the cycle collector) stays: Thread.sleep(0). Without a GL window
+   (it never happens in this build) the rest stays as it was. */
+void Runtime::loopRest(int64_t millis) {
+    java::lang::Thread::sleep(gl::GLBackend::isActive() ? 0 : millis);
+}
+
 void Runtime::tickFpsCounter() {
     Diagnostics::frame();
     if (Det::onGameThread()) GameUi::commitFrame();   // deterministic runs: the game loop's frames only
