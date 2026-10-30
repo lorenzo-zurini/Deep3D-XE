@@ -863,8 +863,9 @@ bool FirstRun::ensureAssets() {
 // ---------------------------------------------------------------------
 
 namespace {
-constexpr double DEPTH_K = 8.0 / 100.0;      // 8 world units per game metre of depth
-constexpr double DIST_K = 128.0 / 12.0 / 100.0;  // the HUD's metres are world units x 12/128
+constexpr double UNITS_PER_METRE = 50.0;     // the sub (362 units) is a 7.2 m deep-sea craft
+constexpr double DEPTH_K = 8.0 / UNITS_PER_METRE;            // 8 world units per game metre of depth
+constexpr double DIST_K = 128.0 / 12.0 / UNITS_PER_METRE;    // the HUD's metres are world units x 12/128
 }  // namespace
 
 int32_t Scale::depth(int32_t v) {

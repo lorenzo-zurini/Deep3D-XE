@@ -408,11 +408,12 @@ public:
 /** Remastered graphics: the frame block handed to the native renderer. */
 /**
  * The game's numbers at a believable scale (Config::believableScale, on by
- * default). Its "metres" are about ten times too big for what it shows:
- * the sub is a one-seater some 3.6 m long (its windows, the stations'
- * portholes), so a metre is about 100 world units, where the game counts 8
- * for a depth and 10.7 for a distance. The world, its speeds and its light
- * stay as they are: only what is shown changes.
+ * default). Its "metres" are several times too big for what it shows: the
+ * sub, 362 units long, is taken as a 7.2 m deep-sea craft (DeepSea
+ * Challenger, Alvin), so a metre is 50 world units, where the game counts 8
+ * for a depth and 10.7 for a distance. The stations sit 2.2-4.8 km down.
+ * The world, its speeds and its light stay as they are: only what is shown
+ * changes.
  */
 class Scale {
 public:
