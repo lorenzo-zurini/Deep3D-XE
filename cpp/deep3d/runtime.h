@@ -6,6 +6,25 @@
 #include "m3g.h"
 
 class class_37;
+class class_26;
+class class_86;
+
+/** Open Sea: every station at its place on one map (deep3d/OpenSea.cpp). */
+class OpenSea {
+public:
+    /** The level is built (its station slots filled): place the others. */
+    static void begin(class_26* world);
+    /** Each frame: build and free stations by reach, seat the nearest, and update / draw the others. */
+    static void step(class_26* world, int64_t dt, bool update);
+    /** The level goes. */
+    static void end(class_26* world);
+    /** The station whose waters these are (null: not on the open sea). */
+    static jrt::Ref<class_86> nearest();
+    /** Docking: the nearest station becomes the current one first. */
+    static void beforeDock();
+    /** Tests: where the named station stands (false: not on the open sea). */
+    static bool where(const std::string& name, int32_t& x, int32_t& y, int32_t& z);
+};
 
 /** Debug options and test hooks on the game side (Java: game/src/Deep3dDebug.java). */
 class Deep3dDebug {

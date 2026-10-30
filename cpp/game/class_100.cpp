@@ -144,8 +144,18 @@ void class_100::method_809() {
 }
 
 jrt::Ref<class_3> class_100::method_799(jrt::Ref<class_3> var1) {
-    var1->method_10(0, 0, 0);
+    var1->method_10(this->deep3dOX, this->deep3dOY, this->deep3dOZ);
     return var1;
+}
+
+/* Deep3D-PC: Open Sea puts every station at its place on the map. Its
+   modules move there; its docking box and collision volumes stay where
+   they were built, and what is tested against them is taken there first */
+void class_100::deep3dPlace(int32_t x, int32_t y, int32_t z) {
+    this->method_827(x - this->deep3dOX, y - this->deep3dOY, z - this->deep3dOZ);
+    this->deep3dOX = x, this->deep3dOY = y, this->deep3dOZ = z;
+    this->class_91::field_1234 = x, this->class_91::field_1235 = y, this->class_91::field_1236 = z;
+    this->class_98::field_1300 = x, this->class_98::field_1301 = y, this->class_98::field_1302 = z;
 }
 
 jrt::Ref<class_108> class_100::method_826() {
@@ -162,10 +172,12 @@ void class_100::method_827(int32_t var1, int32_t var2, int32_t var3) {
 }
 
 bool class_100::method_806(int32_t var1, int32_t var2, int32_t var3) {
+    var1 -= this->deep3dOX, var2 -= this->deep3dOY, var3 -= this->deep3dOZ;
     return (((((float(var1) < this->class_91::field_1225->field_362) && (float(var1) > (-this->class_91::field_1225->field_362))) && (float(var2) < this->class_91::field_1225->field_362)) && (float(var2) > (-this->class_91::field_1225->field_362))) && (float(var3) < this->class_91::field_1225->field_362)) && (float(var3) > (-this->class_91::field_1225->field_362));
 }
 
 bool class_100::method_828(int32_t var1, int32_t var2, int32_t var3) {
+    var1 -= this->deep3dOX, var2 -= this->deep3dOY, var3 -= this->deep3dOZ;
     if (((((((var1 < this->field_1310) && (var1 > (-this->field_1310))) && (var2 < this->field_1310)) && (var2 > (-this->field_1310))) && (var3 < this->field_1310)) && (var3 > (-this->field_1310))) && (this->class_99::field_1303 != nullptr)) {
         for (int32_t var4 = 0; var4 < this->class_99::field_1303->length; var4++) {
             if (this->class_99::field_1303->at(var4)->method_288(var1, var2, var3)) {
@@ -182,6 +194,10 @@ bool class_100::method_807(jrt::Ref<class_3> var1) {
 }
 
 jrt::Ref<class_3> class_100::method_808(jrt::Ref<class_3> var1) {
+    if (this->class_99::field_1303 != nullptr && (this->deep3dOX | this->deep3dOY | this->deep3dOZ) != 0) {
+        jrt::Ref<class_3> rel = jrt::New<class_3>(var1->field_37 - this->deep3dOX, var1->field_38 - this->deep3dOY, var1->field_39 - this->deep3dOZ);
+        return this->class_99::field_1303->at(this->field_1309)->method_285(rel);
+    }
     return (this->class_99::field_1303 != nullptr) ? this->class_99::field_1303->at(this->field_1309)->method_285(var1) : jrt::Ref<class_3>(nullptr);
 }
 

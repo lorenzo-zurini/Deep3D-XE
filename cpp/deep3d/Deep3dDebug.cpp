@@ -101,10 +101,13 @@ public:
 
     bool inGame() override { return inGameNow(); }
 
-    bool move(int32_t dx, int32_t dy, int32_t dz) override {
+    bool seaStation(const std::string& name, int32_t& x, int32_t& y, int32_t& z) override { return OpenSea::where(name, x, y, z); }
+
+    bool move(int32_t dx, int32_t dy, int32_t dz, bool absolute) override {
         auto* flight = dynamic_cast<class_64*>(currentScene().get());
         if (!flight || !flight->field_787 || !flight->field_787->field_970 || !flight->field_790) return false;
         Ref<class_108> sub = flight->field_787->field_970;
+        if (absolute) dx -= sub->method_852(), dy -= sub->method_853(), dz -= sub->method_854();
         sub->method_845(sub->method_852() + dx, sub->method_853() + dy, sub->method_854() + dz);
         Ref<class_3> cam = flight->field_790->field_457;
         cam->field_37 += dx, cam->field_38 += dy, cam->field_39 += dz;

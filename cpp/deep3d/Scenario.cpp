@@ -447,9 +447,17 @@ bool run(const Args& s) {
         holdKey(Input::Action::DOCK, 4);
         return true;
     }
-    if (c == "move") {
-        // tests: move the sub and its camera (Open Sea: far from the origin)
-        bool ok = g && g->move(arg(s, 1, 0), arg(s, 2, 0), arg(s, 3, 0));
+    if (c == "near") {
+        // Open Sea tests: put the sub by a station: near <dx> <dy> <dz> <station name>
+        int32_t x, y, z;
+        std::string name = join(s, 4);
+        bool ok = g && g->seaStation(name, x, y, z) && g->move(x + arg(s, 1, 0), y + arg(s, 2, 0), z + arg(s, 3, 0), true);
+        log("near " + name + (ok ? "" : " (no such station on the open sea)"));
+        return true;
+    }
+    if (c == "move" || c == "moveto") {
+        // tests: move the sub and its camera by, or to, a place (Open Sea: far from the origin)
+        bool ok = g && g->move(arg(s, 1, 0), arg(s, 2, 0), arg(s, 3, 0), c == "moveto");
         log(std::string("move") + (ok ? "" : " (not in flight)"));
         return true;
     }

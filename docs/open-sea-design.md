@@ -1,6 +1,6 @@
 # Open Sea: all 200 stations on one continuous map
 
-Draft design, 2026-10-30. Status: decided. Phase 1 done (2026-10-30).
+Draft design, 2026-10-30. Status: decided. Phases 1 and 2 done (2026-10-30).
 
 ## The idea
 
@@ -149,9 +149,17 @@ station's waters does count as a visit (discovered, and added to the map's trail
    `deep3d_remaster.cpp`). Tested at 50, 400 and 1,800 km out: Enhanced and Remastered draw
    normally, 30 s of boosted flight across an origin step shows no seam, and `detcheck` is
    identical.
-2. **Map position and sector handoff.** Stations at their map positions, nearest-station
-   ownership, partial rebuild. Done when Gosu to Veill is one continuous flight ending in a
-   dock.
+2. **Every station on one map** (decided 2026-10-30: no handoff). *Done:* `cpp/deep3d/OpenSea.cpp`.
+   The level is built around the current station at the origin; all 200 stations stand at
+   their map positions relative to it (`class_100::deep3dPlace`, gates as the level makes
+   them). A station is built within 15 km of the sub and freed beyond 20 km. The level's
+   station slots (`field_276`) hold the nearest station's objects, so docking, the
+   autopilot, the gates and the HUD speak of it; docking makes it the current station
+   (`class_21::method_131`, as a S.T.R.E.A.M. arrival does), and entering its waters marks it
+   discovered. Station flares (Remastered) fade at a tenth of the murk's rate and keep a
+   minimum size, so they show as points of light out to about 10 km; the hull, about 1.5 km.
+   Tested: Charon to Hephaistos (121 km), docked there, departed with the sea laid out
+   around it; `detcheck` identical.
 3. **Continuous environment.** Tint and creature mix from the map position.
 4. **Travel and UI.** S.T.R.E.A.M. into the continuous world, map marker, HUD distances,
    `Scale::km`.

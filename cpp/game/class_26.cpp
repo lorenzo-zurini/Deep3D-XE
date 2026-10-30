@@ -38,6 +38,7 @@ bool class_26::method_240() {
         this->field_266 = jrt::New<class_116>(class_43::method_380(2), 96, 0, 127, 32, 10, 700, 100, 500);
         this->field_268 = jrt::New<class_116>(class_43::method_380(2), 96, 0, 127, 32, 10, 700, 100, 500);
         this->method_241();
+        OpenSea::begin(this);
         if (this->field_262 != 0) {
             this->method_244();
             if (class_26::field_301 && (this->field_272->field_970 != nullptr)) {
@@ -1506,6 +1507,7 @@ void class_26::method_265(int64_t var1) {
             this->field_275->at(var8)->method_809();
         }
     }
+    OpenSea::step(this, var1, true);
     if (this->field_276 != nullptr) {
         for (int32_t var9 = 0; var9 < this->field_276->length; var9++) {
             if (this->field_276->at(var9) != nullptr) {
@@ -1561,6 +1563,7 @@ void class_26::method_266(int64_t var1) {
             this->field_275->at(var8)->method_809();
         }
     }
+    OpenSea::step(this, 0, false);
     if (this->field_276 != nullptr) {
         for (int32_t var9 = 0; var9 < this->field_276->length; var9++) {
             if (this->field_276->at(var9) != nullptr) {
@@ -1615,6 +1618,7 @@ bool class_26::method_270(int32_t var1) {
 }
 
 void class_26::method_271() {
+    OpenSea::end(this);
     class_43::method_384();
     if (this->field_276 != nullptr) {
         for (int32_t var1 = 0; var1 < this->field_276->length; var1++) {

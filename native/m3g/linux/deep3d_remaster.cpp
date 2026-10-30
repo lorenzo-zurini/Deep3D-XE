@@ -589,7 +589,7 @@ static const char *GLOW_FS =
 "  float halo = (1.0 - smoothstep(0.2, 1.0, r)) * 0.12;\n"
 "  float star = (exp(-abs(vUV.y) * 70.0) + exp(-abs(vUV.x) * 70.0)) * (1.0 - smoothstep(0.0, 0.7, r)) * 0.35;\n"
 "  vec3 c = vCol.rgb * (glow * 1.1 + halo + star) + mix(vCol.rgb, vec3(1.0), 0.7) * core * 1.6;\n"
-"  gl_FragColor = vec4(c * trans1(vDist * 0.3) * smoothstep(40.0, 200.0, vDist), 1.0);\n"
+"  gl_FragColor = vec4(c * trans1(vDist * vCol.a) * smoothstep(40.0, 200.0, vDist), 1.0);\n"
 "}\n";
 
 /* Shoals of small fish (simulated on the CPU, see drawFish): each fish is
@@ -1202,6 +1202,7 @@ static void deriveFrame() {
 struct Glow {
     float p[3], r, c[3];
     int drawn;                          /* drawn as a light (not a flame) */
+    int beacon;                         /* a station's flare: seen from afar */
 };
 static Glow glowNext[GLOW_MAX];
 static int glowNextN;
@@ -1226,6 +1227,7 @@ static void addGlow(const float *eye, float r, const float *c, int drawn) {
     }
     g->r = r;
     g->drawn = drawn;
+    g->beacon = rmStructure;
     /* the stations' blinking flares: a quarter of the light, or each blink
        floods the whole station */
     if (rmStructure) {
@@ -2817,13 +2819,20 @@ static void drawGlows(const float *worldToEye) {
             continue;
         }
         float e = g->r * 3.0f;
+        /* a station's flare stays a point of light far off (a few pixels
+           wide: the core of the sprite is about a tenth of it) */
+        if (g->beacon) {
+            float dx = g->p[0] - m[12], dy = g->p[1] - m[13], dz = g->p[2] - m[14];
+            e = fmaxf(e, sqrtf(dx * dx + dy * dy + dz * dz) * 0.024f);
+        }
         int i4 = n++;
         for (int k = 0; k < 4; k++) {
             int o = i4 * 4 + k;
             for (int j = 0; j < 3; j++) glowQuad[o * 3 + j] = g->p[j] + (rt[j] * cu[k] + up[j] * cv[k]) * e;
             glowQuadUV[o * 2] = cu[k]; glowQuadUV[o * 2 + 1] = cv[k];
-            for (int j = 0; j < 3; j++) glowQuadCol[o * 4 + j] = g->c[j];
-            glowQuadCol[o * 4 + 3] = 1;
+            /* (a flare lights its station at a quarter, but is seen whole) */
+            for (int j = 0; j < 3; j++) glowQuadCol[o * 4 + j] = g->c[j] * (g->beacon ? 4.0f : 1.0f);
+            glowQuadCol[o * 4 + 3] = g->beacon ? 0.1f : 0.3f;   /* how fast the murk takes it */
         }
     }
     Saved s;

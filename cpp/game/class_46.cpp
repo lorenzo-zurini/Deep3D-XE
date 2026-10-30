@@ -132,6 +132,9 @@ void class_46::method_390(jrt::Ref<class_37> var1, jrt::Ref<class_106> var2) {
     this->field_509 = this->field_514->field_273;
     this->field_510 = this->field_514->field_274;
     this->field_511 = this->field_514->field_276;
+    if (OpenSea::nearest() != nullptr) {
+        this->field_522->at(0) = OpenSea::nearest()->field_1133;   // Deep3D-PC: the station you are at
+    }
     this->field_513 = this->field_514->field_277;
     this->field_512 = this->field_514->field_275;
     bool var3 = false;

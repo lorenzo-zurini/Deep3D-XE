@@ -228,7 +228,9 @@ public:
     jrt::Ref<jrt::Array<int32_t>> field_1308{};
     int32_t field_1309{};
     int32_t field_1310{};
+    int32_t deep3dOX{}, deep3dOY{}, deep3dOZ{};   // Deep3D-PC: where it stands (Open Sea), else the origin
     void __init(jrt::Ref<class_86> var1);
+    void deep3dPlace(int32_t x, int32_t y, int32_t z);
     jrt::Ref<jrt::Array<int32_t>> method_825(int32_t var1, bool var2);
     virtual void method_805(int64_t var1);
     virtual void method_809();

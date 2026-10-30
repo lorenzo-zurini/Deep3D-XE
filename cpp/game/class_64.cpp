@@ -578,6 +578,7 @@ bool class_64::method_566(int32_t var1, int32_t var2) {
             }
             if (this->field_787->method_669()) {
                 if (((class_21::method_143() != 5) || (class_21::method_180()->field_1134 != 0)) && ((class_21::method_143() != 6) || (class_21::method_180()->field_1134 == 0))) {
+                    OpenSea::beforeDock();
                     class_14::method_67(this->field_787);
                     class_84::field_1126->method_439(class_84::field_1127->at(1));
                     return true;
@@ -592,7 +593,7 @@ bool class_64::method_566(int32_t var1, int32_t var2) {
                     if (this->field_808 == nullptr) {
                         this->field_808 = jrt::New<class_121>();
                     }
-                    this->field_808->method_940(class_21::method_219(class_84::field_1116->method_4(272), class_21::method_180()->field_1133), true);
+                    this->field_808->method_940(class_21::method_219(class_84::field_1116->method_4(272), (OpenSea::nearest() != nullptr ? OpenSea::nearest() : class_21::method_180())->field_1133), true);
                     this->field_808->method_942();
                     this->field_810 = true;
                     this->field_793 = true;
@@ -768,6 +769,7 @@ void class_64::method_550(int32_t var1) {
                             this->field_817 = true;
                             this->field_793 = true;
                         } else {
+                            OpenSea::beforeDock();
                             class_14::method_67(this->field_787);
                             class_84::field_1126->method_439(class_84::field_1127->at(1));
                         }

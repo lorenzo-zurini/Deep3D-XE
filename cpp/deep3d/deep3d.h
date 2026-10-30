@@ -363,7 +363,9 @@ public:
     /** Stick input that turns toward the nearest creature or ship ahead (none: false). */
     virtual bool aim(const std::string& what, float& x, float& y) = 0;
     /** Tests: move the sub and its camera by (dx, dy, dz) world units (Open Sea: far places). */
-    virtual bool move(int32_t dx, int32_t dy, int32_t dz) = 0;
+    virtual bool move(int32_t dx, int32_t dy, int32_t dz, bool absolute) = 0;
+    /** Open Sea tests: where the named station stands. */
+    virtual bool seaStation(const std::string& name, int32_t& x, int32_t& y, int32_t& z) = 0;
 };
 
 class Cheats {
