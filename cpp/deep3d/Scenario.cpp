@@ -477,7 +477,7 @@ bool run(const Args& s) {
         return true;
     }
     if (c == "record") {
-        gl::GLBackend::burst(gOut, s.size() > 2 ? s[2] : "rec", arg(s, 1, 60), true);
+        gl::GLBackend::burst(gOut, s.size() > 2 ? s[2] : "rec", arg(s, 1, 60), true, arg(s, 3, 0));
         return true;
     }
     if (c == "shot") {

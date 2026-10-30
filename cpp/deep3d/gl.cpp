@@ -784,6 +784,7 @@ bool gPipeShotPending = false;
 std::string gBurstDir, gBurstName;
 int32_t gBurstLeft = 0, gBurstIndex = 0;
 bool gBurstFull = false;   // record: every frame at full size, no log
+int32_t gBurstSkip = 0;    // record: frames to let pass first
 std::atomic<std::thread::id*> gHoldNext{nullptr};
 thread_local std::thread::id tId = std::this_thread::get_id();
 
@@ -1285,6 +1286,10 @@ void captureScreenshot() {
 void checkBurst() {
     std::lock_guard<std::mutex> g(gShotLock);
     if (gBurstLeft <= 0) return;
+    if (gBurstSkip > 0) {
+        gBurstSkip--;
+        return;
+    }
     gBurstLeft--;
     int32_t w = GLBackend::fbWidth, h = GLBackend::fbHeight;
     auto rgb = readBack(w, h);
@@ -1624,10 +1629,11 @@ void GLBackend::screenshotTo(const std::string& file) {
     gPipeShotPending = true;
 }
 
-void GLBackend::burst(const std::string& dir, const std::string& name, int32_t frames, bool full) {
+void GLBackend::burst(const std::string& dir, const std::string& name, int32_t frames, bool full, int32_t skip) {
     std::lock_guard<std::mutex> g(gShotLock);
     gBurstIndex = 0;
     gBurstFull = full;
+    gBurstSkip = skip;
     gBurstName = name;
     gBurstDir = dir;
     gBurstLeft = frames;
