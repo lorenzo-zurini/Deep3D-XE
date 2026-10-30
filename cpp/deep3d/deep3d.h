@@ -35,12 +35,15 @@ Ref<String> jstr(const std::string& s);
 class Det {
 public:
     static const bool ON;
+    /** DEEP3D_BENCH with DEEP3D_DET: the clock, seeds and input only (no hashing). */
+    static const bool BENCH;
     static int64_t millis();
     static int64_t nanos();
     static Ref<java::util::Random> random(int32_t site);
     static bool onGameThread();
     static bool queueKey(int32_t code, bool pressed);
     static void frame();
+    static void deliverKeys();
 
     // what the game does in a pass (game thread only), hashed into det.log
     // and written to det_events.txt: its drawing, sounds, saves, resources
@@ -507,6 +510,18 @@ public:
     static bool active();
     static void tick();
     static int32_t frame();
+};
+
+/** The benchmark (Deep3D-XE --bench, Bench.cpp): runs per mode, frame-time statistics. */
+class Bench {
+public:
+    /** The parent: runs the game once per mode and reports. */
+    static int main(int argc, char** argv);
+    /** In a run (the scenario's bench step): times the next frames. */
+    static void start(const std::string& label, int32_t frames);
+    static bool running();
+    /** A frame was presented. */
+    static void presented();
 };
 
 /** The game's bitmap font, for the window-resolution overlay layer. */

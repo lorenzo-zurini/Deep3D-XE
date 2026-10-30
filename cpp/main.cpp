@@ -78,6 +78,7 @@ int run(int argc, char** argv) {
             Config::internalHeight = java::lang::Integer::parseInt(java::lang::String::of(p[1]));
         } else if (a == "--help") {
             printf("usage: deep3d [--fullscreen|--windowed] [--res WxH]\n");
+            printf("       deep3d --bench [original,enhanced,remastered] [--frames N] [--fullscreen|--windowed|--size WxH]\n");
             printf("settings persist in deep3d.cfg; press Esc in game for options\n");
             return 0;
         } else {
@@ -136,6 +137,17 @@ int run(int argc, char** argv) {
 int main(int argc, char** argv) {
     // the window's X connection is used from several threads (the game's
     // presenting threads, the M3G engine's GLX contexts)
+    // the benchmark: this process only starts the runs (DEEP3D_BENCH=1 is the same)
+    bool bench = getenv("DEEP3D_BENCH") && !getenv("DEEP3D_DET");
+    for (int i = 1; i < argc; i++) bench |= strcmp(argv[i], "--bench") == 0;
+    if (bench) {
+        try {
+            return Bench::main(argc, argv);
+        } catch (const jrt::Thrown& t) {
+            uncaught(t);
+        }
+    }
+    if (Det::BENCH) setvbuf(stdout, nullptr, _IOLBF, 0);   // a benchmark run: its log as it happens
     XInitThreads();
     XSetErrorHandler(xError);
     try {

@@ -1566,6 +1566,7 @@ void GLBackend::endFrame() {
         if (gScreenshotRequested.exchange(false)) captureScreenshot();
         checkPipeShot();
         swap();
+        Bench::presented();
         Runtime::tickFpsCounter();
         gLastFrame = frame;
         frame.reset();

@@ -542,6 +542,11 @@ bool run(const Args& s) {
         }
         return false;
     }
+    if (c == "bench") {
+        Bench::start(s[1], arg(s, 2, 3000));
+        return true;
+    }
+    if (c == "benchdone") return !Bench::running();
     if (c == "fuzz") return fuzz(arg(s, 1, 3000), s.size() > 2 ? parseLong(s[2]) : 1);
     if (c == "toast") {
         Overlay::showToast(join(s, 1));

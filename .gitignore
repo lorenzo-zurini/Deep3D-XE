@@ -15,6 +15,7 @@ dist/
 # Runtime-generated
 deep3d.cfg
 screenshots/
+benchmarks/
 /*.sf2
 /*.dls
 logs/

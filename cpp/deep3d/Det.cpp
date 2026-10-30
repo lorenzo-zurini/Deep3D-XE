@@ -12,9 +12,16 @@
 namespace org::deep3d {
 
 const bool Det::ON = getenv("DEEP3D_DET") != nullptr;
+const bool Det::BENCH = ON && getenv("DEEP3D_BENCH") != nullptr;
 
 namespace {
-constexpr int64_t STEP_MS = 33;
+/* the virtual clock's step per game loop pass: 33 ms, or DEEP3D_DET_STEP_MS
+   (the benchmark's) */
+const int64_t STEP_MS = [] {
+    const char* s = getenv("DEEP3D_DET_STEP_MS");
+    int64_t v = s ? atoll(s) : 0;
+    return v > 0 ? v : int64_t(33);
+}();
 int64_t gNow = 1000000000000LL;
 std::atomic<bool> gHaveGame{false};
 std::thread::id gGame;
@@ -117,6 +124,18 @@ bool Det::queueKey(int32_t code, bool pressed) {
 void Det::frame() {
     Step::advance();
     if (!ON) return;
+    if (!gHaveGame && BENCH) {
+        gGame = std::this_thread::get_id();
+        gHaveGame = true;
+    }
+    if (BENCH) {
+        // the benchmark: a deterministic run's clock, seeds and input, without
+        // hashing the game's state every pass
+        gFrame++;
+        gNow += STEP_MS;
+        deliverKeys();
+        return;
+    }
     if (!gHaveGame) {
         gGame = std::this_thread::get_id();
         gHaveGame = true;
@@ -148,6 +167,10 @@ void Det::frame() {
     if (gDumpFrames.count(gFrame)) {
         std::ofstream(outDir() + "/det_" + std::to_string(gFrame) + ".txt", std::ios::binary) << d.out;
     }
+    deliverKeys();
+}
+
+void Det::deliverKeys() {
     while (true) {
         std::pair<int32_t, bool> k;
         {
@@ -168,7 +191,7 @@ void Det::frame() {
     }
 }
 
-bool Det::recording() { return ON && gHaveGame && std::this_thread::get_id() == gGame; }
+bool Det::recording() { return ON && !BENCH && gHaveGame && std::this_thread::get_id() == gGame; }
 
 uint64_t Det::hashBytes(uint64_t h, const void* data, size_t len) {
     const unsigned char* p = static_cast<const unsigned char*>(data);

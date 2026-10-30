@@ -158,6 +158,24 @@ overrides that folder, and `DEEP3D_SAVE_DIR` and `DEEP3D_CONFIG` override
 the saves and the settings file. Settings and saves are compatible with
 the earlier Java build.
 
+### Benchmark
+
+```sh
+./Deep3D-XE --bench                      # every mode: original, enhanced, remastered
+./Deep3D-XE --bench remastered --frames 6000
+./Deep3D-XE --bench --fullscreen         # or --windowed, --size 2560x1440, --set key=value
+```
+
+Starts the game once per graphics mode with your display and graphics
+settings, but with vsync and the FPS limit off, no audio and a throwaway
+home (your settings and saves are not touched). Each run flies the same
+route on a deterministic clock (a new game, a shallow station, turns of
+every kind, boosting and firing), so modes and builds draw the same frames,
+and times the measured part frame by frame. It prints average FPS, the 1%
+and 0.1% lows (the average frame rate of the slowest 1% / 0.1% of the
+frames) and frame-time percentiles, and saves them under `benchmarks/`
+with each mode's frame times as CSV. A run takes about a minute per mode.
+
 ## Controls
 
 Every screen of the game — menus, lists, tabs, dialogs, popups, the map,

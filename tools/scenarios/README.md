@@ -56,6 +56,7 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `shot <name>` | a screenshot, logged to metrics.tsv with state, FPS and the sub's heading |
 | `pair <name>` | the same moment in Remastered and Enhanced (`<name>__alt`), without particles |
 | `describe` | log what the UI layer sees (rows, buttons, bar) |
+| `bench <label> <frames>`, `benchdone` | time the next frames (`<out>/bench.tsv`, frame times as CSV); wait until done (`Deep3D-XE --bench` uses them) |
 
 ## What the report checks
 
