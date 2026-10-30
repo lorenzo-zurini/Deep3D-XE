@@ -206,6 +206,7 @@ public:
     bool field_1304{};
     bool field_1305{};
     bool field_1306{};
+    double deep3dSpin{};   // Deep3D-PC
     void __init(int32_t var1, jrt::Ref<class_108> var2, int32_t var3, int32_t var4, int32_t var5);
     void deep3dMove(int32_t dx, int32_t dy, int32_t dz);
     virtual void method_821();
@@ -275,6 +276,10 @@ public:
     int32_t field_1332{};
     bool field_1333{};
     int32_t field_1334{};
+    double deep3dSink{};   // Deep3D-PC
+    int32_t deep3dTumble[2]{};
+    bool deep3dPhase{};
+    void deep3dSwim(int32_t axis, int32_t perStep);
     void __init(int32_t var1, jrt::Ref<class_108> var2, jrt::Ref<class_40> var3, int32_t var4, int32_t var5, int32_t var6);
     virtual void method_829(bool var1);
     virtual void method_830(int32_t var1);
@@ -305,6 +310,8 @@ public:
     jrt::Ref<class_57> field_1342{};
     jrt::Ref<class_15> field_1343{};
     int32_t field_1344{};
+    void deep3dTurn(int32_t axis, double units);
+    void deep3dGo(double units);
     void __init();
     void __init(jrt::Ref<class_102> var1);
     virtual void method_837(jrt::Ref<class_106> var1, jrt::Ref<class_4> var2) = 0;
@@ -523,6 +530,8 @@ public:
     int32_t field_114{};
     void __init();
     virtual void method_51(jrt::Ref<class_59> var1, bool var2);
+    void deep3dHeldUp(int32_t var1);
+    void deep3dHeldDown(int32_t var1);
     virtual void method_52(int32_t var1);
     virtual void method_53(int32_t var1);
     virtual void method_54();
@@ -575,6 +584,8 @@ public:
     static jrt::Ref<javax::microedition::m3g::CompositingMode> field_1406;
     bool field_1407{};
     jrt::Ref<javax::microedition::m3g::Texture2D> field_1408{};
+    float deep3dFraction{};   // Deep3D-PC: how far into the next animation frame
+    void deep3dAnimate(jrt::Ref<javax::microedition::m3g::Object3D> o);
     void __init(int32_t var1, jrt::Ref<java::lang::String> var2, int32_t var3);
     void __init(jrt::Ref<class_111> var1);
     void method_898();
@@ -630,6 +641,8 @@ public:
     static int32_t field_1419;
     static int32_t field_1420;
     bool field_1421{};
+    double deep3dFeed{}, deep3dRibbon{};   // Deep3D-PC
+    void deep3dHome();
     void __init(jrt::Ref<class_9> var1, jrt::Ref<class_108> var2, int32_t var3, bool var4);
     virtual void method_894();
     virtual void method_887();
@@ -655,6 +668,7 @@ public:
     int32_t field_1431{};
     int32_t field_1432{};
     bool field_1433{};
+    double deep3dPull{};   // Deep3D-PC
     void __init(jrt::Ref<class_9> var1, jrt::Ref<class_108> var2, jrt::Ref<class_108> var3, int32_t var4, int32_t var5, int32_t var6);
     virtual void method_894();
     virtual void method_887();
@@ -740,6 +754,7 @@ public:
     jrt::Ref<class_39> field_1454{};
     int32_t field_1455{};
     bool field_1456{};
+    double deep3dBack{}, deep3dLift{}, deep3dGather{}, deep3dCredits{};   // Deep3D-PC
     void __init(jrt::Ref<class_42> var1, jrt::Ref<class_5> var2, jrt::Ref<class_26> var3);
     virtual bool method_913(int32_t var1, jrt::Ref<class_42> var2, jrt::Ref<class_2> var3);
     virtual void method_914();
@@ -1382,6 +1397,9 @@ public:
     int32_t field_247{};
     bool field_248{};
     int32_t field_249{};
+    double deep3dScroll{};   // Deep3D-PC
+    void deep3dHeldDown(int32_t var1, int32_t perStep = 3);
+    void deep3dHeldUp(int32_t var1, int32_t perStep = 3);
     void __init(int32_t var1, int32_t var2, int32_t var3, int32_t var4, jrt::Ref<java::lang::String> var5);
     virtual void method_224();
     virtual void method_225(jrt::Ref<java::lang::String> var1);
@@ -1404,6 +1422,7 @@ public:
     int32_t field_252{};
     int32_t field_253{};
     int32_t field_254{};
+    double deep3dGrow{}, deep3dFade{};   // Deep3D-PC
     void __init(int32_t var1, jrt::Ref<class_44> var2, int32_t var3, int32_t var4, int32_t var5, int32_t var6, int32_t var7, int32_t var8, int32_t var9, int32_t var10, int8_t var11);
     virtual void method_232();
     virtual void method_233();
@@ -1423,6 +1442,7 @@ public:
     int32_t field_259{};
     int32_t field_260{};
     jrt::Ref<class_108> field_261{};
+    double deep3dRise[20]{};   // Deep3D-PC
     void __init();
     virtual void method_235();
     virtual void method_236(jrt::Ref<class_3> var1, int32_t var2);
@@ -1663,6 +1683,7 @@ public:
     jrt::Ref<jrt::Array<jrt::Ref<java::lang::String>>> field_339{};
     jrt::Ref<java::lang::String> field_340{};
     static jrt::Ref<java::lang::String> field_341;
+    int64_t deep3dBubbleAt{};   // Deep3D-PC
     void __init();
     static jrt::Ref<javax::microedition::lcdui::Image> method_292();
     virtual void run();
@@ -1979,6 +2000,7 @@ public:
     float deep3dDolly{};
     jrt::Ref<class_3> deep3dOff{};
     jrt::Ref<class_3> deep3dAim{};
+    double deep3dChase[3]{};   // Deep3D-PC
     void __init(jrt::Ref<class_102> var1, jrt::Ref<class_102> var2);
     void __init(jrt::Ref<class_102> var1, jrt::Ref<class_102> var2, jrt::Ref<class_3> var3);
     virtual void method_368(jrt::Ref<class_102> var1);
@@ -2512,6 +2534,9 @@ public:
     int32_t field_703{};
     bool field_704{};
     static jrt::Ref<class_3> field_705;
+    double deep3dAxes[9]{}, deep3dGoLeft[3]{};   // Deep3D-PC: the axes in doubles, what a move left over
+    void deep3dTurn(int32_t axis, double units);
+    void deep3dGo(double units);
     void __init();
     void __init(jrt::Ref<class_57> var1);
     virtual void method_469();
@@ -2665,6 +2690,7 @@ public:
     jrt::Ref<class_3> field_721{};
     jrt::Ref<class_3> field_722{};
     jrt::Ref<class_108> field_723{};
+    double deep3dRespawn{}, deep3dMove[45]{};   // Deep3D-PC
     void __init();
     virtual void method_546();
     virtual void method_547(int64_t var1, jrt::Ref<class_57> var3, bool var4);
@@ -2862,6 +2888,7 @@ public:
     jrt::Ref<class_60> field_834{};
     jrt::Ref<jrt::Array<jrt::Ref<class_108>>> field_835{};
     jrt::Ref<class_103> field_836{};
+    double deep3dTurn[2]{};   // Deep3D-PC
     void __init(int32_t var1);
     virtual void method_552();
     virtual void method_551();
@@ -2922,6 +2949,7 @@ public:
     static int32_t field_860;
     static bool field_861;
     static bool field_862;
+    static double deep3dLockSteps;   // Deep3D-PC
     void __init();
     static void method_574();
     static bool method_575();
@@ -3195,6 +3223,8 @@ public:
     int32_t field_1013{};
     int32_t field_1014{};
     bool field_1015{};
+    double deep3dBank{}, deep3dSteer{};   // Deep3D-PC
+    void deep3dCruise(int64_t var1);
     void __init(jrt::Ref<class_37> var1);
     virtual void method_648(jrt::Ref<class_108> var1);
     virtual void method_649();
@@ -3527,6 +3557,8 @@ public:
     void __init();
     virtual void method_731();
     virtual void method_732(int32_t var1, int32_t var2, int32_t var3, int32_t var4, int32_t var5, int32_t var6);
+    void deep3dQuad(int32_t var1, int32_t var2, int32_t var3, int32_t var4, int32_t var5, int32_t var6, bool shift);
+    void deep3dHead(jrt::Ref<class_3> var1);
     virtual void method_733(jrt::Ref<class_3> var1);
     virtual void method_734(jrt::Ref<class_3> var1);
     virtual void method_735();
@@ -3827,6 +3859,7 @@ public:
     int32_t field_1243{};
     int32_t field_1244{};
     int32_t field_1245{};
+    double deep3dRise{}, deep3dSteps{};   // Deep3D-PC
     void __init(int32_t var1, bool var2, jrt::Ref<class_37> var3, jrt::Ref<class_108> var4, int32_t var5, int32_t var6, int32_t var7);
     virtual void method_810();
     virtual void method_805(int64_t var1);
@@ -3846,6 +3879,7 @@ public:
     int64_t field_1249{};
     jrt::Ref<class_37> field_1250{};
     jrt::Ref<class_116> field_1251{};
+    double deep3dBob{}, deep3dSpin{};   // Deep3D-PC
     void __init(int32_t var1, bool var2, jrt::Ref<class_37> var3, jrt::Ref<class_108> var4, int32_t var5, int32_t var6, int32_t var7);
     virtual void method_794();
     virtual void method_811();
@@ -3934,6 +3968,7 @@ public:
     bool field_1292{};
     bool field_1293{};
     int32_t field_1294{};
+    double deep3dSteer{}, deep3dAvoid{}, deep3dSink{};   // Deep3D-PC
     void __init(int32_t var1, int32_t var2, bool var3, jrt::Ref<class_37> var4, jrt::Ref<class_108> var5, int32_t var6, int32_t var7, int32_t var8);
     virtual void method_794();
     virtual void method_814(bool var1);
@@ -4002,6 +4037,7 @@ public:
     int32_t field_99{};
     int32_t field_100{};
     bool field_101{};
+    std::vector<double> deep3dVel{}, deep3dCarry{};   // Deep3D-PC: per step, 3 a shot
     void __init(int32_t var1, int32_t var2, int32_t var3, int32_t var4, int32_t var5, float var6, jrt::Ref<class_3> var7, jrt::Ref<class_3> var8);
     virtual void method_41(int32_t var1, jrt::Ref<class_114> var2);
     virtual void method_42(int32_t var1, int32_t var2);

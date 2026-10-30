@@ -14,8 +14,17 @@ namespace org::deep3d {
 const bool Det::ON = getenv("DEEP3D_DET") != nullptr;
 
 namespace {
+/* DEEP3D_DET=1 DEEP3D_STEP_MS=<ms>: a virtual clock at that frame time, to
+   compare what a simulated second does at different frame rates */
+const double kForcedMs = Det::ON && getenv("DEEP3D_STEP_MS") ? atof(getenv("DEEP3D_STEP_MS")) : 0.0;
+}  // namespace
+
+const bool Step::EXACT = Det::ON && kForcedMs <= 0.0;
+
+namespace {
 constexpr int64_t STEP_MS = 33;
 int64_t gNow = 1000000000000LL;
+double gForcedNow = double(gNow);
 std::atomic<bool> gHaveGame{false};
 std::thread::id gGame;
 std::mutex gKeysLock;
@@ -53,13 +62,13 @@ int64_t Det::millis() {
 }
 
 int64_t Det::nanos() {
-    if (ON) return gNow * 1000000LL;
+    if (ON) return kForcedMs > 0.0 ? int64_t(gForcedNow * 1e6) : gNow * 1000000LL;
     return steadyNanos() - gSkippedNanos.load();
 }
 
 void Step::advance() {
     if (Det::ON) {
-        gFrameMs = ORIGINAL_MS;
+        gFrameMs = kForcedMs > 0.0 ? kForcedMs : ORIGINAL_MS;
         return;
     }
     int64_t now = steadyNanos();
@@ -76,6 +85,8 @@ void Step::advance() {
 
 double Step::ms() { return gFrameMs; }
 
+bool Step::forced() { return kForcedMs > 0.0; }
+
 int32_t Step::share(double perStep, double& carry) {
     if (exact()) return int32_t(perStep);
     double v = perStep * scale() + carry;
@@ -84,10 +95,25 @@ int32_t Step::share(double perStep, double& carry) {
     return whole;
 }
 
-int32_t Step::chase(int32_t x, int32_t target, int32_t shift) {
+int32_t Step::shareAtLeast(double perStep, double least, double& carry) {
+    if (exact()) return int32_t(perStep);
+    double v = perStep * scale() + carry;
+    if (v < least) {
+        carry = v;
+        return 0;
+    }
+    int32_t whole = int32_t(v);
+    carry = v - whole;
+    return whole;
+}
+
+int32_t Step::chase(int32_t x, int32_t target, int32_t shift, double& carry) {
     if (exact()) return x - ((x - target) >> shift);
     double keep = std::pow(1.0 - 1.0 / double(int64_t(1) << shift), scale());
-    return target + int32_t(std::lround(double(x - target) * keep));
+    double v = double(target) + (double(x) + carry - double(target)) * keep;
+    int32_t whole = int32_t(std::lround(v));
+    carry = v - whole;
+    return whole;
 }
 
 double Step::factor(double perStep) { return exact() ? perStep : std::pow(perStep, scale()); }
@@ -135,12 +161,20 @@ void Det::frame() {
         }
     }
     gFrame++;
-    gNow += STEP_MS;
+    if (kForcedMs > 0.0) {
+        gForcedNow += kForcedMs;
+        gNow = int64_t(gForcedNow);
+    } else {
+        gNow += STEP_MS;
+    }
     jrt::Dumper d;
-    d.out.reserve(1 << 20);
-    game_dumpStatics(d);
-    uint64_t h = hashBytes(FNV, d.out.data(), d.out.size());
-    if (gLog) {
+    bool hash = kForcedMs <= 0.0 || gDumpFrames.count(gFrame);   // forced: many short frames, not compared
+    if (hash) {
+        d.out.reserve(1 << 20);
+        game_dumpStatics(d);
+    }
+    uint64_t h = hash ? hashBytes(FNV, d.out.data(), d.out.size()) : 0;
+    if (gLog && hash) {
         fprintf(gLog, "%d %016lx %016lx %zu\n", gFrame, (unsigned long)h, (unsigned long)gEventHash, d.out.size());
         fflush(gLog);
     }

@@ -343,6 +343,11 @@ int32_t Thrust::move(int32_t units, bool boosting) {
     return int32_t(std::lround(units * t));
 }
 
+float Thrust::factor(bool boosting) {
+    float t = level();
+    return boosting || t >= 1.0f ? 1.0f : t;
+}
+
 void Input::sendMidpKey(int32_t code, bool pressed) {
     if (Det::queueKey(code, pressed)) return;   // deterministic runs: at the next game loop pass
     Runtime::postEvent([code, pressed]() {
@@ -794,6 +799,13 @@ void Remaster::sub(float x, float y, float z, float dx, float dy, float dz, floa
 }
 
 void Remaster::frozen() { gFrozen = true; }
+
+/* The time is a float of seconds, which loses its milliseconds over the hours;
+   going back to 0 would jump everything that moves with it, so that waits for
+   a scene change. The renderer's clocks take a time that went back as a new start. */
+void Remaster::newScene() {
+    if (!Step::exact() && gGameNanos > 1800000000000LL) gGameNanos = 0;
+}
 
 void Remaster::subUp(float x, float y, float z) {
     clinit();

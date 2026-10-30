@@ -1,0 +1,22 @@
+# The same flight at any frame time (steptest.sh runs it at several): cruise,
+# turn, pitch, boost, fire. Frames here are original steps of 33 ms when
+# DEEP3D_STEP_MS forces the frame time.
+include prologue.scn
+wait 30
+steer 1 0 60
+wait 30
+steer 0 -1 40
+wait 30
+steer -0.5 0 60
+wait 30
+boost 60
+wait 60
+fire 30
+wait 60
+autopilot
+wait 200
+teleport 16                 # Wagoll: ships, creatures
+until station 1800
+depart
+until flight 14000
+wait 400

@@ -69,17 +69,29 @@ public:
     /** This frame's length in ms: sub-millisecond, at most 100 (33 in deterministic runs). */
     static double ms();
     /** The frame is exactly one original step: use the original formula. */
-    static bool exact() { return Det::ON; }
+    static bool exact() { return EXACT; }
+    /** DEEP3D_DET=1 DEEP3D_STEP_MS=<ms>: a deterministic run at that frame time (tests). */
+    static bool forced();
     /** This frame as a fraction of an original step. */
     static double scale() { return ms() / ORIGINAL_MS; }
     /** A whole number of units for this frame out of perStep a step; what rounds away stays in carry. */
     static int32_t share(double perStep, double& carry);
-    /** x -= (x - target) >> shift, done once a step: the same chase at any frame rate. */
-    static int32_t chase(int32_t x, int32_t target, int32_t shift);
+    /** A share given out only once it reaches least: for the length of a steering vector, which
+        says nothing about its direction when it is a few units long. */
+    static int32_t shareAtLeast(double perStep, double least, double& carry);
+    /** x -= (x - target) >> shift, done once a step. The fraction stays in carry: it is most of a
+        frame's move at high frame rates, and x would stop short without it. */
+    static int32_t chase(int32_t x, int32_t target, int32_t shift, double& carry);
     /** A per-step factor (a decay of k each step) for this frame. */
     static double factor(double perStep);
     /** How many whole original steps have gone by (for what can only happen in steps). */
     static int32_t steps(double& accumulated);
+    /** The dt of what happens once, not over a frame (a key press, a timed nudge), whose size the
+        game took from the frame: as it was at one original step. */
+    static int32_t once(int32_t dt) { return exact() ? dt : int32_t(ORIGINAL_MS); }
+
+private:
+    static const bool EXACT;
 };
 
 /** Where user files live: DEEP3D_HOME, the executable's folder, or the working directory. */
@@ -449,6 +461,8 @@ public:
     static float level();
     /** a cruising step of the sub, scaled by the thrust (boosting: as it is) */
     static int32_t move(int32_t units, bool boosting);
+    /** what move() scales a step by */
+    static float factor(bool boosting);
 };
 
 /** Remastered graphics: the frame block handed to the native renderer. */
@@ -490,6 +504,8 @@ public:
     static void hazard(float rad, float pres);
     /** The world is frozen this frame (a dialog in flight): so are the effects. */
     static void frozen();
+    /** A new scene is about to show: the moment to start the effects' clock over. */
+    static void newScene();
     static std::array<float, 3> subHeading();
     static void light(float x, float y, float z, int32_t kind);
     static void bind();
