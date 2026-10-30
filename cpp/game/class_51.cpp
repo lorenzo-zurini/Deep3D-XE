@@ -221,20 +221,20 @@ void class_51::method_418(int32_t var1, int32_t var2) {
     class_67::method_579(var2);
     if ((var1 & 64) != 0) {
         if (this->field_560 >= 15) {
-            this->field_569->method_229(var2);
+            this->field_569->deep3dHeldDown(var2);
             return;
         }
         if (this->field_560 == 8) {
-            this->field_568->method_229(var2);
+            this->field_568->deep3dHeldDown(var2);
             return;
         }
     } else if ((var1 & 2) != 0) {
         if (this->field_560 >= 15) {
-            this->field_569->method_230(var2);
+            this->field_569->deep3dHeldUp(var2);
             return;
         }
         if (this->field_560 == 8) {
-            this->field_568->method_230(var2);
+            this->field_568->deep3dHeldUp(var2);
         }
     }
 }
@@ -565,7 +565,7 @@ void class_51::method_420(int32_t var1) {
             }
         } else {
             if (this->field_560 == 13) {
-                this->field_570->method_230(var1);
+                this->field_570->method_230(org::deep3d::Step::once(var1));
                 return;
             }
             if (this->field_560 == 14) {
@@ -592,7 +592,7 @@ void class_51::method_421(int32_t var1) {
             }
         } else {
             if (this->field_560 == 13) {
-                this->field_570->method_229(var1);
+                this->field_570->method_229(org::deep3d::Step::once(var1));
                 return;
             }
             if (this->field_560 == 14) {

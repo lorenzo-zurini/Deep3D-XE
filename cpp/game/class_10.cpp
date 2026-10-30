@@ -201,6 +201,14 @@ void class_10::method_52(int32_t var1) {
     this->field_108->method_230(var1);
 }
 
+void class_10::deep3dHeldUp(int32_t var1) {
+    this->field_108->deep3dHeldUp(var1);
+}
+
+void class_10::deep3dHeldDown(int32_t var1) {
+    this->field_108->deep3dHeldDown(var1);
+}
+
 void class_10::method_53(int32_t var1) {
     this->field_108->method_229(var1);
 }

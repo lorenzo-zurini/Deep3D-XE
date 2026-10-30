@@ -108,10 +108,10 @@ bool class_56::method_459(int32_t var1) {
 
 bool class_56::method_460(int32_t var1, int32_t var2) {
     if ((var1 & 64) != 0) {
-        this->field_679->method_229(var2);
+        this->field_679->deep3dHeldDown(var2);
     }
     if ((var1 & 2) != 0) {
-        this->field_679->method_230(var2);
+        this->field_679->deep3dHeldUp(var2);
     }
     return true;
 }

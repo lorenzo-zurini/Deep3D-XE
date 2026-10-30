@@ -60,7 +60,13 @@ void class_33::method_293() {
         int32_t var2 = class_14::method_70() ? ((this->field_338 == var1) ? 5 : 4) : (this->field_337 ? ((this->field_338 == var1) ? 3 : 2) : ((this->field_338 == var1) ? 1 : 0));
         class_84::field_1117->drawImage(this->field_335->at(var2), this->field_336->at((var1 << 1)), this->field_336->at(((var1 << 1) + 1)), 3);
     }
-    this->field_338++;
+    // Deep3D-PC: one a step, not one a draw (this thread has no game frames: the clock)
+    if (org::deep3d::Step::exact()) {
+        this->field_338++;
+    } else if ((org::deep3d::Det::nanos() - this->deep3dBubbleAt) >= int64_t(33000000)) {
+        this->deep3dBubbleAt = org::deep3d::Det::nanos();
+        this->field_338++;
+    }
     if (this->field_338 > 9) {
         this->field_338 = 0;
     }

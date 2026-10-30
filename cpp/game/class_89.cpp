@@ -244,10 +244,10 @@ bool class_89::method_778(int32_t var1, int32_t var2) {
             return true;
         } else {
             if (((var1 & 2) != 0) && (this->field_1198 == 1)) {
-                this->field_1191->method_52(var2);
+                this->field_1191->deep3dHeldUp(var2);
             }
             if (((var1 & 64) != 0) && (this->field_1198 == 1)) {
-                this->field_1191->method_53(var2);
+                this->field_1191->deep3dHeldDown(var2);
             }
             return true;
         }
