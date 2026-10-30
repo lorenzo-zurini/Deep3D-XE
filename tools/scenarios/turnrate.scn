@@ -1,0 +1,20 @@
+# Turning at high frame rates (DEEP3D_DET=1): the same 2 s of steering at
+# 33, 3 and 1 ms per frame; metrics.tsv logs the sub's heading before and after
+until title 2400
+newgame
+god on
+calm
+shot start33
+steer 1 0 60
+shot end33
+clock 3
+shot start3
+steer 1 0 666
+shot end3
+clock 1
+shot start1
+steer 1 0 2000
+shot end1
+steer 0.5 0 2000
+shot end1half
+clock 33

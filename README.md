@@ -174,7 +174,7 @@ every kind, boosting and firing), so modes and builds draw the same frames,
 and times the measured part frame by frame. It prints average FPS, the 1%
 and 0.1% lows (the average frame rate of the slowest 1% / 0.1% of the
 frames) and frame-time percentiles, and saves them under `benchmarks/`
-with each mode's frame times as CSV. A run takes about a minute per mode.
+with each mode's frame times as CSV. It takes a minute or two per mode.
 
 ## Controls
 

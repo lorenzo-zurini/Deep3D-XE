@@ -1,0 +1,38 @@
+# Renderer changes: the same moments in every mode, for comparing builds
+# pixel by pixel (run with EXTRA_ENV="DEEP3D_DET=1 DEEP3D_NO_AUDIO=1" and
+# display.show_fps=true, so the FPS counter's layer is in the shots too)
+until title 2400
+shot title
+newgame
+god on
+shot flight_start
+teleport 28
+until station 2400
+shot station
+depart
+until flight 14000
+wait 120
+steer 0.6 0.2 60
+shot original
+mode enhanced
+wait 4
+shot enhanced
+mode remastered
+wait 4
+shot remastered
+steer -0.6 0 60
+pin creature 1500
+wait 10
+shot remastered_creature
+mode enhanced
+wait 4
+shot enhanced_creature
+mode original
+wait 4
+shot original_creature
+pin off
+overlay settings
+wait 10
+shot original_menu
+overlay back
+wait 10

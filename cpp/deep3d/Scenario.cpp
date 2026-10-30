@@ -542,6 +542,11 @@ bool run(const Args& s) {
         }
         return false;
     }
+    if (c == "clock") {
+        Det::setStep(parseInt(s[1]));   // deterministic runs: ms per pass (2: as at 500 FPS)
+        log("clock " + s[1]);
+        return true;
+    }
     if (c == "bench") {
         Bench::start(s[1], arg(s, 2, 3000));
         return true;

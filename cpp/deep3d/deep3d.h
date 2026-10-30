@@ -44,6 +44,8 @@ public:
     static bool queueKey(int32_t code, bool pressed);
     static void frame();
     static void deliverKeys();
+    /** The virtual clock's step per pass from now on (tests of high frame rates). */
+    static void setStep(int64_t ms);
 
     // what the game does in a pass (game thread only), hashed into det.log
     // and written to det_events.txt: its drawing, sounds, saves, resources

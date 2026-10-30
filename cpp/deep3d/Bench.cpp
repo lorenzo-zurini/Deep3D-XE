@@ -8,7 +8,7 @@
 // pass, seeded randoms), so every mode and every build flies the same route
 // and draws the same frames however fast it renders them. The scenario's
 // "bench" step records the time between presented frames.
-#include "deep3d.h"
+#include "gl.h"
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -96,6 +96,7 @@ void finish() {
         for (size_t i = 0; i < gTimes.size(); i++) fprintf(f, "%zu,%.4f\n", i, gTimes[i]);
         fclose(f);
     }
+    printf("[bench] %s: %s\n", gLabel.c_str(), gl::M3GTargets::statsAndReset(int32_t(s.frames)).c_str());
     printf("[bench] %s: %zu frames in %.2f s, %.1f FPS average, 1%% low %.1f, 0.1%% low %.1f, frame ms p50 %.3f p99 %.3f max %.3f\n",
            gLabel.c_str(), s.frames, s.totalS, s.avgFps, s.low1, s.low01, s.p50, s.p99, s.max);
     fflush(stdout);
@@ -230,6 +231,7 @@ void Bench::start(const std::string& label, int32_t frames) {
     gTimes.clear();
     gTimes.reserve(size_t(gWant));
     gHaveLast = false;
+    gl::M3GTargets::statsAndReset(1);
     gRecording = true;
     printf("[bench] %s: recording %d frames\n", label.c_str(), gWant);
 }

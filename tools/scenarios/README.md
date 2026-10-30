@@ -56,6 +56,7 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `shot <name>` | a screenshot, logged to metrics.tsv with state, FPS and the sub's heading |
 | `pair <name>` | the same moment in Remastered and Enhanced (`<name>__alt`), without particles |
 | `describe` | log what the UI layer sees (rows, buttons, bar) |
+| `clock <ms>` | deterministic runs: the clock's step per pass from now on (2: as at 500 FPS) |
 | `bench <label> <frames>`, `benchdone` | time the next frames (`<out>/bench.tsv`, frame times as CSV); wait until done (`Deep3D-XE --bench` uses them) |
 
 ## What the report checks
@@ -112,6 +113,7 @@ Environment variables for `run.sh` (`EXTRA_ENV="..."`):
 | `DEEP3D_LOG_CROSSHAIR=1`, `DEEP3D_LOG_HITS=1` | log the crosshair's position, weapon hits |
 | `DEEP3D_RM_ORIGINLOG=1` | log the renderer origin's steps (Open Sea) |
 | `DEEP3D_RM_DEBUG=1` | log the frame data and draw states |
+| `DEEP3D_RM_TIMERS=1` | log each stage's GPU time, averaged over 240 passes (timestamp queries) |
 
 ## Filming switches
 

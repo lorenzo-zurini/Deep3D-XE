@@ -17,7 +17,7 @@ const bool Det::BENCH = ON && getenv("DEEP3D_BENCH") != nullptr;
 namespace {
 /* the virtual clock's step per game loop pass: 33 ms, or DEEP3D_DET_STEP_MS
    (the benchmark's) */
-const int64_t STEP_MS = [] {
+int64_t gStepMs = [] {
     const char* s = getenv("DEEP3D_DET_STEP_MS");
     int64_t v = s ? atoll(s) : 0;
     return v > 0 ? v : int64_t(33);
@@ -132,7 +132,7 @@ void Det::frame() {
         // the benchmark: a deterministic run's clock, seeds and input, without
         // hashing the game's state every pass
         gFrame++;
-        gNow += STEP_MS;
+        gNow += gStepMs;
         deliverKeys();
         return;
     }
@@ -154,7 +154,7 @@ void Det::frame() {
         }
     }
     gFrame++;
-    gNow += STEP_MS;
+    gNow += gStepMs;
     jrt::Dumper d;
     d.out.reserve(1 << 20);
     game_dumpStatics(d);
@@ -169,6 +169,8 @@ void Det::frame() {
     }
     deliverKeys();
 }
+
+void Det::setStep(int64_t ms) { gStepMs = ms; }
 
 void Det::deliverKeys() {
     while (true) {
