@@ -96,6 +96,12 @@ int32_t javax::microedition::m3g::Object3D::getAnimationTrackCount() {
     return javax::microedition::m3g::Object3D::_getAnimationTrackCount(this->handle);
 }
 
+extern "C" void m3gSetAnimationFraction(float fraction);
+
+void javax::microedition::m3g::Object3D::setAnimationFraction(float fraction) {
+    m3gSetAnimationFraction(fraction);
+}
+
 int32_t javax::microedition::m3g::Object3D::animate(int32_t time) {
     return javax::microedition::m3g::Object3D::_animate(this->handle, time);
 }
