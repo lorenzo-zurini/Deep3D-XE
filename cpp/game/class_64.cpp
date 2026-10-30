@@ -94,6 +94,7 @@ void class_64::method_551() {
 }
 
 void class_64::method_560() {
+    org::deep3d::Remaster::newScene();
     this->field_787 = this->field_799->field_272;
     this->field_802 = jrt::New<class_34>();
     this->field_802->method_298(this->field_799->field_280);
