@@ -314,12 +314,16 @@ void class_96::method_805(int64_t var1) {
                     this->class_91::field_1232->method_9(this->class_91::field_1226->method_855(this->class_91::field_1232));
                     this->class_91::field_1233->method_17(this->class_91::field_1232);
                     this->class_91::field_1233->method_22();
-                    this->class_91::field_1233->method_18(jrt::f2i((float(var1) * this->field_1290)));
+                    this->class_91::field_1233->method_18(org::deep3d::Step::exact() ? jrt::f2i((float(var1) * this->field_1290)) : org::deep3d::Step::shareAtLeast(jrt::f2i((float(33) * this->field_1290)), 16.0, this->deep3dSteer));   // Deep3D-PC
                     this->field_1273 = this->class_91::field_1232->method_14(this->class_91::field_1233, this->field_1273);
                     this->field_1273->method_22();
                     this->class_91::field_1226->field_1341->method_512(this->field_1273);
                 }
-                this->class_91::field_1226->method_847(jrt::f2i((float(var1) * this->field_1289)));
+                if (org::deep3d::Step::exact()) {
+                    this->class_91::field_1226->method_847(jrt::f2i((float(var1) * this->field_1289)));
+                } else {
+                    this->class_91::field_1226->deep3dGo(jrt::f2i((float(33) * this->field_1289)) * org::deep3d::Step::scale());
+                }   // Deep3D-PC
             case 2:
                 ;
             default:
@@ -337,7 +341,7 @@ void class_96::method_805(int64_t var1) {
             case 4:
                 if (this->class_91::field_1239 && this->class_91::field_1225->field_375) {
                     if (!this->class_91::field_1237) {
-                        this->class_91::field_1226->method_843(0, ((-int32_t(var1)) / 2), 0);
+                        this->class_91::field_1226->method_843(0, (org::deep3d::Step::exact() ? ((-int32_t(var1)) / 2) : org::deep3d::Step::share(-16.0, this->deep3dSink)), 0);   // Deep3D-PC
                     }
                     if ([&]() { int32_t __l1 = this->class_91::field_1226->method_848(this->class_91::field_1232)->field_38; int32_t __r1 = (this->field_1271->field_38 - 30000); return (__l1 < __r1); }()) {
                         this->field_1285 = true;
@@ -363,11 +367,15 @@ void class_96::method_805(int64_t var1) {
                         if (this->class_91::field_1233 != nullptr) {
                             this->class_91::field_1232->method_9(this->class_91::field_1226->method_855(this->class_91::field_1232));
                             this->class_91::field_1233->method_17(this->class_91::field_1232);
-                            this->class_91::field_1233->method_18(jrt::f2i((float(var1) * 5.0f)));
+                            this->class_91::field_1233->method_18(org::deep3d::Step::exact() ? jrt::f2i((float(var1) * 5.0f)) : org::deep3d::Step::shareAtLeast(165.0, 16.0, this->deep3dAvoid));   // Deep3D-PC
                             this->field_1270 = this->class_91::field_1232->method_14(this->class_91::field_1233, this->field_1270);
                             this->field_1270->method_22();
                             this->class_91::field_1226->field_1341->method_512(this->field_1270);
-                            this->class_91::field_1226->method_847(jrt::f2i((float(var1) * this->field_1289)));
+                            if (org::deep3d::Step::exact()) {
+                                this->class_91::field_1226->method_847(jrt::f2i((float(var1) * this->field_1289)));
+                            } else {
+                                this->class_91::field_1226->deep3dGo(jrt::f2i((float(33) * this->field_1289)) * org::deep3d::Step::scale());
+                            }
                         }
                     }
                 }

@@ -60,7 +60,11 @@ void class_95::method_805(int64_t var1) {
     this->field_1254 = var1;
     this->class_91::field_1225->method_353(var1);
     if ((this->field_1255 && (int32_t(this->class_91::field_1224) != 3)) && (int32_t(this->class_91::field_1224) != 4)) {
-        this->class_91::field_1226->method_847(int32_t(var1));
+        if (org::deep3d::Step::exact()) {
+            this->class_91::field_1226->method_847(int32_t(var1));
+        } else {
+            this->class_91::field_1226->deep3dGo(33.0 * org::deep3d::Step::scale());   // Deep3D-PC
+        }
         this->class_91::field_1225->field_377 = this->class_91::field_1226->field_1341;
         if (this->field_1253 != nullptr) {
             for (int32_t var3 = 0; var3 < this->field_1253->length; var3++) {

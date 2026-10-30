@@ -188,7 +188,7 @@ void class_70::method_671(int64_t var1) {
         this->field_1004 = (var3 > 500) ? var3 : 500;
         this->field_1000 = this->field_970->method_849(this->field_1000);
         this->field_992 = var1;
-        if ((this->field_993 < 0) && ((int64_t(this->field_993) + (int64_t(3) * var1)) > int64_t(0))) {
+        if ((this->field_993 < 0) && ((int64_t(this->field_993) + (int64_t(3) * org::deep3d::Step::once(int32_t(var1)))) > int64_t(0))) {
             class_69::method_633(4, jrt::Ref<class_70>(this));
             this->field_993 = 0;
         }
@@ -221,38 +221,46 @@ void class_70::method_671(int64_t var1) {
                 this->field_974->method_9(this->field_970->method_855(this->field_974));
                 this->field_974->method_22();
                 this->field_975->method_17(this->field_974);
-                this->field_975->method_18(jrt::f2i((float(this->field_992) * 5.0f)));
+                this->field_975->method_18(org::deep3d::Step::exact() ? jrt::f2i((float(this->field_992) * 5.0f)) : org::deep3d::Step::shareAtLeast(165.0, 16.0, this->deep3dSteer));   // Deep3D-PC: per step, its share
                 this->field_1010 = this->field_974->method_14(this->field_975, this->field_1010);
                 this->field_1010->method_22();
                 this->field_970->field_1341->method_512(this->field_1010);
                 if ((this->field_984 == float(0)) && (this->field_985 == float(0))) {
-                    this->method_677(int32_t(this->field_992));
+                    this->method_677(org::deep3d::Step::once(int32_t(this->field_992)));
                 }
-                this->field_970->method_847(org::deep3d::Thrust::move(int32_t(var1) * this->field_983, this->field_994));   // Deep3D-PC: thrust
+                this->deep3dCruise(var1);   // Deep3D-PC: thrust
             } else {
                 this->method_667(jrt::Ref<class_91>(nullptr));
             }
         } else if (!this->field_998) {
-            this->field_970->method_862(jrt::f2i((this->field_1005 * ((this->field_984 * float(int32_t(var1))) / float(3)))));
-            this->field_995 = jrt::f2i((this->field_1005 * ((this->field_985 * float(int32_t(var1))) / float(3))));
-            this->field_970->method_863(this->field_995);
-            this->field_996 = this->field_996 + jrt::f2i((this->field_1005 * ((this->field_984 * float(int32_t(var1))) / float(3))));
+            if (org::deep3d::Step::exact()) {
+                this->field_970->method_862(jrt::f2i((this->field_1005 * ((this->field_984 * float(int32_t(var1))) / float(3)))));
+                this->field_995 = jrt::f2i((this->field_1005 * ((this->field_985 * float(int32_t(var1))) / float(3))));
+                this->field_970->method_863(this->field_995);
+                this->field_996 = this->field_996 + jrt::f2i((this->field_1005 * ((this->field_984 * float(int32_t(var1))) / float(3))));
+            } else {
+                // Deep3D-PC: full stick turns what the original's step did, a frame its share
+                double deep3dFull = jrt::f2i((this->field_1005 * ((float(1) * float(33)) / float(3)))) * org::deep3d::Step::scale();
+                this->field_970->deep3dTurn(0, deep3dFull * this->field_984);
+                this->field_970->deep3dTurn(1, deep3dFull * this->field_985);
+            }
             if ((this->field_984 == float(0)) && (this->field_985 == float(0))) {
-                this->method_677(int32_t(this->field_992));
+                this->method_677(org::deep3d::Step::once(int32_t(this->field_992)));
             } else if (org::deep3d::AnalogInput::active()) {
-                int32_t deep3dLevel = org::deep3d::AnalogInput::levelRate(this->field_984, int32_t(this->field_992));
-                if (deep3dLevel > 0) {
-                    this->method_677(deep3dLevel);
+                int32_t deep3dLevelNow = org::deep3d::AnalogInput::levelRate(this->field_984, org::deep3d::Step::once(int32_t(this->field_992)));
+                if (deep3dLevelNow > 0) {
+                    this->method_677(deep3dLevelNow);
                 }
             }
-            this->field_970->method_847(org::deep3d::Thrust::move(int32_t(var1) * this->field_983, this->field_994));   // Deep3D-PC: thrust
+            this->deep3dCruise(var1);   // Deep3D-PC: thrust
         }
         if (!this->field_998) {
             this->field_970->field_1364 = -this->field_986;
+            // Deep3D-PC: var1 / 5 is 0 under 5 ms: a share of what a step levels
             if ((this->field_986 > 0) && (this->field_985 == float(0))) {
-                this->field_986 = int32_t((int64_t(this->field_986) - (var1 / int64_t(5))));
-            } else if ((int64_t(this->field_986) < ((-var1) / int64_t(5))) && (this->field_985 == float(0))) {
-                this->field_986 = int32_t((int64_t(this->field_986) + (var1 / int64_t(5))));
+                this->field_986 = int32_t((int64_t(this->field_986) - (org::deep3d::Step::exact() ? (var1 / int64_t(5)) : int64_t(org::deep3d::Step::share(6.0, this->deep3dBank)))));
+            } else if ((int64_t(this->field_986) < ((-int64_t(org::deep3d::Step::once(int32_t(var1)))) / int64_t(5))) && (this->field_985 == float(0))) {
+                this->field_986 = int32_t((int64_t(this->field_986) + (org::deep3d::Step::exact() ? (var1 / int64_t(5)) : int64_t(org::deep3d::Step::share(6.0, this->deep3dBank)))));
             }
             this->field_984 = this->field_985 = float(0);
         }
@@ -330,12 +338,16 @@ void class_70::method_672(jrt::Ref<jrt::Array<jrt::Ref<class_91>>> var1) {
                 if (this->field_975 != nullptr) {
                     this->field_974->method_9(this->field_970->method_855(this->field_974));
                     this->field_975->method_17(this->field_974);
-                    this->field_975->method_18(jrt::f2i((float(this->field_992) * 5.0f)));
+                    this->field_975->method_18(org::deep3d::Step::exact() ? jrt::f2i((float(this->field_992) * 5.0f)) : org::deep3d::Step::shareAtLeast(165.0, 16.0, this->deep3dSteer));
                     this->field_1000 = this->field_974->method_14(this->field_975, this->field_1000);
                     this->field_1000->method_22();
                     this->field_970->field_1341->method_512(this->field_1000);
-                    this->field_970->method_847((int32_t(this->field_992) * this->field_983));
-                    this->method_677(int32_t(this->field_992));
+                    if (org::deep3d::Step::exact()) {
+                        this->field_970->method_847((int32_t(this->field_992) * this->field_983));
+                    } else {
+                        this->field_970->deep3dGo(33.0 * this->field_983 * org::deep3d::Step::scale());
+                    }
+                    this->method_677(org::deep3d::Step::once(int32_t(this->field_992)));
                     this->field_998 = true;
                     return;
                 }
@@ -344,17 +356,25 @@ void class_70::method_672(jrt::Ref<jrt::Array<jrt::Ref<class_91>>> var1) {
     }
 }
 
+void class_70::deep3dCruise(int64_t var1) {
+    if (org::deep3d::Step::exact()) {
+        this->field_970->method_847(org::deep3d::Thrust::move(int32_t(var1) * this->field_983, this->field_994));
+    } else {
+        this->field_970->deep3dGo(33.0 * this->field_983 * org::deep3d::Thrust::factor(this->field_994) * org::deep3d::Step::scale());
+    }
+}
+
 void class_70::method_673(int64_t var1) {
     this->field_985 = float(1);
     if (this->field_986 < 384) {
-        this->field_986 = int32_t((int64_t(this->field_986) + var1));
+        this->field_986 = int32_t((int64_t(this->field_986) + (org::deep3d::Step::exact() ? var1 : int64_t(org::deep3d::Step::share(33.0, this->deep3dBank)))));
     }
 }
 
 void class_70::method_674(int64_t var1) {
     this->field_985 = float((-1));
     if (this->field_986 > (-384)) {
-        this->field_986 = int32_t((int64_t(this->field_986) - var1));
+        this->field_986 = int32_t((int64_t(this->field_986) - (org::deep3d::Step::exact() ? var1 : int64_t(org::deep3d::Step::share(33.0, this->deep3dBank)))));
     }
 }
 
@@ -363,10 +383,14 @@ void class_70::steerAnalog(int64_t var1, float yaw, float pitch) {
     /* the bank follows the turn both ways: into it at the keys' rate, out
        of it at the rate it levels when the keys are released */
     float bank = 384.0f * yaw;
+    auto deep3dBy = [&](bool into) -> int64_t {
+        if (org::deep3d::Step::exact()) return into ? var1 : var1 / int64_t(5);
+        return org::deep3d::Step::share(into ? 33.0 : 6.0, this->deep3dBank);
+    };
     if (float(this->field_986) < bank) {
-        this->field_986 = int32_t(java::lang::Math::min(bank, float(int64_t(this->field_986) + (yaw > 0.0f ? var1 : var1 / int64_t(5)))));
+        this->field_986 = int32_t(java::lang::Math::min(bank, float(int64_t(this->field_986) + deep3dBy(yaw > 0.0f))));
     } else if (float(this->field_986) > bank) {
-        this->field_986 = int32_t(java::lang::Math::max(bank, float(int64_t(this->field_986) - (yaw < 0.0f ? var1 : var1 / int64_t(5)))));
+        this->field_986 = int32_t(java::lang::Math::max(bank, float(int64_t(this->field_986) - deep3dBy(yaw < 0.0f))));
     }
     this->field_984 = pitch;
 }
@@ -386,19 +410,27 @@ void class_70::method_677(int32_t var1) {
     this->field_975 = this->field_970->method_858(this->field_975);
     this->field_1002->method_469();
     int32_t var2 = this->field_1002->method_483()->method_12(this->field_975);
+    // Deep3D-PC: var1 >> 1 is 0 under 2 ms and jumps with the frame: a share of what a step rolls
+    auto deep3dRoll = [&](int32_t perStep) {
+        if (org::deep3d::Step::exact()) {
+            this->field_970->method_861(perStep);
+        } else {
+            this->field_970->deep3dTurn(2, perStep * org::deep3d::Step::scale());
+        }
+    };
     if (this->field_1002->method_483()->method_12(this->field_974) < 0) {
         if (var2 > 0) {
-            this->field_970->method_861(((-var1) >> 1));
+            deep3dRoll(((-var1) >> 1));
         } else {
-            this->field_970->method_861((var1 >> 1));
+            deep3dRoll((var1 >> 1));
         }
     } else {
         if (((var2 > 128) && (var2 < 3968)) || ((var2 < (-128)) && (var2 > (-3968)))) {
             if (var2 < 0) {
-                this->field_970->method_861((var1 >> 1));
+                deep3dRoll((var1 >> 1));
                 return;
             }
-            this->field_970->method_861(((-var1) >> 1));
+            deep3dRoll(((-var1) >> 1));
         }
     }
 }

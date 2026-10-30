@@ -58,7 +58,7 @@ void class_99::method_805(int64_t var1) {
         this->class_91::field_1226->method_874(1);
         this->class_91::field_1226->method_876(1, 1);
         this->class_91::field_1226->method_877(int8_t(2));
-        this->class_91::field_1226->method_860(0, 0, (int32_t(var1) >> 1));
+        this->class_91::field_1226->method_860(0, 0, (org::deep3d::Step::exact() ? (int32_t(var1) >> 1) : org::deep3d::Step::share(16.0, this->deep3dSpin)));   // Deep3D-PC
     }
     this->class_91::field_1232 = class_84::field_1110->field_40->method_849(this->class_91::field_1232);
     this->class_91::field_1233->method_10(this->class_98::field_1300, this->class_98::field_1301, this->class_98::field_1302);

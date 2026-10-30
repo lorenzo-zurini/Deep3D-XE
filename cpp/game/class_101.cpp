@@ -64,7 +64,10 @@ void class_101::method_829(bool var1) {
         class_101::field_1321->method_10(0, 0, 4096);
         this->class_91::field_1226->field_1341->method_512(class_101::field_1321);
     }
+    // Deep3D-PC: not a frame: the wiggle's starting phase, given as a dt
+    this->deep3dPhase = true;
     this->method_805(int64_t(((-1024) + class_84::field_1123->nextInt(2048))));
+    this->deep3dPhase = false;
     this->class_91::field_1225->method_327(10);
     this->field_1327 = this->class_91::field_1225->field_363;
 }
@@ -141,28 +144,45 @@ void class_101::method_834(int32_t var1) {
     }
 }
 
+/* Deep3D-PC: the body's swim is a rotation added once a step, so it would
+   swing further the higher the frame rate: a share of it a frame */
+void class_101::deep3dSwim(int32_t axis, int32_t perStep) {
+    if (org::deep3d::Step::exact() || this->deep3dPhase) {
+        class_101::field_1322->method_491((axis == 0) ? perStep : 0, (axis == 1) ? perStep : 0, 0);
+        this->class_91::field_1226->field_1341->method_472(class_101::field_1322);
+    } else {
+        this->class_91::field_1226->field_1341->deep3dTurn(axis, perStep * org::deep3d::Step::scale());
+    }
+}
+
 void class_101::method_805(int64_t var1) {
     this->field_1334 = int32_t(var1);
     if (this->class_91::field_1225->field_375 && (!this->field_1326)) {
         if (!this->field_1331) {
-            this->field_1329 = int32_t(var1);
+            this->field_1329 = (org::deep3d::Step::exact() || this->deep3dPhase) ? int32_t(var1) : 33;
             if ((this->field_1327 > this->class_91::field_1225->field_363) && (int32_t(this->class_91::field_1224) != 4)) {
                 this->field_1324 = true;
             }
             this->field_1327 = this->class_91::field_1225->field_363;
         }
         if (this->field_1324) {
-            this->field_1328 += 0.01f;
+            // Deep3D-PC: speeding up, and the struggle's turn, are per step: shares of them
+            this->field_1328 += org::deep3d::Step::exact() ? 0.01f : float(0.01 * org::deep3d::Step::scale());
             this->field_1314 = int32_t((int64_t(this->field_1314) + var1));
-            this->field_1329 = jrt::f2i((float(var1) * this->field_1328));
+            this->field_1329 = org::deep3d::Step::exact() ? jrt::f2i((float(var1) * this->field_1328)) : jrt::f2i((float(33) * this->field_1328));
             var1 <<= 1;
             if (this->field_1314 < 2000) {
-                this->class_91::field_1226->field_1341->method_472(this->field_1323);
+                if (org::deep3d::Step::exact()) {
+                    this->class_91::field_1226->field_1341->method_472(this->field_1323);
+                } else {
+                    this->class_91::field_1226->field_1341->deep3dTurn(0, this->deep3dTumble[0] * org::deep3d::Step::scale());
+                    this->class_91::field_1226->field_1341->deep3dTurn(1, this->deep3dTumble[1] * org::deep3d::Step::scale());
+                }
             } else {
                 this->field_1316 = this->field_1316 - (this->field_1314 >> 1);
                 if (!this->field_1330) {
                     int32_t var3 = this->field_1329 >> 1;
-                    [&]() { auto __r = this->field_1323; int32_t __a1 = ((-(var3 >> 1)) + class_84::field_1123->nextInt(var3)); int32_t __a2 = ((-(var3 >> 1)) + class_84::field_1123->nextInt(var3)); int32_t __a3 = 0; return __r->method_491(__a1, __a2, __a3); }();
+                    [&]() { auto __r = this->field_1323; int32_t __a1 = ((-(var3 >> 1)) + class_84::field_1123->nextInt(var3)); int32_t __a2 = ((-(var3 >> 1)) + class_84::field_1123->nextInt(var3)); int32_t __a3 = 0; this->deep3dTumble[0] = __a1; this->deep3dTumble[1] = __a2; return __r->method_491(__a1, __a2, __a3); }();
                 }
                 this->field_1314 = 0;
             }
@@ -205,7 +225,7 @@ void class_101::method_805(int64_t var1) {
             }
         } else if (int32_t(this->class_91::field_1224) == 4) {
             if (!this->field_1325) {
-                this->class_91::field_1226->method_843(0, (int32_t(var1) / 3), 0);
+                this->class_91::field_1226->method_843(0, (org::deep3d::Step::exact() ? (int32_t(var1) / 3) : org::deep3d::Step::share((this->field_1324 ? 22.0 : 11.0), this->deep3dSink)), 0);   // Deep3D-PC
             }
             if (this->field_1317 != nullptr) {
                 this->field_1317->method_870(this->class_91::field_1226->field_1341);
@@ -215,7 +235,11 @@ void class_101::method_805(int64_t var1) {
             }
         } else {
             if ((!this->field_1331) && (this->class_91::field_1227 != 4429)) {
-                this->class_91::field_1226->method_847(this->field_1329);
+                if (org::deep3d::Step::exact() || this->deep3dPhase) {
+                    this->class_91::field_1226->method_847(this->field_1329);
+                } else {
+                    this->class_91::field_1226->deep3dGo(this->field_1329 * org::deep3d::Step::scale());   // Deep3D-PC: field_1329 is a step's
+                }
                 this->field_1313 = int32_t((int64_t(this->field_1313) + var1));
                 this->field_1313 &= 4095;
             }
@@ -225,8 +249,7 @@ void class_101::method_805(int64_t var1) {
                     this->class_91::field_1226->method_869(4096, (class_16::method_91(this->field_1313) / 3), 4096);
                     break;
                 case 4423:
-                    class_101::field_1322->method_491(0, (class_16::method_91(this->field_1313) >> 7), 0);
-                    this->class_91::field_1226->field_1341->method_472(class_101::field_1322);
+                    this->deep3dSwim(1, (class_16::method_91(this->field_1313) >> 7));
                     break;
                 case 4424:
                     this->field_1317->method_870(this->class_91::field_1226->field_1341);
@@ -262,8 +285,7 @@ void class_101::method_805(int64_t var1) {
                     this->field_1317->method_870(this->class_91::field_1226->field_1341);
                     class_101::field_1322->method_491((-(class_16::method_91(this->field_1313) >> 6)), 0, 0);
                     this->field_1317->field_1341->method_472(class_101::field_1322);
-                    class_101::field_1322->method_491((class_16::method_91(this->field_1313) >> 8), 0, 0);
-                    this->class_91::field_1226->field_1341->method_472(class_101::field_1322);
+                    this->deep3dSwim(0, (class_16::method_91(this->field_1313) >> 8));
                     break;
                 case 4430:
                     ;
@@ -273,8 +295,7 @@ void class_101::method_805(int64_t var1) {
                     this->field_1317->method_870(this->class_91::field_1226->field_1341);
                     class_101::field_1322->method_491(0, (class_16::method_91(this->field_1313) >> 5), 0);
                     this->field_1317->field_1341->method_472(class_101::field_1322);
-                    class_101::field_1322->method_491(0, (-(class_16::method_91(this->field_1313) >> 7)), 0);
-                    this->class_91::field_1226->field_1341->method_472(class_101::field_1322);
+                    this->deep3dSwim(1, (-(class_16::method_91(this->field_1313) >> 7)));
                     break;
                 case 4438:
                     this->field_1317->method_870(this->class_91::field_1226->field_1341);
