@@ -175,6 +175,7 @@ std::string Input::keyName(int32_t c) {
 void Input::handleKey(int32_t code, char16_t keyChar, bool pressed, bool altDown, bool charSeparate) {
     // rebind capture has priority over everything
     if (pressed && Overlay::captureKey(code)) return;
+    if (Demo::key(code, pressed)) return;
     // global hotkeys (never rebindable, never reach the game)
     if (pressed) {
         if (code == vk::F11 || (code == vk::ENTER && altDown)) {
@@ -305,6 +306,7 @@ float gThrust = 1.0f;
 int32_t gThrustDir = 0;
 int64_t gThrustAt = 0;
 int32_t gThrustShown = 100;
+float gThrustHeld = 1.0f;
 
 void thrustUpdate() {
     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -331,7 +333,11 @@ void Thrust::held(int32_t direction, bool pressed) {
     }
 }
 
-float Thrust::level() {
+float Thrust::level() { return Det::DEMO ? gThrustHeld : live(); }
+
+void Thrust::hold(float level) { gThrustHeld = level; }
+
+float Thrust::live() {
     std::lock_guard<std::mutex> g(gThrustLock);
     thrustUpdate();
     return gThrust;
@@ -618,20 +624,45 @@ void AnalogInput::setMouse(float x, float y, bool on) {
     gMouseOn = on;
 }
 
-bool AnalogInput::mouseSteering() {
+namespace {
+bool gHeldActive = false, gHeldSteering = false;
+float gHeldX = 0, gHeldY = 0;
+
+bool liveSteering() {
     float x = gMouseX, y = gMouseY;
     return gMouseOn && !Overlay::isOpen() && (x * x + y * y) > 1e-6f;
 }
 
-bool AnalogInput::active() {
+bool liveActive() {
     if (Overlay::isOpen()) return false;
-    if (mouseSteering()) return true;
+    if (liveSteering()) return true;
     float x = gRawX, y = gRawY;
     return Config::gamepadEnabled && float(std::sqrt(x * x + y * y)) > DEADZONE;
 }
+}  // namespace
 
-float AnalogInput::x() { return mouseSteering() ? mouseShaped(gMouseX) : shaped()[0]; }
-float AnalogInput::y() { return mouseSteering() ? mouseShaped(gMouseY) : shaped()[1]; }
+void AnalogInput::live(bool& active, bool& steering, float& x, float& y) {
+    active = liveActive();
+    steering = liveSteering();
+    x = steering ? mouseShaped(gMouseX) : shaped()[0];
+    y = steering ? mouseShaped(gMouseY) : shaped()[1];
+}
+
+void AnalogInput::hold(bool active, bool steering, float x, float y) {
+    gHeldActive = active, gHeldSteering = steering, gHeldX = x, gHeldY = y;
+}
+
+bool AnalogInput::mouseSteering() { return Det::DEMO ? gHeldSteering : liveSteering(); }
+bool AnalogInput::active() { return Det::DEMO ? gHeldActive : liveActive(); }
+
+float AnalogInput::x() {
+    if (Det::DEMO) return gHeldX;
+    return mouseSteering() ? mouseShaped(gMouseX) : shaped()[0];
+}
+float AnalogInput::y() {
+    if (Det::DEMO) return gHeldY;
+    return mouseSteering() ? mouseShaped(gMouseY) : shaped()[1];
+}
 
 int32_t AnalogInput::levelRate(float pitch, int32_t rate) {
     float p = std::fabs(pitch);
@@ -692,6 +723,10 @@ void MouseFlight::setCaptured(bool on) {
 }
 
 void MouseFlight::move(double dx, double dy, int32_t windowHeight) {
+    if (Demo::wantsMouse()) {
+        Demo::look(dx, dy);
+        return;
+    }
     std::lock_guard<std::mutex> g(gMouseLock);
     if (!gCaptured) return;
     float k = SENSITIVITY / float(std::max(1, windowHeight));
@@ -707,7 +742,7 @@ void MouseFlight::move(double dx, double dy, int32_t windowHeight) {
 
 void MouseFlight::draw(Ref<Graphics> g, int32_t w, int32_t h) {
     std::lock_guard<std::mutex> l(gMouseLock);
-    if (!gCaptured || !wanted()) return;
+    if (!gCaptured || !wanted() || Demo::PLAYING) return;
     bool cross = Det::nanos() - gCrossNanos < 300000000LL;
     int32_t cx = cross ? int32_t(gCrossX) : w / 2;
     int32_t cy = cross ? int32_t(gCrossY) : h / 2;

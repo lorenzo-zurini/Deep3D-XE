@@ -27,6 +27,12 @@ original Java build frame for frame.
 the frame time: `steptest.scn` runs at each forced frame time and `steptest.py`
 compares what the world did (distance flown, degrees turned, the camera's
 distance, ships, creatures, mines, shots, the gate's spin, bubbles).
+`demotest.sh` records a flight in Original and in Remastered and replays each in
+the other mode and under the free camera; every replay checks itself against
+its recording. `DEEP3D_DEMO_HASH=<n>` logs the whole state's hash every n passes
+of a demo run (det.log), `DEEP3D_DEMO_DUMP=<passes>` writes the state at those;
+the mode's own draw tags differ between modes, so compare within one.
+
 `DEEP3D_DET=1 DEEP3D_STEP_MS=<ms>` gives a run a virtual clock at that frame
 time: `Step::exact()` is false, so every share and carry runs, repeatably, and
 a script's frames count original steps of 33 ms. `DEEP3D_STEP_TRACE=1` writes

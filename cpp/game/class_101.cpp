@@ -315,7 +315,7 @@ void class_101::method_805(int64_t var1) {
 bool class_101::method_835() {
     this->class_91::field_1232 = class_84::field_1110->field_40->method_849(this->class_91::field_1232);
     this->class_91::field_1233 = this->class_91::field_1232->method_16(this->class_91::field_1226->method_848(class_101::field_1311), this->class_91::field_1233);
-    return this->class_91::field_1233->method_23() > (org::deep3d::Remaster::on() ? 46000 : 40000);
+    return this->class_91::field_1233->method_23() > (org::deep3d::Demo::remasteredWorld() ? 46000 : 40000);
 }
 
 void class_101::method_836() {
@@ -327,7 +327,7 @@ void class_101::method_836() {
     class_101::field_1318->at(0) = class_101::field_1320->field_37;
     class_101::field_1318->at(1) = class_101::field_1320->field_38;
     class_101::field_1318->at(2) = class_101::field_1320->field_39;
-    class_101::field_1320->method_18((org::deep3d::Remaster::on() ? 36000 : 30000));
+    class_101::field_1320->method_18((org::deep3d::Demo::remasteredWorld() ? 36000 : 30000));
     class_101::field_1320->method_15(class_84::field_1110->field_40->method_848(this->class_91::field_1233));
     this->class_91::field_1226->method_846(class_101::field_1320);
     for (int32_t var2 = 0; var2 < class_101::field_1319->length; var2++) {

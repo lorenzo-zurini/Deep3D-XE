@@ -37,7 +37,7 @@ cd "$ROOT"
 GAME=("$ROOT/build/bin/Deep3D-XE")
 [ -x "${GAME[0]}" ] || "$ROOT/build.sh" > /dev/null
 nice -n ${NICE:-10} env -u WAYLAND_DISPLAY DISPLAY=$DISP DEEP3D_HOME="$OUT/home" DEEP3D_SCENARIO="$SCN" DEEP3D_SCENARIO_OUT="$OUT" \
-  ${EXTRA_ENV:-} "${GAME[@]}" \
+  ${EXTRA_ENV:-} "${GAME[@]}" ${GAME_ARGS:-} \
   > "$OUT/game.log" 2>&1 &
 PID=$!
 ( sleep "${TIMEOUT:-900}"; kill $PID 2>/dev/null; echo "[run] watchdog killed the game" >> "$OUT/game.log" ) & WD=$!

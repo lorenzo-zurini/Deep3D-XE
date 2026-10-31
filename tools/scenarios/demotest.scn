@@ -1,0 +1,13 @@
+# A short flight to record (demotest.sh): keys, stick, boost, shots.
+include prologue.scn
+wait 30
+steer 1 0 60
+wait 30
+steer 0 -1 40
+wait 30
+boost 60
+wait 60
+fire 150
+wait 60
+steer -0.5 0.5 60
+wait 120

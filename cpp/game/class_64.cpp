@@ -351,9 +351,19 @@ void class_64::method_561() {
             this->field_787->method_671(this->field_781);
             this->field_787->method_681((!this->field_795));
             class_84::field_1111->method_683(class_84::field_1117);
+            // Deep3D-PC: a demo's free camera, for the draw only (the game keeps its own)
+            jrt::Ref<class_3> deep3dAt = this->field_787->field_970->method_849(jrt::New<class_3>());
+            org::deep3d::Demo::sub(deep3dAt->field_37, deep3dAt->field_38, deep3dAt->field_39);
+            bool deep3dFree = org::deep3d::Demo::freeCamera(this->field_788);
             this->field_789->method_839(true);
             class_84::field_1110->method_27(org::deep3d::Det::millis());
+            if (deep3dFree) {
+                org::deep3d::Demo::gameCamera(this->field_788);
+            }
             class_84::field_1111->method_684(class_84::field_1117);
+            if (org::deep3d::Demo::hudHidden()) {
+                org::deep3d::gl::GLBackend::recorder().muted = true;
+            }
         } catch (const jrt::Thrown& __ex1) {
             if (jrt::isInstance<java::lang::Exception>(__ex1.t)) {
                 jrt::Ref<java::lang::Exception> var2 = jrt::cast<java::lang::Exception>(__ex1.t);

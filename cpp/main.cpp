@@ -79,6 +79,8 @@ int run(int argc, char** argv) {
         } else if (a == "--help") {
             printf("usage: deep3d [--fullscreen|--windowed] [--res WxH]\n");
             printf("       deep3d --bench [original,enhanced,remastered] [--frames N] [--fullscreen|--windowed|--size WxH]\n");
+            printf("       deep3d --record [name]\n");
+            printf("       deep3d --play name [--at seconds] [--mode original|enhanced|remastered] [--set key=value]\n");
             printf("settings persist in deep3d.cfg; press Esc in game for options\n");
             return 0;
         } else {
@@ -143,6 +145,16 @@ int main(int argc, char** argv) {
     if (bench) {
         try {
             return Bench::main(argc, argv);
+        } catch (const jrt::Thrown& t) {
+            uncaught(t);
+        }
+    }
+    // demos: this process only sets up the run
+    bool demo = false;
+    for (int i = 1; i < argc; i++) demo |= strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--play") == 0;
+    if (demo && !Det::DEMO) {
+        try {
+            return Demo::main(argc, argv);
         } catch (const jrt::Thrown& t) {
             uncaught(t);
         }

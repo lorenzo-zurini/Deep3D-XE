@@ -371,7 +371,7 @@ void applyMouse(const std::vector<Item>& items) {
             if (!hit->selected && hit->index >= 0 && gSelect) {
                 // the game's menu, selected at once (the frame after shows it)
                 if (click || millis() - gLastMouseMove < 1500) {
-                    gSelect(hit->index);
+                    if (!Det::queueKey(hit->index, 2)) gSelect(hit->index);
                     if (click) fire(GameUi::ACT_CONFIRM);
                 }
             } else if (!hit->selected) {
@@ -689,9 +689,30 @@ void GameUi::mouseClicked(int32_t gx, int32_t gy, bool right) {
 
 void GameUi::mouseWheel(int32_t rotation) { gWheelSteps += rotation; }
 
+namespace {
+bool gHeldPointer = false;
+int32_t gHeldPointerX = 0, gHeldPointerY = 0;
+std::u16string gHeldTyped;
+}  // namespace
+
+bool GameUi::livePointer(int32_t& x, int32_t& y) {
+    x = gHoverX;
+    y = gHoverY;
+    return !(gHoverX < 0 || millis() - gLastMouseMove > 1500);
+}
+
+void GameUi::holdPointer(bool on, int32_t x, int32_t y) {
+    gHeldPointer = on, gHeldPointerX = x, gHeldPointerY = y;
+}
+
 Ref<Array<int32_t>> GameUi::pointer() {
-    if (gHoverX < 0 || millis() - gLastMouseMove > 1500) return nullptr;
-    return jrt::arrayOf<int32_t>({int32_t(gHoverX), int32_t(gHoverY)});
+    int32_t x = gHeldPointerX, y = gHeldPointerY;
+    if (Det::DEMO ? !gHeldPointer : !livePointer(x, y)) return nullptr;
+    return jrt::arrayOf<int32_t>({x, y});
+}
+
+void GameUi::select(int32_t index) {
+    if (gSelect) gSelect(index);
 }
 
 // ---- tests ----
@@ -736,7 +757,23 @@ void GameUi::pushTypedChar(char16_t c) {
     gTyped.push_back(c);
 }
 
+std::u16string GameUi::takeTyped() {
+    std::lock_guard<std::mutex> g(gTypedLock);
+    std::u16string out;
+    out.swap(gTyped);
+    return out;
+}
+
+void GameUi::holdTyped(const std::u16string& text) { gHeldTyped = text; }
+const std::u16string& GameUi::heldTyped() { return gHeldTyped; }
+
 Ref<String> GameUi::pollTypedText() {
+    if (Det::DEMO) {
+        if (gHeldTyped.empty()) return JRT_LIT(u"");
+        Ref<String> held = String::of(gHeldTyped);
+        gHeldTyped.clear();
+        return held;
+    }
     std::lock_guard<std::mutex> g(gTypedLock);
     if (gTyped.empty()) return JRT_LIT(u"");
     Ref<String> out = String::of(gTyped);

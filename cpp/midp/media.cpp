@@ -587,7 +587,7 @@ Ref<Player> Manager::createPlayer(Ref<java::io::InputStream> stream, Ref<String>
                                        org::deep3d::Det::hex(org::deep3d::Det::hashBytes(org::deep3d::Det::FNV, data.data(), data.size()))));
     for (auto& c : t) c = char(tolower(c));
     Ref<BasePlayer> p;
-    if (org::deep3d::Det::ON) {
+    if (org::deep3d::Det::ON && !org::deep3d::Det::DEMO) {
         p = Ref<BasePlayer>(new SilentPlayer());   // deterministic runs: no sound
     } else if (data.size() >= 4 && memcmp(data.data(), "RIFF", 4) == 0) {
         p = Ref<BasePlayer>(new WavPlayer(std::move(data)));

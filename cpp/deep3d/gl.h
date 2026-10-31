@@ -47,12 +47,16 @@ public:
 
     std::vector<int32_t> ops;
     std::vector<Ref<java::lang::Object>> objects;
+    bool muted = false;   // the rest of the frame is not drawn (a demo's replay without the HUD)
 
     void reset() {
         ops.clear();
         objects.clear();
+        muted = false;
     }
-    void op(std::initializer_list<int32_t> v) { ops.insert(ops.end(), v); }
+    void op(std::initializer_list<int32_t> v) {
+        if (!muted) ops.insert(ops.end(), v);
+    }
     int32_t obj(Ref<java::lang::Object> o) {
         objects.push_back(std::move(o));
         return int32_t(objects.size() - 1);

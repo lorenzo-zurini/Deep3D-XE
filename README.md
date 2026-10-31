@@ -176,6 +176,35 @@ and 0.1% lows (the average frame rate of the slowest 1% / 0.1% of the
 frames) and frame-time percentiles, and saves them under `benchmarks/`
 with each mode's frame times as CSV. It takes a minute or two per mode.
 
+### Demos
+
+Doom-style: a recording keeps what you did, pass by pass, and a replay is that
+same game again, under any camera or graphics mode.
+
+```
+./Deep3D-XE --record combat              # play; quit when done (demos/combat.demo)
+./Deep3D-XE --play combat                # from the first flight
+./Deep3D-XE --play combat --at 95        # from 95 s into the recording
+./Deep3D-XE --play combat --mode original
+```
+
+A recording starts from your saves and settings as they are then, and it starts
+when the game does, so a replay goes through the same menus first (at top speed,
+unshown). It runs in a temporary folder: your own saves are not touched.
+
+| Key | While replaying |
+| --- | --- |
+| C | Free camera on or off |
+| WASD, Q/E, mouse | Fly it (Shift: faster, Ctrl: slower) |
+| V | The free camera follows the sub |
+| H | HUD on or off |
+| Space | Pause |
+| [ ] | Half or double speed (⅛ to 8×) |
+| Esc | Quit |
+
+Every 64 passes a replay checks itself against the recording, and says so if it
+has left it. Changing the world option (Open Sea) from the recorded one will.
+
 ## Controls
 
 Every screen of the game — menus, lists, tabs, dialogs, popups, the map,

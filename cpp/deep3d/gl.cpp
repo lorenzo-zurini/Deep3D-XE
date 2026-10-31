@@ -1060,7 +1060,7 @@ void updateMouseCapture() {
             else if (b == GLFW_MOUSE_BUTTON_MIDDLE) Input::handleAction(Input::Action::DOCK, false);
         }
     }
-    MouseFlight::setCaptured(want);
+    MouseFlight::setCaptured(want || Demo::wantsMouse());
 }
 
 }  // namespace
@@ -1761,14 +1761,16 @@ void GLBackend::endFrame() {
             frame.reset();
         }
         if (MouseFlight::captured()) MouseFlight::draw(screenGraphics(), virtWidth, virtHeight);
-        Det::present(frame);
-        renderFrame(frame, nullptr);
-        if (gScreenshotRequested.exchange(false)) captureScreenshot();
-        checkPipeShot();
-        swap();
-        Bench::presented();
-        Runtime::tickFpsCounter();
-        gLastFrame = frame;
+        if (Demo::show()) {
+            Det::present(frame);
+            renderFrame(frame, nullptr);
+            if (gScreenshotRequested.exchange(false)) captureScreenshot();
+            checkPipeShot();
+            swap();
+            Bench::presented();
+            Runtime::tickFpsCounter();
+            gLastFrame = frame;
+        }
         frame.reset();
         M3GTargets::frameDone();
         for (GLsync f : gUnderlayFences) glDeleteSync(f);

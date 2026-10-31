@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+class class_106;
+
 namespace org::deep3d::gl {
 class Draw2D;
 }
@@ -37,11 +39,14 @@ public:
     static const bool ON;
     /** DEEP3D_BENCH with DEEP3D_DET: the clock, seeds and input only (no hashing). */
     static const bool BENCH;
+    /** A demo being recorded or replayed (see Demo): ON, on the demo's clock. */
+    static const bool DEMO;
     static int64_t millis();
     static int64_t nanos();
     static Ref<java::util::Random> random(int32_t site);
     static bool onGameThread();
-    static bool queueKey(int32_t code, bool pressed);
+    /** kind: 0 released, 1 pressed, 2 a menu row picked by the mouse (code: its index) */
+    static bool queueKey(int32_t code, int32_t kind);
     static void frame();
     static void deliverKeys();
     /** The virtual clock's step per pass from now on (tests of high frame rates). */
@@ -103,6 +108,44 @@ public:
 private:
     friend class Det;
     static bool EXACT;
+};
+
+/**
+ * Doom-style demos. `--record` is the player's own game, kept pass by pass;
+ * `--play` runs that same game again from the file, under the game's camera
+ * or a free one, in any graphics mode. The game's own state is the same pass
+ * for pass, so what the free camera shows is the recorded game.
+ */
+class Demo {
+public:
+    static const bool RECORDING, PLAYING;
+    struct Event {
+        int32_t code;
+        int8_t kind;
+    };
+    /** `--record` and `--play`: sets up the run and starts it. */
+    static int32_t main(int32_t argc, char** argv);
+    /** The start of a game loop pass: its frame time in ms (recording: this one, measured). */
+    static double pass(double measuredMs);
+    /** Recording: an input the game was given in this pass. */
+    static void event(int32_t code, int32_t kind);
+    /** Replaying: this pass's input. */
+    static const std::vector<Event>& events();
+    static void passDone();
+    /** Remastered's wider ring of creatures, which is game state: as recorded, whatever is shown. */
+    static bool remasteredWorld();
+    /** Replaying: is this pass's frame shown, or is the replay catching up? */
+    static bool show();
+    /** Replaying: the replay's own keys; none reach the game. */
+    static bool key(int32_t code, bool pressed);
+    static bool wantsMouse();
+    static void look(double dx, double dy);
+    /** Where the sub is, for the free camera and the recording's checks. */
+    static void sub(int32_t x, int32_t y, int32_t z);
+    /** Around the draw only: the game itself keeps its camera. */
+    static bool freeCamera(Ref<class_106> cam);
+    static void gameCamera(Ref<class_106> cam);
+    static bool hudHidden();
 };
 
 /** Where user files live: DEEP3D_HOME, the executable's folder, or the working directory. */
@@ -267,6 +310,9 @@ public:
 
 class AnalogInput {
 public:
+    /** What a pass reads in a demo (live: the input itself). */
+    static void live(bool& active, bool& steering, float& x, float& y);
+    static void hold(bool active, bool steering, float x, float y);
     static void setStick(float x, float y);
     static void setMouse(float x, float y, bool on);
     static bool mouseSteering();
@@ -361,6 +407,14 @@ public:
     static bool textEntryActive();
     static void pushTypedChar(char16_t c);
     static Ref<String> pollTypedText();
+    // what a pass reads in a demo (live, take: the input itself)
+    static bool livePointer(int32_t& x, int32_t& y);
+    static void holdPointer(bool on, int32_t x, int32_t y);
+    static std::u16string takeTyped();
+    static void holdTyped(const std::u16string& text);
+    static const std::u16string& heldTyped();
+    /** A menu row picked by the mouse. */
+    static void select(int32_t index);
     static bool padTextDirection(int32_t midpCode);
     static void padTextReset();
 
@@ -472,6 +526,9 @@ class Thrust {
 public:
     static void held(int32_t direction, bool pressed);
     static float level();
+    /** What a pass reads in a demo (live: the input itself). */
+    static float live();
+    static void hold(float level);
     /** a cruising step of the sub, scaled by the thrust (boosting: as it is) */
     static int32_t move(int32_t units, bool boosting);
     /** what move() scales a step by */

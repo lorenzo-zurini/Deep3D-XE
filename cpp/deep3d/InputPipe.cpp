@@ -77,6 +77,12 @@ void handle(const Parts& parts) {
         Input::handleKey(code, ch, true, false, true);
         sleepMs(120);
         Input::handleKey(code, ch, false, false, true);
+    } else if (c == "hold") {
+        // a keyboard key (AWT code), pressed for that many ms
+        int32_t code = parseInt(parts[1]);
+        Input::handleKey(code, u'\0', true, false, true);
+        sleepMs(parseInt(parts[2]));
+        Input::handleKey(code, u'\0', false, false, true);
     } else if (c == "pad") {
         // a controller button (A=0 B=1 X=2 Y=3 LB=4 RB=5 Select=6 Start=7) or a direction
         const std::string& b = parts[1];

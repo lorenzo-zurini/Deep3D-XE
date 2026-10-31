@@ -979,7 +979,7 @@ bool Runtime::running() { return gRunning; }
 void Runtime::framePace() {
     int32_t cap = Config::fpsCap;
     bool vsynced = Config::vsync && gl::GLBackend::isActive();
-    if (cap <= 0 || vsynced) {
+    if (cap <= 0 || vsynced || Demo::PLAYING) {
         gLastFrameNanos = nowNanos();
         return;
     }

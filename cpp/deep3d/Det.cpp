@@ -11,8 +11,9 @@
 
 namespace org::deep3d {
 
-const bool Det::ON = getenv("DEEP3D_DET") != nullptr;
+const bool Det::ON = getenv("DEEP3D_DET") != nullptr || getenv("DEEP3D_DEMO") != nullptr;
 const bool Det::BENCH = ON && getenv("DEEP3D_BENCH") != nullptr;
+const bool Det::DEMO = getenv("DEEP3D_DEMO") != nullptr;
 
 namespace {
 /* DEEP3D_DET=1 DEEP3D_STEP_MS=<ms>, or the scenario command `clock`: a virtual
@@ -21,7 +22,7 @@ namespace {
 double gForcedMs = Det::ON && getenv("DEEP3D_STEP_MS") ? atof(getenv("DEEP3D_STEP_MS")) : 0.0;
 }  // namespace
 
-bool Step::EXACT = Det::ON && gForcedMs <= 0.0;
+bool Step::EXACT = Det::ON && !Det::DEMO && gForcedMs <= 0.0;
 
 namespace {
 constexpr int64_t STEP_MS = 33;
@@ -30,8 +31,9 @@ double gForcedNow = double(gNow);
 std::atomic<bool> gHaveGame{false};
 std::thread::id gGame;
 std::mutex gKeysLock;
-std::deque<std::pair<int32_t, bool>> gKeys;
+std::deque<std::pair<int32_t, int32_t>> gKeys;
 int32_t gFrame = 0;
+const int32_t gDemoHashEvery = getenv("DEEP3D_DEMO_HASH") ? atoi(getenv("DEEP3D_DEMO_HASH")) : 0;   // tests
 FILE* gLog = nullptr;
 FILE* gEvents = nullptr;
 uint64_t gEventHash = Det::FNV;
@@ -43,6 +45,8 @@ std::string outDir() {
     const char* d = getenv("DEEP3D_SCENARIO_OUT");
     return d ? d : AppDirs::base();
 }
+
+void logState();
 
 void tick() {
     if (gForcedMs > 0.0) {
@@ -78,8 +82,8 @@ int64_t Det::nanos() {
 }
 
 void Step::advance() {
-    if (Det::ON) {
-        gFrameMs = gForcedMs > 0.0 ? gForcedMs : ORIGINAL_MS;
+    if (Det::ON && !Demo::RECORDING) {
+        gFrameMs = Det::DEMO ? gForcedMs = Demo::pass(0) : gForcedMs > 0.0 ? gForcedMs : ORIGINAL_MS;
         return;
     }
     int64_t now = steadyNanos();
@@ -92,6 +96,7 @@ void Step::advance() {
         gFrameMs = ms;
     }
     gLastNanos = now;
+    if (Demo::RECORDING) gFrameMs = gForcedMs = Demo::pass(gFrameMs);
 }
 
 double Step::ms() { return gFrameMs; }
@@ -132,26 +137,29 @@ Ref<java::util::Random> Det::random(int32_t site) {
 
 bool Det::onGameThread() { return !ON || (gHaveGame && std::this_thread::get_id() == gGame); }
 
-bool Det::queueKey(int32_t code, bool pressed) {
+bool Det::queueKey(int32_t code, int32_t kind) {
     if (!ON) return false;
+    if (Demo::PLAYING) return true;   // the recording's input only
     std::lock_guard<std::mutex> g(gKeysLock);
-    gKeys.emplace_back(code, pressed);
+    gKeys.emplace_back(code, kind);
     return true;
 }
 
 void Det::frame() {
     Step::advance();
     if (!ON) return;
-    if (!gHaveGame && BENCH) {
+    if (!gHaveGame && (BENCH || DEMO)) {
         gGame = std::this_thread::get_id();
         gHaveGame = true;
     }
-    if (BENCH) {
-        // the benchmark: a deterministic run's clock, seeds and input, without
-        // hashing the game's state every pass
+    if (BENCH || DEMO) {
+        // the benchmark and demos: a deterministic run's clock, seeds and
+        // input, without hashing the game's state every pass
         gFrame++;
         tick();
+        if (gDemoHashEvery > 0 && gFrame % gDemoHashEvery == 0) logState();
         deliverKeys();
+        Demo::passDone();
         return;
     }
     if (!gHaveGame) {
@@ -191,6 +199,38 @@ void Det::frame() {
     deliverKeys();
 }
 
+namespace {
+void send(int32_t code, int32_t kind) {
+    Demo::event(code, kind);
+    if (kind == 2) {
+        GameUi::select(code);
+        return;
+    }
+    auto cur = Runtime::getCurrent();
+    if (auto* c = dynamic_cast<javax::microedition::lcdui::Canvas*>(cur.get())) {
+        Det::event("key " + std::to_string(code) + " " + (kind ? "1" : "0"));
+        if (kind) {
+            c->keyPressed(code);
+        } else {
+            c->keyReleased(code);
+        }
+    }
+}
+
+void logState() {
+    if (!gLog) gLog = fopen((outDir() + "/det.log").c_str(), "w");
+    jrt::Dumper d;
+    d.out.reserve(1 << 20);
+    game_dumpStatics(d);
+    fprintf(gLog, "%d %016lx\n", gFrame, (unsigned long)Det::hashBytes(Det::FNV, d.out.data(), d.out.size()));
+    fflush(gLog);
+    if (const char* at = getenv("DEEP3D_DEMO_DUMP"))
+        if (strstr(("," + std::string(at) + ",").c_str(), ("," + std::to_string(gFrame) + ",").c_str()))
+            std::ofstream(outDir() + "/det_" + std::to_string(gFrame) + ".txt", std::ios::binary) << d.out;
+}
+
+}  // namespace
+
 void Det::setStep(int64_t ms) {
     gForcedMs = ms == STEP_MS ? 0.0 : double(ms);
     gForcedNow = double(gNow);
@@ -198,27 +238,23 @@ void Det::setStep(int64_t ms) {
 }
 
 void Det::deliverKeys() {
+    if (Demo::PLAYING) {
+        for (auto& e : Demo::events()) send(e.code, e.kind);
+        return;
+    }
     while (true) {
-        std::pair<int32_t, bool> k;
+        std::pair<int32_t, int32_t> k;
         {
             std::lock_guard<std::mutex> g(gKeysLock);
             if (gKeys.empty()) break;
             k = gKeys.front();
             gKeys.pop_front();
         }
-        auto cur = Runtime::getCurrent();
-        if (auto* c = dynamic_cast<javax::microedition::lcdui::Canvas*>(cur.get())) {
-            event("key " + std::to_string(k.first) + " " + (k.second ? "1" : "0"));
-            if (k.second) {
-                c->keyPressed(k.first);
-            } else {
-                c->keyReleased(k.first);
-            }
-        }
+        send(k.first, k.second);
     }
 }
 
-bool Det::recording() { return ON && !BENCH && gHaveGame && std::this_thread::get_id() == gGame; }
+bool Det::recording() { return ON && !BENCH && !DEMO && gHaveGame && std::this_thread::get_id() == gGame; }
 
 uint64_t Det::hashBytes(uint64_t h, const void* data, size_t len) {
     const unsigned char* p = static_cast<const unsigned char*>(data);
