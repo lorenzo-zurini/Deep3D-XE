@@ -66,7 +66,7 @@ struct Held {
 
 FILE* gFile = nullptr;
 std::mutex gFileLock;       // an export reads what the game thread has written
-std::string gPath;
+std::string gPath, gGpu;
 long gHeaderEnd = 0;
 std::vector<std::pair<std::string, std::string>> gFiles;   // what the recording started from
 double gWrittenS = 0;
@@ -572,10 +572,19 @@ std::string startInfo() {
     return m.str();
 }
 
+/* demos get shared: not where the player keeps things (a replay finds its own JARs) */
+std::string shareableSettings() {
+    std::istringstream in(readFile(settingsFile()));
+    std::string l, out;
+    while (std::getline(in, l))
+        if (l.rfind("assets.", 0) != 0) out += l + "\n";
+    return out;
+}
+
 std::vector<std::pair<std::string, std::string>> startFiles() {
     std::vector<std::pair<std::string, std::string>> files;
     files.push_back({"demo.txt", startInfo()});
-    files.push_back({"deep3d.cfg", readFile(settingsFile())});
+    files.push_back({"deep3d.cfg", shareableSettings()});
     std::error_code ec;
     for (auto& e : fs::directory_iterator(savesDir(), ec))
         if (e.is_regular_file()) files.push_back({"saves/" + e.path().filename().string(), readFile(e.path().string())});
@@ -739,6 +748,8 @@ void Demo::begin() {
     gHeaderEnd = ftell(gFile);
 }
 
+void Demo::gpu(const std::string& name) { gGpu = name; }
+
 std::string Demo::exportSession(const std::string& diagnostics) {
     if (!RECORDING || !gFile) return "";
     long end;
@@ -753,6 +764,7 @@ std::string Demo::exportSession(const std::string& diagnostics) {
     }
     auto files = gFiles;
     std::ostringstream m;
+    m << "gpu=" << gGpu << "\n";
     m << "exported=" << stamp("%Y-%m-%d %H:%M:%S %z") << "\n";
     m << "length_s=" << seconds << "\npasses=" << passes << "\n";
     m << "play_at=" << std::max(0.0, seconds - LAST_S) << "\n";

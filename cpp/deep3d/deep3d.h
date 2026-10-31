@@ -150,6 +150,8 @@ public:
     /** F9: the session so far as demos/<name>.demo (its path; none: empty),
         with the diagnostics file in it. */
     static std::string exportSession(const std::string& diagnostics);
+    /** For the metadata: what renders the game. */
+    static void gpu(const std::string& name);
     /** The session's seed for the game's randoms. */
     static uint64_t seed();
     /** Replaying, before the point it opens at: nothing needs drawing. */

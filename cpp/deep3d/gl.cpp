@@ -1138,6 +1138,7 @@ void claimContext() {
         glGenVertexArrays(1, &vao);   // core contexts want one bound for gl_VertexID draws
         gContextReady = true;
         printf("[gl] renderer: %s / %s\n", glGetString(GL_RENDERER), glGetString(GL_VERSION));
+        Demo::gpu(std::string((const char*) glGetString(GL_RENDERER)) + " / " + (const char*) glGetString(GL_VERSION));
     }
     // GLFW sets the swap interval through its current context: the window's own
     if (!gVsyncApplied && (!gKeepContexts || gCtxIndex == 0)) {
