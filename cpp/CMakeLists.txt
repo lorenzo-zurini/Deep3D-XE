@@ -55,6 +55,11 @@ set_source_files_properties(${GERVILL_EMG} PROPERTIES
     OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/midp/gervill_emg.sf2)
 
 add_executable(deep3d ${JRT_SRC} ${RUNTIME_SRC} ${GAME_SRC} ${GERVILL_EMG} ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+# the commit, for demos' metadata: refreshed at every build, rewritten only when it changes
+add_custom_target(build_info COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/build_info.sh ${CMAKE_BINARY_DIR}/build_info.h
+                  BYPRODUCTS ${CMAKE_BINARY_DIR}/build_info.h)
+add_dependencies(deep3d build_info)
+target_include_directories(deep3d PRIVATE ${CMAKE_BINARY_DIR})
 target_include_directories(deep3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/jni ${M3G}/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/m3g ${CMAKE_CURRENT_SOURCE_DIR}/game)
 target_compile_options(deep3d PRIVATE ${JAVA_FLAGS} -Wall -Wno-unused -Wno-unused-variable -Wno-unused-but-set-variable

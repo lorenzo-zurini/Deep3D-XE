@@ -31,3 +31,4 @@ __pycache__/
 
 # C++ build: the editor link to build/cpp
 /compile_commands.json
+demos/

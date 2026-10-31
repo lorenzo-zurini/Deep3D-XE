@@ -249,7 +249,8 @@ void class_57::method_486(int32_t var1, int32_t var2, int32_t var3) {
 void class_57::deep3dTurn(int32_t axis, double units) {
     this->deep3dAxesNow();
     double* d = this->deep3dAxes;
-    double angle = units * 3.141592653589793 / 2048.0, c = std::cos(angle), s = std::sin(angle);
+    double c, s;
+    org::deep3d::Step::sincos(units * 3.141592653589793 / 2048.0, s, c);
     const double* a = d + axis * 3;
     for (int32_t k = 1; k < 3; k++) {
         double* v = d + ((axis + k) % 3) * 3;

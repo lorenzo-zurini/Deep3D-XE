@@ -11,9 +11,9 @@
 
 namespace org::deep3d {
 
-const bool Det::ON = getenv("DEEP3D_DET") != nullptr || getenv("DEEP3D_DEMO") != nullptr;
+const bool Det::ON = getenv("DEEP3D_DET") != nullptr || getenv("DEEP3D_DEMO") != nullptr || demoSession();
 const bool Det::BENCH = ON && getenv("DEEP3D_BENCH") != nullptr;
-const bool Det::DEMO = getenv("DEEP3D_DEMO") != nullptr;
+const bool Det::DEMO = getenv("DEEP3D_DEMO") != nullptr || demoSession();
 
 namespace {
 /* DEEP3D_DET=1 DEEP3D_STEP_MS=<ms>, or the scenario command `clock`: a virtual
@@ -81,6 +81,13 @@ int64_t Det::nanos() {
     return steadyNanos() - gSkippedNanos.load();
 }
 
+int64_t Det::uiMillis() {
+    if (!DEMO) return millis();
+    return steadyNanos() / 1000000LL;
+}
+
+int64_t Det::uiNanos() { return DEMO ? steadyNanos() : nanos(); }
+
 void Step::advance() {
     if (Det::ON && !Demo::RECORDING) {
         gFrameMs = Det::DEMO ? gForcedMs = Demo::pass(0) : gForcedMs > 0.0 ? gForcedMs : ORIGINAL_MS;
@@ -113,14 +120,64 @@ int32_t Step::share(double perStep, double& carry) {
 
 int32_t Step::chase(int32_t x, int32_t target, int32_t shift, double& carry) {
     if (exact()) return x - ((x - target) >> shift);
-    double keep = std::pow(1.0 - 1.0 / double(int64_t(1) << shift), scale());
+    double keep = Step::pow(1.0 - 1.0 / double(int64_t(1) << shift), scale());
     double v = double(target) + (double(x) + carry - double(target)) * keep;
     int32_t whole = int32_t(std::lround(v));
     carry = v - whole;
     return whole;
 }
 
-double Step::factor(double perStep) { return exact() ? perStep : std::pow(perStep, scale()); }
+double Step::factor(double perStep) { return exact() ? perStep : Step::pow(perStep, scale()); }
+
+/* Series in + - * / only (the build has no fused multiply-add): the same bits
+   on every machine, good to about 1e-15 for the arguments the game has. */
+namespace {
+constexpr double LN2 = 0.693147180559945309417, PI_2 = 1.57079632679489661923;
+
+double seriesLog(double x) {
+    int e;
+    double m = std::frexp(x, &e);
+    if (m < 0.70710678118654752440) {
+        m *= 2;
+        e--;
+    }
+    double s = (m - 1) / (m + 1), s2 = s * s, sum = 0;
+    for (int i = 21; i >= 1; i -= 2) sum = sum * s2 + 1.0 / i;
+    return 2 * s * sum + e * LN2;
+}
+
+double seriesExp(double x) {
+    int64_t k = std::llround(x / LN2);
+    double r = x - double(k) * LN2, sum = 1;
+    for (int i = 18; i >= 1; i--) sum = 1 + r * sum / i;
+    return std::ldexp(sum, int(k));
+}
+}  // namespace
+
+double Step::pow(double x, double y) {
+    if (x <= 0.0) return 0.0;
+    return seriesExp(y * seriesLog(x));
+}
+
+void Step::sincos(double angle, double& s, double& c) {
+    int64_t k = std::llround(angle / PI_2);
+    double r = angle - double(k) * PI_2, r2 = r * r, ss = 0, cc = 0;
+    for (int i = 21; i >= 3; i -= 2) ss = (1 - ss) * r2 / (i * (i - 1));
+    for (int i = 20; i >= 2; i -= 2) cc = (1 - cc) * r2 / (i * (i - 1));
+    double sn = r * (1 - ss), cs = 1 - cc;
+    switch (int(k & 3)) {
+        case 0: s = sn, c = cs; break;
+        case 1: s = cs, c = -sn; break;
+        case 2: s = -sn, c = -cs; break;
+        default: s = -cs, c = sn; break;
+    }
+}
+
+double Step::tan(double angle) {
+    double s, c;
+    sincos(angle, s, c);
+    return s / c;
+}
 
 int32_t Step::steps(double& accumulated) {
     if (exact()) return 1;
@@ -131,7 +188,7 @@ int32_t Step::steps(double& accumulated) {
 }
 
 Ref<java::util::Random> Det::random(int32_t site) {
-    if (ON) return jrt::New<java::util::Random>(int64_t(0x5EED + site));
+    if (ON) return jrt::New<java::util::Random>(int64_t(0x5EED + site) + int64_t(DEMO ? Demo::seed() : 0));
     return jrt::New<java::util::Random>();
 }
 
@@ -204,6 +261,10 @@ void send(int32_t code, int32_t kind) {
     Demo::event(code, kind);
     if (kind == 2) {
         GameUi::select(code);
+        return;
+    }
+    if (kind == 3) {
+        Cheats::teleportNow(code);
         return;
     }
     auto cur = Runtime::getCurrent();

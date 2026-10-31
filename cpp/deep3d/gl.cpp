@@ -1274,7 +1274,7 @@ void renderOverlayLayer(int32_t w, int32_t h) {
     bool menuOrToast = Overlay::isOpen() || Overlay::hasToast();
     bool wantLayer = menuOrToast || Config::showFps;
     if (!wantLayer) return;
-    int64_t now = Det::millis();
+    int64_t now = Det::uiMillis();
     bool fpsTick = false;
     if (Config::showFps && now - gLastFpsStamp >= 500) {
         gLastFpsStamp = now;

@@ -34,6 +34,12 @@ Ref<String> jstr(const std::string& s);
  * build (Java: Det): a virtual clock, seeded randoms, input delivered at
  * the start of a game loop pass, the game state's hash per pass (det.log).
  */
+/** Normal play keeps a demo of the session (see Demo); tests' runs don't. */
+inline bool demoSession() {
+    return !getenv("DEEP3D_DEMO") && !getenv("DEEP3D_DET") && !getenv("DEEP3D_BENCH") && !getenv("DEEP3D_SCENARIO") &&
+           !getenv("DEEP3D_NO_DEMO");
+}
+
 class Det {
 public:
     static const bool ON;
@@ -43,9 +49,14 @@ public:
     static const bool DEMO;
     static int64_t millis();
     static int64_t nanos();
+    /** The clock of what isn't the game (menus, toasts, the loading screen): a
+        demo's game clock stands still in a pause or a load. */
+    static int64_t uiMillis();
+    static int64_t uiNanos();
     static Ref<java::util::Random> random(int32_t site);
     static bool onGameThread();
-    /** kind: 0 released, 1 pressed, 2 a menu row picked by the mouse (code: its index) */
+    /** kind: 0 released, 1 pressed, 2 a menu row picked by the mouse (code: its
+        index), 3 a debug teleport (code: the station) */
     static bool queueKey(int32_t code, int32_t kind);
     static void frame();
     static void deliverKeys();
@@ -91,6 +102,11 @@ public:
     static int32_t chase(int32_t x, int32_t target, int32_t shift, double& carry);
     /** A per-step factor (a decay of k each step) for this frame. */
     static double factor(double perStep);
+    // In what the game keeps, these instead of the C library's: its last bit
+    // depends on the CPU and the library, and a demo must replay anywhere.
+    static double pow(double x, double y);
+    static void sincos(double angle, double& s, double& c);
+    static double tan(double angle);
     /** How many whole original steps have gone by (for what can only happen in steps). */
     static int32_t steps(double& accumulated);
     /** timer > limit, for a timer of summed dt: the game looked once a step, so what fired past
@@ -115,6 +131,10 @@ private:
  * `--play` runs that same game again from the file, under the game's camera
  * or a free one, in any graphics mode. The game's own state is the same pass
  * for pass, so what the free camera shows is the recorded game.
+ *
+ * Normal play records too, into logs/: F9 exports it for a bug report. There
+ * are no savestates, so a demo always holds the session from its start; an
+ * export marks the last minute, and a replay gets there at top speed.
  */
 class Demo {
 public:
@@ -123,8 +143,17 @@ public:
         int32_t code;
         int8_t kind;
     };
-    /** `--record` and `--play`: sets up the run and starts it. */
+    /** `--record`, `--play` and `--info`: sets up the run and starts it. */
     static int32_t main(int32_t argc, char** argv);
+    /** The start of a recording: what it replays from. */
+    static void begin();
+    /** F9: the session so far as demos/<name>.demo (its path; none: empty),
+        with the diagnostics file in it. */
+    static std::string exportSession(const std::string& diagnostics);
+    /** The session's seed for the game's randoms. */
+    static uint64_t seed();
+    /** Replaying, before the point it opens at: nothing needs drawing. */
+    static bool rushing();
     /** The start of a game loop pass: its frame time in ms (recording: this one, measured). */
     static double pass(double measuredMs);
     /** Recording: an input the game was given in this pass. */
@@ -132,8 +161,12 @@ public:
     /** Replaying: this pass's input. */
     static const std::vector<Event>& events();
     static void passDone();
-    /** Remastered's wider ring of creatures, which is game state: as recorded, whatever is shown. */
+    // settings and debug options that are game state: as recorded, whatever is shown
+    /** Remastered's wider ring of creatures. */
     static bool remasteredWorld();
+    static bool openSea();
+    static int32_t fov();
+    static bool god();
     /** Replaying: is this pass's frame shown, or is the replay catching up? */
     static bool show();
     /** Replaying: the replay's own keys; none reach the game. */
@@ -199,8 +232,10 @@ public:
     static bool smoothTexturesOn() { return enhanced && textureFilter; }
     static bool antialiasingOn() { return enhanced && antialiasing; }
     static bool fullColourOn() { return enhanced && fullColour; }
-    static bool openSeaOn() { return enhanced && openSea; }
-    static int32_t flightFov() { return int32_t(float(fov) * 4096.0f / 360.0f); }
+    static bool openSeaLive() { return enhanced && openSea; }
+    static bool openSeaOn() { return Det::DEMO ? Demo::openSea() : openSeaLive(); }
+    static int32_t flightFovLive() { return int32_t(float(fov) * 4096.0f / 360.0f); }
+    static int32_t flightFov() { return Det::DEMO ? Demo::fov() : flightFovLive(); }
 
     static void load();
     static void save();
@@ -482,6 +517,7 @@ public:
     static void install(Cheats_Game* g);
     static Cheats_Game* game();
     static void teleport(int32_t id);
+    static void teleportNow(int32_t id);
     static int32_t takeTeleport();
 };
 

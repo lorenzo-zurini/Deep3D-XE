@@ -11,3 +11,6 @@ fire 150
 wait 60
 steer -0.5 0.5 60
 wait 120
+wait 60
+key 120                     # F9: the bug report
+wait 30

@@ -178,19 +178,35 @@ with each mode's frame times as CSV. It takes a minute or two per mode.
 
 ### Demos
 
-Doom-style: a recording keeps what you did, pass by pass, and a replay is that
-same game again, under any camera or graphics mode.
+Doom-style: a demo keeps what you did, pass by pass, and a replay is that same
+game again, under any camera or graphics mode.
+
+**Bug reports.** The game always keeps a log of the session. Press **F9** at any
+time and it saves `demos/bug-<date>.demo`, which is what to attach to a report:
+it opens at the last minute, and it carries the build, the game data's hashes, the
+machine, your settings, your saves as they were at launch, and the diagnostics.
+
+```
+./Deep3D-XE --info bug-2026-10-31-094835       # what it is, and whether this copy can replay it
+./Deep3D-XE --play bug-2026-10-31-094835       # opens at its last minute
+```
+
+There are no savestates, so a demo always holds the session from launch: the
+replay goes through it at top speed, unshown, to reach the last minute. The log
+takes a few tens of MB an hour. The last three sessions stay in `logs/`, so a
+crash's can still be replayed with `--play logs/session-....demo`.
+`DEEP3D_NO_DEMO=1` turns the log off.
+
+**On purpose.**
 
 ```
 ./Deep3D-XE --record combat              # play; quit when done (demos/combat.demo)
 ./Deep3D-XE --play combat                # from the first flight
-./Deep3D-XE --play combat --at 95        # from 95 s into the recording
+./Deep3D-XE --play combat --at 95        # from 95 s in
 ./Deep3D-XE --play combat --mode original
 ```
 
-A recording starts from your saves and settings as they are then, and it starts
-when the game does, so a replay goes through the same menus first (at top speed,
-unshown). It runs in a temporary folder: your own saves are not touched.
+Replays run in a temporary folder: your own saves are not touched.
 
 | Key | While replaying |
 | --- | --- |
@@ -203,7 +219,9 @@ unshown). It runs in a temporary folder: your own saves are not touched.
 | Esc | Quit |
 
 Every 64 passes a replay checks itself against the recording, and says so if it
-has left it. Changing the world option (Open Sea) from the recorded one will.
+has left it. A demo replays exactly on the same build with the same game data;
+`--info` and the replay itself warn about either. What the simulation keeps uses
+no C library maths, so the machine and its CPU don't change it.
 
 ## Controls
 

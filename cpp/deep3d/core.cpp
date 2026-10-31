@@ -1016,7 +1016,7 @@ void Runtime::tickFpsCounter() {
     }
 }
 
-int32_t Runtime::getDisplayFps() { return Det::ON ? 60 : int32_t(gDisplayFps); }   // det: a fixed reading
+int32_t Runtime::getDisplayFps() { return Det::ON && !Det::DEMO ? 60 : int32_t(gDisplayFps); }   // det: a fixed reading
 
 int32_t Runtime::framesSinceStats() {
     int64_t now = gTotalFrames;

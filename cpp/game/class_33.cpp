@@ -63,8 +63,8 @@ void class_33::method_293() {
     // Deep3D-PC: one a step, not one a draw (this thread has no game frames: the clock)
     if (org::deep3d::Step::exact()) {
         this->field_338++;
-    } else if ((org::deep3d::Det::nanos() - this->deep3dBubbleAt) >= int64_t(33000000)) {
-        this->deep3dBubbleAt = org::deep3d::Det::nanos();
+    } else if ((org::deep3d::Det::uiNanos() - this->deep3dBubbleAt) >= int64_t(33000000)) {
+        this->deep3dBubbleAt = org::deep3d::Det::uiNanos();
         this->field_338++;
     }
     if (this->field_338 > 9) {

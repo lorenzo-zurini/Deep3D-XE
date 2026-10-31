@@ -928,7 +928,7 @@ void class_64::method_550(int32_t var1) {
 
 float class_64::deep3dDolly() {
     int32_t var0 = org::deep3d::Config::flightFov();
-    return (var0 == 500) ? 1.0f : float((java::lang::Math::tan(0.38349519697141027) / java::lang::Math::tan(((double(var0) * 3.141592653589793) / 4096.0))));
+    return (var0 == 500) ? 1.0f : float((org::deep3d::Step::tan(0.38349519697141027) / org::deep3d::Step::tan(((double(var0) * 3.141592653589793) / 4096.0))));
 }
 
 void class_64::__dumpFields(jrt::Dumper& d) {

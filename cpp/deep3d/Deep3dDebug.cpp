@@ -301,4 +301,4 @@ void Deep3dDebug::tick() {
     org::deep3d::Scenario::tick();
 }
 
-bool Deep3dDebug::godFor(Ref<class_37> damage) { return org::deep3d::Cheats::god && damage == player; }
+bool Deep3dDebug::godFor(Ref<class_37> damage) { return org::deep3d::Demo::god() && damage == player; }

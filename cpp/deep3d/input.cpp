@@ -192,7 +192,9 @@ void Input::handleKey(int32_t code, char16_t keyChar, bool pressed, bool altDown
         }
         if (code == vk::F9) {
             std::string f = Diagnostics::dump("manual", "F9 pressed");
-            Overlay::showToast("Diagnostics saved: logs/" + f.substr(f.rfind('/') + 1));
+            std::string demo = Demo::exportSession(f);
+            Overlay::showToast(!demo.empty() ? "Saved for a bug report: demos/" + demo.substr(demo.rfind('/') + 1)
+                                             : "Diagnostics saved: logs/" + f.substr(f.rfind('/') + 1));
             return;
         }
         if (code == vk::ESCAPE && !Overlay::isOpen()) {
@@ -697,17 +699,17 @@ void publish() {
 std::atomic<bool> MouseFlight::testing{false};
 
 bool MouseFlight::wanted() {
-    return Config::mouseFlight && Det::nanos() - gFlyingNanos < 300000000LL && !GameUi::profile() && !Overlay::isOpen() &&
+    return Config::mouseFlight && Det::uiNanos() - gFlyingNanos < 300000000LL && !GameUi::profile() && !Overlay::isOpen() &&
            !Runtime::isGamePaused();
 }
 
-void MouseFlight::flying() { gFlyingNanos = Det::nanos(); }
+void MouseFlight::flying() { gFlyingNanos = Det::uiNanos(); }
 
 void MouseFlight::crosshair(int32_t x, int32_t y) {
     if (kLogCross) printf("[cross] %d %d\n", x, y);
     gCrossX = x;
     gCrossY = y;
-    gCrossNanos = Det::nanos();
+    gCrossNanos = Det::uiNanos();
 }
 
 bool MouseFlight::captured() { return gCaptured; }
@@ -743,7 +745,7 @@ void MouseFlight::move(double dx, double dy, int32_t windowHeight) {
 void MouseFlight::draw(Ref<Graphics> g, int32_t w, int32_t h) {
     std::lock_guard<std::mutex> l(gMouseLock);
     if (!gCaptured || !wanted() || Demo::PLAYING) return;
-    bool cross = Det::nanos() - gCrossNanos < 300000000LL;
+    bool cross = Det::uiNanos() - gCrossNanos < 300000000LL;
     int32_t cx = cross ? int32_t(gCrossX) : w / 2;
     int32_t cy = cross ? int32_t(gCrossY) : h / 2;
     int32_t ax = cx + java::lang::Math::round(gOffX * float(h));   // Java's Math.round
@@ -917,7 +919,10 @@ Ref<MenuToolkit> gToolkit;
 
 void Cheats::install(Cheats_Game* g) { gCheatsGame = g; }
 Cheats_Game* Cheats::game() { return gCheatsGame; }
-void Cheats::teleport(int32_t id) { gPendingTeleport = id; }
+void Cheats::teleport(int32_t id) {
+    if (!Det::DEMO || !Det::queueKey(id, 3)) gPendingTeleport = id;
+}
+void Cheats::teleportNow(int32_t id) { gPendingTeleport = id; }
 int32_t Cheats::takeTeleport() { return gPendingTeleport.exchange(-1); }
 
 void GameSettings::open(Ref<GameSettings_Toggle> invertPitch) {

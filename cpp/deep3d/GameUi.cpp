@@ -13,7 +13,7 @@ namespace org::deep3d {
 
 namespace {
 
-int64_t millis() { return Det::millis(); }
+int64_t millis() { return Det::uiMillis(); }
 
 enum class Kind { ROW, TAB, BUTTON, ZONE, SCROLL };
 
@@ -89,7 +89,7 @@ int64_t since = 0;
    one frame's gap is as fast as the game takes keys: frames, whatever they are. */
 int32_t gone() {
     if (Step::exact() || (current->hold == 1 && current->gap == 1)) return frames;
-    return int32_t((Det::nanos() - since) / int64_t(Step::ORIGINAL_MS * 1e6));
+    return int32_t((Det::uiNanos() - since) / int64_t(Step::ORIGINAL_MS * 1e6));
 }
 bool released = false;
 
@@ -125,7 +125,7 @@ void frame() {
         current = queue.front();
         queue.pop_front();
         frames = 0;
-        since = Det::nanos();
+        since = Det::uiNanos();
         released = false;
         deliver(current->code, true);
         return;
@@ -135,7 +135,7 @@ void frame() {
         deliver(current->code, false);
         released = true;
         frames = 0;
-        since = Det::nanos();
+        since = Det::uiNanos();
     } else if (released && gone() >= current->gap) {
         current.reset();
     }
@@ -185,7 +185,7 @@ void continueWalk(const std::vector<Item>& items) {
             selectedIdx = i;
         }
     }
-    bool stuck = Step::exact() ? ++gWalkStuckFrames > 90 : Det::nanos() - gWalkSince > int64_t(90 * Step::ORIGINAL_MS * 1e6);
+    bool stuck = Step::exact() ? ++gWalkStuckFrames > 90 : Det::uiNanos() - gWalkSince > int64_t(90 * Step::ORIGINAL_MS * 1e6);
     if (!target || !selected || stuck) {
         gWalkTarget.reset();     // screen changed or selection never lands
         return;
@@ -210,7 +210,7 @@ void startWalk(const Item& target, bool confirm) {
     gWalkTarget = target;
     gWalkThenConfirm = confirm;
     gWalkStuckFrames = 0;
-    gWalkSince = Det::nanos();
+    gWalkSince = Det::uiNanos();
     std::vector<Item> visible;
     {
         std::lock_guard<std::mutex> g(gState);

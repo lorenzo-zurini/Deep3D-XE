@@ -51,7 +51,7 @@ std::vector<Item> gCurrentItems;
 int32_t gPanelX = 0, gPanelW = 0;
 std::optional<std::array<int32_t, 4>> gBarLeft, gBarRight;
 
-int64_t millis() { return Det::millis(); }   // System.currentTimeMillis (det: the virtual clock)
+int64_t millis() { return Det::uiMillis(); }   // System.currentTimeMillis (det: the virtual clock)
 
 void enter(Page p) {
     gPage = p;

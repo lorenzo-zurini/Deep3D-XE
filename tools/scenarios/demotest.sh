@@ -2,7 +2,9 @@
 # Is a replay the recorded game? Records demotest.scn in real time, once in
 # Original and once in Remastered, and replays each in the other mode and under
 # the free camera. A replay checks itself against the recording every 64 passes
-# (the game's randoms and the sub's place) and says so if it leaves it.
+# (the game's randoms and the sub's place) and says so if it leaves it. The
+# script presses F9 near its end: that export must open at its last minute, and
+# replay on a CPU with another C library path (no FMA, no AVX2).
 #   tools/scenarios/demotest.sh [out dir]
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -22,5 +24,9 @@ run rec-remastered "--record $OUT/remastered.demo" "graphics.enhanced=true graph
 run original-in-remastered "--play $OUT/original.demo --mode remastered" graphics.remastered=false
 run remastered-in-original "--play $OUT/remastered.demo --mode original" graphics.remastered=false
 PLAYENV=DEEP3D_DEMO_FREECAM=1 run free-camera "--play $OUT/remastered.demo" graphics.remastered=false
+BUG=$(ls "$OUT"/rec-remastered/home/demos/bug-*.demo | head -1)
+run bug-report "--play $BUG" graphics.remastered=false
+grep -a '\[demo\] at ' "$OUT/bug-report/game.log" | tail -1
+PLAYENV="GLIBC_TUNABLES=glibc.cpu.hwcaps=-AVX2,-FMA,-AVX2_Usable,-FMA_Usable,-AVX512F" run other-cpu "--play $BUG" graphics.remastered=false
 [ $FAILED = 0 ] && echo "all replays stayed with their recordings"
 exit $FAILED

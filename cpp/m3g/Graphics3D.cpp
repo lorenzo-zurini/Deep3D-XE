@@ -4,6 +4,7 @@
 // Made available under the terms of the Eclipse Public License v1.0
 // (http://www.eclipse.org/legal/epl-v10.html); the changes likewise.
 #include "m3g.h"
+#include "deep3d/deep3d.h"
 
 int32_t javax::microedition::m3g::Graphics3D::ANTIALIAS{};
 int32_t javax::microedition::m3g::Graphics3D::DITHER{};
@@ -172,12 +173,14 @@ void javax::microedition::m3g::Graphics3D::setViewport(int32_t x, int32_t y, int
 }
 
 void javax::microedition::m3g::Graphics3D::clear(jrt::Ref<javax::microedition::m3g::Background> background) {
+    if (org::deep3d::Demo::rushing()) return;
     this->integrityCheck();
     jrt::Ref<javax::microedition::m3g::Background> finalBackground = background;
     javax::microedition::m3g::Platform::executeInUIThread(jrt::Ref<javax::microedition::m3g::M3gRunnable>(([&]() { jrt::Ref<javax::microedition::m3g::Graphics3D__anon5> __o(new javax::microedition::m3g::Graphics3D__anon5()); __o->__outer = this; __o->finalBackground = finalBackground; __o->__init(); return __o; }())));
 }
 
 void javax::microedition::m3g::Graphics3D::render(jrt::Ref<javax::microedition::m3g::World> world) {
+    if (org::deep3d::Demo::rushing()) return;
     this->integrityCheck();
     jrt::Ref<javax::microedition::m3g::World> finalWorld = world;
     javax::microedition::m3g::Platform::executeInUIThread(jrt::Ref<javax::microedition::m3g::M3gRunnable>(([&]() { jrt::Ref<javax::microedition::m3g::Graphics3D__anon6> __o(new javax::microedition::m3g::Graphics3D__anon6()); __o->__outer = this; __o->finalWorld = finalWorld; __o->__init(); return __o; }())));
@@ -189,6 +192,7 @@ void javax::microedition::m3g::Graphics3D::render(jrt::Ref<javax::microedition::
 }
 
 void javax::microedition::m3g::Graphics3D::render(jrt::Ref<javax::microedition::m3g::VertexBuffer> vertices, jrt::Ref<javax::microedition::m3g::IndexBuffer> primitives, jrt::Ref<javax::microedition::m3g::Appearance> appearance, jrt::Ref<javax::microedition::m3g::Transform> transform, int32_t scope) {
+    if (org::deep3d::Demo::rushing()) return;
     this->integrityCheck();
     jrt::Ref<javax::microedition::m3g::VertexBuffer> finalVertices = vertices;
     jrt::Ref<javax::microedition::m3g::IndexBuffer> finalPrimitives = primitives;
@@ -199,6 +203,7 @@ void javax::microedition::m3g::Graphics3D::render(jrt::Ref<javax::microedition::
 }
 
 void javax::microedition::m3g::Graphics3D::render(jrt::Ref<javax::microedition::m3g::Node> node, jrt::Ref<javax::microedition::m3g::Transform> transform) {
+    if (org::deep3d::Demo::rushing()) return;
     if ((!((jrt::isInstance<javax::microedition::m3g::Mesh>(node) || jrt::isInstance<javax::microedition::m3g::Sprite3D>(node)) || jrt::isInstance<javax::microedition::m3g::Group>(node))) && (node != nullptr)) {
         jrt::throwJava(jrt::New<java::lang::IllegalArgumentException>());
     }

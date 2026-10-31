@@ -81,6 +81,7 @@ int run(int argc, char** argv) {
             printf("       deep3d --bench [original,enhanced,remastered] [--frames N] [--fullscreen|--windowed|--size WxH]\n");
             printf("       deep3d --record [name]\n");
             printf("       deep3d --play name [--at seconds] [--mode original|enhanced|remastered] [--set key=value]\n");
+            printf("       deep3d --info name\n");
             printf("settings persist in deep3d.cfg; press Esc in game for options\n");
             return 0;
         } else {
@@ -104,6 +105,7 @@ int run(int argc, char** argv) {
 
     if (!FirstRun::ensureAssets()) return 1;
 
+    Demo::begin();
     Input::init();
     Gamepad::init();
     Scenario::init();
@@ -151,8 +153,8 @@ int main(int argc, char** argv) {
     }
     // demos: this process only sets up the run
     bool demo = false;
-    for (int i = 1; i < argc; i++) demo |= strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--play") == 0;
-    if (demo && !Det::DEMO) {
+    for (int i = 1; i < argc; i++) demo |= strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--info") == 0;
+    if (demo && !getenv("DEEP3D_DEMO")) {
         try {
             return Demo::main(argc, argv);
         } catch (const jrt::Thrown& t) {
