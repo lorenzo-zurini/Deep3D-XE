@@ -76,7 +76,7 @@ void class_93::method_805(int64_t var1) {
             }
         }
         this->field_1249 += var1;
-        this->class_91::field_1226->method_843(0, (class_16::method_91(int32_t(this->field_1249)) >> 6), 0);
+        this->class_91::field_1226->method_843(0, org::deep3d::Step::share((class_16::method_91(int32_t(this->field_1249)) >> 6), this->deep3dBob), 0);   // Deep3D-PC: per step
         {
             switch (int32_t(this->class_91::field_1224)) {
             case 0:
@@ -84,7 +84,7 @@ void class_93::method_805(int64_t var1) {
                 return;
             case 1:
                 this->field_1249 += var1;
-                this->class_91::field_1226->method_860(0, (int32_t(var1) << 1), 0);
+                this->class_91::field_1226->method_860(0, (org::deep3d::Step::exact() ? (int32_t(var1) << 1) : org::deep3d::Step::share(66.0, this->deep3dSpin)), 0);
                 if (this->field_1249 > int64_t(2000)) {
                     this->method_811();
                     return;
@@ -108,7 +108,7 @@ void class_93::method_805(int64_t var1) {
                 return;
             case 999:
                 this->class_91::field_1226->method_868(2048, 2048, 2048);
-                this->class_91::field_1226->method_860(0, (int32_t(var1) << 1), 0);
+                this->class_91::field_1226->method_860(0, (org::deep3d::Step::exact() ? (int32_t(var1) << 1) : org::deep3d::Step::share(66.0, this->deep3dSpin)), 0);
                 if (this->class_91::field_1231 == nullptr) {
                     this->class_91::field_1224 = int16_t(4);
                     this->class_91::field_1225->method_327(0);

@@ -61,6 +61,17 @@ static void m3gDestroyAnimationTrack(Object *obj)
  * \param accumSamples accumulated samples
  * \param sampleInfo sample information
  */
+/* Deep3D-PC: world times are whole numbers, and the game gives whole animation
+   frames. At high frame rates a mesh would visibly step from one to the next:
+   the fraction set here (0 in deterministic runs) blends each sample with the
+   next one. */
+static M3Gfloat m3gAnimationFraction = 0.0f;
+
+void m3gSetAnimationFraction(float fraction)
+{
+    m3gAnimationFraction = fraction;
+}
+
 static void m3gGetContribution(const AnimationTrack *track, M3Gint time,
                                M3Gfloat *accumSamples, SampleInfo *sampleInfo)
 {
@@ -113,6 +124,26 @@ static void m3gGetContribution(const AnimationTrack *track, M3Gint time,
         sampleTime = m3gRoundToInt(m3gGetPosition(track->controller, time));
         sampleValidity = m3gGetSample(track->sequence, sampleTime, sample);
         sampleInfo->validity = sampleValidity;
+
+        if (m3gAnimationFraction > 0.0f && sampleValidity > 0 && sampleLength <= 4
+            && track->sequence->interpolation != M3G_STEP) {
+            M3Gfloat next[4];
+            M3Gfloat position = m3gGetPosition(track->controller, time);
+            M3Gint nextTime = m3gRoundToInt(m3gAdd(position, m3gGetSpeed(track->controller)));
+            if (m3gGetSample(track->sequence, nextTime, next) > 0) {
+                M3Gfloat sign = 1.0f;
+                if (track->property == M3G_ANIM_ORIENTATION) {   /* the short way round */
+                    M3Gfloat dot = 0.0f;
+                    for (i = 0; i < sampleLength; ++i) {
+                        dot += sample[i] * next[i];
+                    }
+                    sign = dot < 0.0f ? -1.0f : 1.0f;
+                }
+                for (i = 0; i < sampleLength; ++i) {
+                    sample[i] += (sign * next[i] - sample[i]) * m3gAnimationFraction;
+                }
+            }
+        }
 
         /* Only bother if there was no error in GetSample... */
             

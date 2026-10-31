@@ -37,6 +37,12 @@ void class_83::method_731() {
 }
 
 void class_83::method_732(int32_t var1, int32_t var2, int32_t var3, int32_t var4, int32_t var5, int32_t var6) {
+    this->deep3dQuad(var1, var2, var3, var4, var5, var6, true);
+}
+
+/* Deep3D-PC: the head of the ribbon follows what it trails; its history moves
+   on when the caller says so (shift) */
+void class_83::deep3dQuad(int32_t var1, int32_t var2, int32_t var3, int32_t var4, int32_t var5, int32_t var6, bool shift) {
     this->field_1074->at(0) = var1 - this->field_1072;
     this->field_1074->at(1) = var2;
     this->field_1074->at(2) = var3;
@@ -49,7 +55,7 @@ void class_83::method_732(int32_t var1, int32_t var2, int32_t var3, int32_t var4
     this->field_1074->at(9) = var4 - this->field_1072;
     this->field_1074->at(10) = var5;
     this->field_1074->at(11) = var6;
-    for (int32_t var7 = this->field_1074->length - 1; var7 >= 23; var7 -= 12) {
+    for (int32_t var7 = this->field_1074->length - 1; shift && (var7 >= 23); var7 -= 12) {
         this->field_1074->at(var7) = this->field_1074->at((var7 - 12));
         this->field_1074->at((var7 - 1)) = this->field_1074->at((var7 - 13));
         this->field_1074->at((var7 - 2)) = this->field_1074->at((var7 - 14));
@@ -79,6 +85,12 @@ void class_83::method_733(jrt::Ref<class_3> var1) {
     }
     this->method_732(var1->field_37, var1->field_38, var1->field_39, this->field_1077->field_37, this->field_1077->field_38, this->field_1077->field_39);
     this->field_1077->method_9(var1);
+}
+
+void class_83::deep3dHead(jrt::Ref<class_3> var1) {
+    if (!this->field_1078) {
+        this->deep3dQuad(var1->field_37, var1->field_38, var1->field_39, this->field_1077->field_37, this->field_1077->field_38, this->field_1077->field_39, false);
+    }
 }
 
 void class_83::method_734(jrt::Ref<class_3> var1) {

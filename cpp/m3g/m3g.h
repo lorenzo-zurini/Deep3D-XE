@@ -71,6 +71,8 @@ public:
     virtual void removeAnimationTrack(jrt::Ref<javax::microedition::m3g::AnimationTrack> animationTrack);
     virtual int32_t getAnimationTrackCount();
     virtual int32_t animate(int32_t time);
+    /** Deep3D-PC: how far past the whole time the next animate() samples (0: as Java). */
+    static void setAnimationFraction(float fraction);
     virtual void setUserObject(jrt::Ref<java::lang::Object> obj);
     virtual jrt::Ref<java::lang::Object> getUserObject();
     static jrt::Ref<javax::microedition::m3g::Object3D> getInstance(int64_t handle);

@@ -125,6 +125,19 @@ void class_102::method_860(int32_t var1, int32_t var2, int32_t var3) {
     this->method_841();
 }
 
+/* Deep3D-PC: see class_57 */
+void class_102::deep3dTurn(int32_t axis, double units) {
+    this->field_1341->deep3dTurn(axis, units);
+    this->field_1339 = true;
+    this->method_841();
+}
+
+void class_102::deep3dGo(double units) {
+    this->field_1341->deep3dGo(units);
+    this->field_1339 = true;
+    this->method_841();
+}
+
 void class_102::method_861(int32_t var1) {
     this->field_1341->method_487(var1);
     this->field_1339 = true;

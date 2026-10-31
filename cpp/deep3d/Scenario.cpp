@@ -588,10 +588,21 @@ void Scenario::init() {
     log("loaded " + std::to_string(gSteps.size()) + " steps from " + path);
 }
 
+static void tickOne();
+
 bool Scenario::active() { return gActive; }
 int32_t Scenario::frame() { return gFrame; }
 
 void Scenario::tick() {
+    if (Step::forced()) {   // scripts count original steps: the same run at any frame time
+        static double acc = 0;
+        for (int32_t n = Step::steps(acc); n > 0; n--) tickOne();
+        return;
+    }
+    tickOne();
+}
+
+void tickOne() {
     if (!gActive) return;
     gFrame++;
     int64_t now = nanos();

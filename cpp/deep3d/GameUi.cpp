@@ -64,6 +64,7 @@ std::atomic<int32_t> gWheelSteps{0};
 std::optional<Item> gWalkTarget;
 bool gWalkThenConfirm = false;
 int32_t gWalkStuckFrames = 0;
+int64_t gWalkSince = 0;
 
 std::mutex gSelectLock;
 std::optional<std::string> gSelectTarget;
@@ -81,6 +82,15 @@ std::mutex lock;
 std::deque<Pulse> queue;
 std::optional<Pulse> current;
 int32_t frames = 0;
+int64_t since = 0;
+
+/* What has gone by since the press or the release, in frames: in original
+   steps, so a pulse lasts as long at any frame rate. A pulse of one frame and
+   one frame's gap is as fast as the game takes keys: frames, whatever they are. */
+int32_t gone() {
+    if (Step::exact() || (current->hold == 1 && current->gap == 1)) return frames;
+    return int32_t((Det::nanos() - since) / int64_t(Step::ORIGINAL_MS * 1e6));
+}
 bool released = false;
 
 /* Straight to the game, on the thread that presents its frames (between
@@ -115,16 +125,18 @@ void frame() {
         current = queue.front();
         queue.pop_front();
         frames = 0;
+        since = Det::nanos();
         released = false;
         deliver(current->code, true);
         return;
     }
     frames++;
-    if (!released && frames >= current->hold) {
+    if (!released && gone() >= current->hold) {
         deliver(current->code, false);
         released = true;
         frames = 0;
-    } else if (released && frames >= current->gap) {
+        since = Det::nanos();
+    } else if (released && gone() >= current->gap) {
         current.reset();
     }
 }
@@ -173,7 +185,8 @@ void continueWalk(const std::vector<Item>& items) {
             selectedIdx = i;
         }
     }
-    if (!target || !selected || ++gWalkStuckFrames > 90) {
+    bool stuck = Step::exact() ? ++gWalkStuckFrames > 90 : Det::nanos() - gWalkSince > int64_t(90 * Step::ORIGINAL_MS * 1e6);
+    if (!target || !selected || stuck) {
         gWalkTarget.reset();     // screen changed or selection never lands
         return;
     }
@@ -197,6 +210,7 @@ void startWalk(const Item& target, bool confirm) {
     gWalkTarget = target;
     gWalkThenConfirm = confirm;
     gWalkStuckFrames = 0;
+    gWalkSince = Det::nanos();
     std::vector<Item> visible;
     {
         std::lock_guard<std::mutex> g(gState);

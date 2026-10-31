@@ -98,9 +98,10 @@ void class_42::method_0() {
             this->field_455 = this->field_452->method_857();
             this->field_455->method_22();
             this->field_456 = this->field_452->field_1342->method_507(this->field_462, this->field_456);
-            this->field_457->field_37 = this->field_457->field_37 - ((this->field_457->field_37 - this->field_456->field_37) >> 8);
-            this->field_457->field_38 = this->field_457->field_38 - ((this->field_457->field_38 - this->field_456->field_38) >> 8);
-            this->field_457->field_39 = this->field_457->field_39 - ((this->field_457->field_39 - this->field_456->field_39) >> 8);
+            // Deep3D-PC: this runs for every object drawn (class_4::method_25), each run a frame's share
+            this->field_457->field_37 = org::deep3d::Step::chase(this->field_457->field_37, this->field_456->field_37, 8, this->deep3dChase[0]);
+            this->field_457->field_38 = org::deep3d::Step::chase(this->field_457->field_38, this->field_456->field_38, 8, this->deep3dChase[1]);
+            this->field_457->field_39 = org::deep3d::Step::chase(this->field_457->field_39, this->field_456->field_39, 8, this->deep3dChase[2]);
             this->field_456 = this->field_452->field_1342->method_507(this->field_461, this->field_456);
             this->field_456->field_37 = this->field_456->field_37 - this->field_457->field_37;
             this->field_456->field_38 = this->field_456->field_38 - this->field_457->field_38;

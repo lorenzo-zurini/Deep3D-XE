@@ -98,12 +98,12 @@ bool class_50::method_412() {
 void class_50::method_413(int32_t var1, int32_t var2) {
     org::deep3d::GameUi::controls(1, (-6), (-7), 0);
     if (((var1 & 2) != 0) && (this->field_549->field_1038 == 0)) {
-        this->field_550->method_230((var2 / 2));
-        this->field_551->method_230((var2 / 2));
+        this->field_550->deep3dHeldUp((var2 / 2), 1);
+        this->field_551->deep3dHeldUp((var2 / 2), 1);
     }
     if (((var1 & 64) != 0) && (this->field_549->field_1038 == 0)) {
-        this->field_550->method_229((var2 / 2));
-        this->field_551->method_229((var2 / 2));
+        this->field_550->deep3dHeldDown((var2 / 2), 1);
+        this->field_551->deep3dHeldDown((var2 / 2), 1);
     }
     class_67::method_587();
     this->field_549->method_718();

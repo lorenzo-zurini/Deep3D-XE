@@ -30,11 +30,12 @@ void class_60::method_546() {
 }
 
 void class_60::method_547(int64_t var1, jrt::Ref<class_57> var3, bool var4) {
-    bool var5 = false;
+    // Deep3D-PC: one respawn per original step, not per frame (they came out in bursts)
+    int32_t deep3dRespawns = org::deep3d::Step::steps(this->deep3dRespawn);
     this->field_718 = (jrt::cast<class_110>(this->field_723))->field_1389;
     for (int32_t var6 = 0; var6 < this->field_718->length; var6 += 3) {
         int32_t var7 = var6 / 3;
-        if ((!var5) && (this->field_719->at(var7) <= 0)) {
+        if ((deep3dRespawns > 0) && (this->field_719->at(var7) <= 0)) {
             int32_t var8 = class_84::field_1123->nextInt(18000) - 9000;
             int32_t var9 = (-5000) - class_84::field_1123->nextInt(10000);
             int32_t var10 = var4 ? (-((10000 + class_84::field_1123->nextInt(9000)) - 4500)) : (-((40000 + class_84::field_1123->nextInt(18000)) - 9000));
@@ -44,15 +45,15 @@ void class_60::method_547(int64_t var1, jrt::Ref<class_57> var3, bool var4) {
             this->field_718->at((var6 + 1)) = this->field_721->field_38;
             this->field_718->at((var6 + 2)) = this->field_721->field_39;
             this->field_719->at(var7) = 2500;
-            var5 = true;
+            deep3dRespawns--;
         } else {
             this->field_719->at(var7) = int32_t((int64_t(this->field_719->at(var7)) - var1));
-            this->field_718->at((var6 + 1)) = this->field_718->at((var6 + 1)) + this->field_720->at(var7);
+            this->field_718->at((var6 + 1)) = this->field_718->at((var6 + 1)) + org::deep3d::Step::share(this->field_720->at(var7), this->deep3dMove[var6 + 1]);
             if (!var4) {
                 this->field_722 = var3->method_481(this->field_722);
-                this->field_718->at(var6) = this->field_718->at(var6) + (this->field_722->field_37 >> 3);
-                this->field_718->at((var6 + 1)) = this->field_718->at((var6 + 1)) + (this->field_722->field_38 >> 3);
-                this->field_718->at((var6 + 2)) = this->field_718->at((var6 + 2)) + (this->field_722->field_39 >> 3);
+                this->field_718->at(var6) = this->field_718->at(var6) + org::deep3d::Step::share((this->field_722->field_37 >> 3), this->deep3dMove[var6]);
+                this->field_718->at((var6 + 1)) = this->field_718->at((var6 + 1)) + org::deep3d::Step::share((this->field_722->field_38 >> 3), this->deep3dMove[var6 + 1]);
+                this->field_718->at((var6 + 2)) = this->field_718->at((var6 + 2)) + org::deep3d::Step::share((this->field_722->field_39 >> 3), this->deep3dMove[var6 + 2]);
             }
         }
     }

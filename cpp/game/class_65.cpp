@@ -143,16 +143,16 @@ void class_65::method_549(int32_t var1) {
         if (this->field_836 != nullptr) {
             this->field_836->method_846(this->field_830->field_274->at(this->field_833)->method_799(this->field_832));
             if ((var1 & 2) != 0) {
-                this->field_836->method_860(int32_t(this->field_820), 0, 0);
+                this->field_836->method_860((org::deep3d::Step::exact() ? int32_t(this->field_820) : org::deep3d::Step::share(33.0, this->deep3dTurn[0])), 0, 0);
             }
             if ((var1 & 64) != 0) {
-                this->field_836->method_860((-int32_t(this->field_820)), 0, 0);
+                this->field_836->method_860((org::deep3d::Step::exact() ? (-int32_t(this->field_820)) : org::deep3d::Step::share(-33.0, this->deep3dTurn[0])), 0, 0);
             }
             if ((var1 & 4) != 0) {
-                this->field_836->method_860(0, int32_t(this->field_820), 0);
+                this->field_836->method_860(0, (org::deep3d::Step::exact() ? int32_t(this->field_820) : org::deep3d::Step::share(33.0, this->deep3dTurn[1])), 0);
             }
             if ((var1 & 32) != 0) {
-                this->field_836->method_860(0, (-int32_t(this->field_820)), 0);
+                this->field_836->method_860(0, (org::deep3d::Step::exact() ? (-int32_t(this->field_820)) : org::deep3d::Step::share(-33.0, this->deep3dTurn[1])), 0);
             }
         }
         if (this->field_834 != nullptr) {

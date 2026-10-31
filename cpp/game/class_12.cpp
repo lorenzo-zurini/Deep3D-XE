@@ -24,11 +24,11 @@ bool class_12::method_60(int32_t var1, int32_t var2) {
     if (this->field_119 > 200) {
         if ((var1 & 2) != 0) {
             this->field_119 = 0;
-            this->field_118->method_230(var2);
+            this->field_118->method_230(org::deep3d::Step::once(var2));
         }
         if ((var1 & 64) != 0) {
             this->field_119 = 0;
-            this->field_118->method_229(var2);
+            this->field_118->method_229(org::deep3d::Step::once(var2));
         }
     }
     this->method_61();

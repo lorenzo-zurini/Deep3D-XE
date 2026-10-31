@@ -16,6 +16,8 @@ void class_9::__init(int32_t var1, int32_t var2, int32_t var3, int32_t var4, int
     this->field_86 = var4;
     this->field_91 = var5;
     this->field_90 = 0;
+    this->deep3dVel.assign(size_t(var2) * 3, 0.0);
+    this->deep3dCarry.assign(size_t(var2) * 3, 0.0);
     this->field_83 = jrt::newArray<int32_t>(var2);
     this->field_78 = jrt::newArray<jrt::Ref<class_3>>(var2);
     this->field_79 = jrt::newArray<jrt::Ref<class_3>>(var2);
@@ -92,10 +94,15 @@ bool class_9::method_45(jrt::Ref<class_57> var1, int64_t var2, jrt::Ref<class_37
                 }
                 this->field_79->at(var6)->method_9(this->field_89);
                 this->field_79->at(var6)->method_22();
-                this->field_79->at(var6)->method_18((jrt::f2i((this->field_85 * float(var2))) << 12));
+                // Deep3D-PC: a shot's velocity was the frame's when it fired, and it moved by that every
+                // frame after: here it is one original step's, and each frame moves its share
+                this->field_79->at(var6)->method_18((jrt::f2i((this->field_85 * float(org::deep3d::Step::once(int32_t(var2))))) << 12));
                 this->field_79->at(var6)->field_37 >>= 12;
                 this->field_79->at(var6)->field_38 >>= 12;
                 this->field_79->at(var6)->field_39 >>= 12;
+                this->deep3dVel[3 * var6] = this->field_79->at(var6)->field_37;
+                this->deep3dVel[3 * var6 + 1] = this->field_79->at(var6)->field_38;
+                this->deep3dVel[3 * var6 + 2] = this->field_79->at(var6)->field_39;
                 this->field_83->at(var6) = this->field_86;
                 return true;
             }
@@ -117,9 +124,11 @@ void class_9::method_47() {
                 for (int32_t var2 = 0; var2 < this->field_78->length; var2++) {
                     this->field_80->method_9(this->field_78->at(var2));
                     this->field_81->method_9(this->field_79->at(var2));
-                    int32_t var3 = (this->field_82->field_377->field_698 - this->field_80->field_37) + this->field_81->field_37;
-                    int32_t var4 = (this->field_82->field_377->field_699 - this->field_80->field_38) + this->field_81->field_38;
-                    int32_t var5 = (this->field_82->field_377->field_700 - this->field_80->field_39) + this->field_81->field_39;
+                    // Deep3D-PC: tests where the shot is after this frame's move
+                    double deep3dNext = org::deep3d::Step::exact() ? 1.0 : org::deep3d::Step::scale();
+                    int32_t var3 = (this->field_82->field_377->field_698 - this->field_80->field_37) + int32_t(this->field_81->field_37 * deep3dNext);
+                    int32_t var4 = (this->field_82->field_377->field_699 - this->field_80->field_38) + int32_t(this->field_81->field_38 * deep3dNext);
+                    int32_t var5 = (this->field_82->field_377->field_700 - this->field_80->field_39) + int32_t(this->field_81->field_39 * deep3dNext);
                     int32_t var6 = this->field_97 ? this->field_99 : jrt::f2i(this->field_82->field_362);
                     if ((((((var3 < var6) && (var3 > (-var6))) && (var4 < var6)) && (var4 > (-var6))) && (var5 < var6)) && (var5 > (-var6))) {
                         if (class_9::DEEP3D_LOG) {
@@ -173,7 +182,13 @@ void class_9::method_49(int64_t var1) {
         for (int32_t var3 = 0; var3 < this->field_78->length; var3++) {
             if (this->field_83->at(var3) > 0) {
                 this->field_83->at(var3) = this->field_83->at(var3) - int32_t(var1);
-                this->field_78->at(var3)->method_15(this->field_79->at(var3));
+                if (org::deep3d::Step::exact()) {
+                    this->field_78->at(var3)->method_15(this->field_79->at(var3));
+                } else {
+                    this->field_78->at(var3)->field_37 += org::deep3d::Step::share(this->deep3dVel[3 * var3], this->deep3dCarry[3 * var3]);
+                    this->field_78->at(var3)->field_38 += org::deep3d::Step::share(this->deep3dVel[3 * var3 + 1], this->deep3dCarry[3 * var3 + 1]);
+                    this->field_78->at(var3)->field_39 += org::deep3d::Step::share(this->deep3dVel[3 * var3 + 2], this->deep3dCarry[3 * var3 + 2]);
+                }
             } else {
                 this->field_78->at(var3)->method_10(50000, 50000, 50000);
                 this->field_79->at(var3)->method_10(0, 0, 0);

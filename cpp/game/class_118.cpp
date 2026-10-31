@@ -99,7 +99,7 @@ bool class_118::method_913(int32_t var1, jrt::Ref<class_42> var2, jrt::Ref<class
                 }
             }
         } else if (class_26::field_301) {
-            this->field_1451->method_10(0, 0, ((-10) * var1));
+            this->field_1451->method_10(0, 0, (org::deep3d::Step::exact() ? ((-10) * var1) : org::deep3d::Step::share(-330.0, this->deep3dBack)));   // Deep3D-PC
             this->field_1453 = this->field_1443->field_272->field_970->field_1341->method_508(this->field_1451, this->field_1453);
             class_84::field_1110->field_40->method_844(this->field_1453);
             if ((this->field_1449 > 3500) && (!this->field_1450)) {
@@ -225,8 +225,9 @@ bool class_118::method_913(int32_t var1, jrt::Ref<class_42> var2, jrt::Ref<class
                     }
                 }
                 if (this->field_1444 == 3) {
-                    this->field_1455 += (var1 / 4);
-                    (jrt::cast<class_100>(this->field_1443->field_276->at(0)))->method_827(0, ((var1 * 2) + this->field_1455), 0);
+                    // Deep3D-PC: it gathers speed per frame, and var1 / 4 is 0 under 4 ms: per step, a share
+                    this->field_1455 += (org::deep3d::Step::exact() ? (var1 / 4) : org::deep3d::Step::share(8.0, this->deep3dGather));
+                    (jrt::cast<class_100>(this->field_1443->field_276->at(0)))->method_827(0, (org::deep3d::Step::exact() ? ((var1 * 2) + this->field_1455) : org::deep3d::Step::share((66 + this->field_1455), this->deep3dLift)), 0);
                     if (this->field_1443->field_280->at(12)->field_185) {
                         this->field_1444 = 4;
                         this->field_1448->field_53 = true;
@@ -271,7 +272,7 @@ bool class_118::method_913(int32_t var1, jrt::Ref<class_42> var2, jrt::Ref<class
                     this->field_1443->field_272->method_670(44000, (-5000), 1000);
                 }
                 if (this->field_1444 == 8) {
-                    class_69::method_636(1);
+                    class_69::method_636(org::deep3d::Step::share(1.0, this->deep3dCredits));   // Deep3D-PC: a line a step
                     if (class_69::method_637()) {
                         this->field_1444 = 9;
                     }

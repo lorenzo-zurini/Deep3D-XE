@@ -20,6 +20,7 @@ int64_t class_67::field_859{};
 int32_t class_67::field_860{};
 bool class_67::field_861{};
 bool class_67::field_862{};
+double class_67::deep3dLockSteps{};
 
 void class_67::__clinit() {
     class_67::field_844 = (-11955272);
@@ -227,7 +228,7 @@ bool class_67::method_595() {
 }
 
 void class_67::method_596() {
-    class_67::field_860--;
+    class_67::field_860 -= org::deep3d::Step::steps(class_67::deep3dLockSteps);
 }
 
 void class_67::method_597(bool var0) {

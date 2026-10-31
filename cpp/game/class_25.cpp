@@ -37,7 +37,7 @@ void class_25::method_237(int32_t var1, int32_t var2, int32_t var3, int32_t var4
     bool var5 = false;
     for (int32_t var6 = 0; var6 < this->field_255->length; var6 += 3) {
         this->field_259 = var6 / 3;
-        if (((this->field_256->at(this->field_259) <= 0) && (!var5)) && (this->field_260 > 100)) {
+        if (((this->field_256->at(this->field_259) <= 0) && (!var5)) && org::deep3d::Step::past(this->field_260, 100)) {
             this->field_260 = 0;
             this->field_258->at(this->field_259) = 4096;
             this->field_255->at(var6) = var1;
@@ -48,7 +48,7 @@ void class_25::method_237(int32_t var1, int32_t var2, int32_t var3, int32_t var4
             var5 = true;
         } else {
             this->field_256->at(this->field_259) = this->field_256->at(this->field_259) - var4;
-            this->field_255->at((var6 + 1)) = this->field_255->at((var6 + 1)) + this->field_257->at(this->field_259);
+            this->field_255->at((var6 + 1)) = this->field_255->at((var6 + 1)) + org::deep3d::Step::share(this->field_257->at(this->field_259), this->deep3dRise[this->field_259]);   // Deep3D-PC
             this->field_258->at(this->field_259) = jrt::f2i(((float(this->field_256->at(this->field_259)) / 2000.0f) * 4096.0f));
         }
     }

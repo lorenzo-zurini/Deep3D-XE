@@ -57,14 +57,14 @@ bool class_17::method_103(int32_t var1) {
         if (this->field_159 == 0) {
             this->field_155->method_704();
         } else if (this->field_159 == 2) {
-            this->field_156->method_52(this->field_152);
+            this->field_156->method_52(org::deep3d::Step::once(this->field_152));
         }
     }
     if (var1 == 64) {
         if (this->field_159 == 0) {
             this->field_155->method_705();
         } else if (this->field_159 == 2) {
-            this->field_156->method_53(this->field_152);
+            this->field_156->method_53(org::deep3d::Step::once(this->field_152));
         }
     }
     if (var1 == 8192) {

@@ -60,8 +60,14 @@ void class_113::method_895(int64_t var1) {
             this->method_904(var1);
         }
         class_113::field_1415->method_9(this->class_112::field_1409->field_78->at(0));
-        this->field_1413->method_236(class_113::field_1415, (int32_t(var1) / 4));
-        this->field_1414->method_733(class_113::field_1415);
+        // Deep3D-PC: the trail runs at a quarter of the time: 0 under 4 ms, so a share of a step's;
+        // the ribbon moves on once a step (11 links: as long at any frame rate), its head always
+        this->field_1413->method_236(class_113::field_1415, (org::deep3d::Step::exact() ? (int32_t(var1) / 4) : org::deep3d::Step::share(8.0, this->deep3dFeed)));
+        if (org::deep3d::Step::steps(this->deep3dRibbon) > 0) {
+            this->field_1414->method_733(class_113::field_1415);
+        } else {
+            this->field_1414->deep3dHead(class_113::field_1415);
+        }
         if (class_113::field_1415->field_39 == 50000) {
             this->class_112::field_1409->field_92 = false;
         }
@@ -91,6 +97,10 @@ void class_113::method_904(int64_t var1) {
             return;
         }
         class_113::field_1415 = var3->at(var4)->method_344(class_113::field_1415);
+        if (!org::deep3d::Step::exact()) {
+            this->deep3dHome();
+            return;
+        }
         class_112::field_1412->field_37 = class_113::field_1415->field_37 - this->class_112::field_1409->field_78->at(0)->field_37;
         class_112::field_1412->field_38 = class_113::field_1415->field_38 - this->class_112::field_1409->field_78->at(0)->field_38;
         class_112::field_1412->field_39 = class_113::field_1415->field_39 - this->class_112::field_1409->field_78->at(0)->field_39;
@@ -104,6 +114,26 @@ void class_113::method_904(int64_t var1) {
         this->class_112::field_1409->field_79->at(0)->field_38 >>= 12;
         this->class_112::field_1409->field_79->at(0)->field_39 >>= 12;
     }
+}
+
+/* Deep3D-PC: homing bends the velocity toward the target by dt / 4096 of the
+   way, and the velocity's length was the frame's: per frame the same angle at
+   any dt, so at 300 FPS ten times the turn. Here the velocity is the step's,
+   as it is at 33 ms, and each frame bends it by its share. In doubles: a
+   frame's bend is a fraction of a unit. */
+void class_113::deep3dHome() {
+    jrt::Ref<class_9> s = this->class_112::field_1409;
+    double* v = s->deep3dVel.data();
+    double k = 33.0 * org::deep3d::Step::scale() / 4096.0;
+    v[0] += (double(class_113::field_1415->field_37 - s->field_78->at(0)->field_37) - v[0]) * k;
+    v[1] += (double(class_113::field_1415->field_38 - s->field_78->at(0)->field_38) - v[1]) * k;
+    v[2] += (double(class_113::field_1415->field_39 - s->field_78->at(0)->field_39) - v[2]) * k;
+    double len = std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    if (len > 0.0) {
+        double speed = double(jrt::f2i((s->field_85 * float(33)))) / len;
+        v[0] *= speed, v[1] *= speed, v[2] *= speed;
+    }
+    s->field_79->at(0)->method_10(int32_t(std::lround(v[0])), int32_t(std::lround(v[1])), int32_t(std::lround(v[2])));
 }
 
 void class_113::__dumpFields(jrt::Dumper& d) {

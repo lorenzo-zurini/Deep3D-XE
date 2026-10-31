@@ -239,6 +239,96 @@ void class_57::method_486(int32_t var1, int32_t var2, int32_t var3) {
     this->method_491(this->field_701, this->field_702, this->field_703);
 }
 
+/* Deep3D-PC: a turn about one of the axes (0 x, 1 y, 2 z), in the game's units
+   of 4096 a circle, as method_489, method_488 and method_487 and a method_491
+   by method_472 do it. A frame's share of a turn can be a unit or less, and
+   those lose it: their terms are (sin * axis) >> 12, and sin(1) is 6, so 12
+   bits of axes round away a good part of each turn. Here the axes turn in
+   doubles, and the ints follow; if anything else moved them, the doubles start
+   again from there. */
+void class_57::deep3dTurn(int32_t axis, double units) {
+    this->deep3dAxesNow();
+    double* d = this->deep3dAxes;
+    double angle = units * 3.141592653589793 / 2048.0, c = std::cos(angle), s = std::sin(angle);
+    const double* a = d + axis * 3;
+    for (int32_t k = 1; k < 3; k++) {
+        double* v = d + ((axis + k) % 3) * 3;
+        double dot = a[0] * v[0] + a[1] * v[1] + a[2] * v[2];
+        double x = v[0] * c + (a[1] * v[2] - a[2] * v[1]) * s + a[0] * dot * (1.0 - c);
+        double y = v[1] * c + (a[2] * v[0] - a[0] * v[2]) * s + a[1] * dot * (1.0 - c);
+        double z = v[2] * c + (a[0] * v[1] - a[1] * v[0]) * s + a[2] * dot * (1.0 - c);
+        double n = std::sqrt(x * x + y * y + z * z);
+        v[0] = x / n, v[1] = y / n, v[2] = z / n;
+    }
+    this->deep3dAxesOut();
+    this->field_704 = true;
+}
+
+/* The doubles, started again from the ints if anything else moved those. */
+void class_57::deep3dAxesNow() {
+    int32_t* m[9] = {&this->field_689, &this->field_690, &this->field_691, &this->field_692, &this->field_693,
+                     &this->field_694, &this->field_695, &this->field_696, &this->field_697};
+    double* d = this->deep3dAxes;
+    for (int32_t i = 0; i < 9; i++) {
+        if (std::lround(d[i] * 4096.0) != *m[i]) {
+            for (int32_t a = 0; a < 9; a += 3) {
+                double x = *m[a], y = *m[a + 1], z = *m[a + 2];
+                double n = std::sqrt(x * x + y * y + z * z);
+                n = n > 0.0 ? n : 1.0;
+                d[a] = x / n, d[a + 1] = y / n, d[a + 2] = z / n;
+            }
+            return;
+        }
+    }
+}
+
+void class_57::deep3dAxesOut() {
+    int32_t* m[9] = {&this->field_689, &this->field_690, &this->field_691, &this->field_692, &this->field_693,
+                     &this->field_694, &this->field_695, &this->field_696, &this->field_697};
+    for (int32_t i = 0; i < 9; i++) {
+        *m[i] = int32_t(std::lround(this->deep3dAxes[i] * 4096.0));
+    }
+}
+
+/* Deep3D-PC: steering: the heading plus a vector (by: 4096 = 1) of the given
+   length in 1/4096, then the axes again with up up, as method_512. A frame's
+   length is 1 to 16 where a step's was 40 to 165: its (length * c) >> 12 has
+   few bits left, less the closer the heading is, and the steer dies out short
+   of the target. In doubles the fraction stays. */
+void class_57::deep3dBend(jrt::Ref<class_3> by, double length) {
+    this->deep3dAxesNow();
+    double* d = this->deep3dAxes;
+    double k = length / (4096.0 * 4096.0);
+    double zx = d[6] + by->field_37 * k, zy = d[7] + by->field_38 * k, zz = d[8] + by->field_39 * k;
+    double n = std::sqrt(zx * zx + zy * zy + zz * zz);
+    if (n <= 0.0) {
+        return;
+    }
+    zx /= n, zy /= n, zz /= n;
+    double xx = zz, xz = -zx;
+    n = std::sqrt(xx * xx + xz * xz);
+    if (n <= 0.0) {
+        return;
+    }
+    xx /= n, xz /= n;
+    d[0] = xx, d[1] = 0.0, d[2] = xz;
+    d[3] = zy * xz, d[4] = zz * xx - zx * xz, d[5] = -zy * xx;
+    d[6] = zx, d[7] = zy, d[8] = zz;
+    this->deep3dAxesOut();
+}
+
+/* Deep3D-PC: method_478 for a frame's share of a move. Its (axis * n) >> 12
+   floors each of x, y and z once a call: nothing at a step's 66 units, but ten
+   calls of 6 or 7 lose a tenth of the speed on a diagonal, none along an axis */
+void class_57::deep3dGo(double units) {
+    double x = this->field_695 * units / 4096.0 + this->deep3dGoLeft[0];
+    double y = this->field_696 * units / 4096.0 + this->deep3dGoLeft[1];
+    double z = this->field_697 * units / 4096.0 + this->deep3dGoLeft[2];
+    int32_t wx = int32_t(x), wy = int32_t(y), wz = int32_t(z);
+    this->deep3dGoLeft[0] = x - wx, this->deep3dGoLeft[1] = y - wy, this->deep3dGoLeft[2] = z - wz;
+    this->field_698 += wx, this->field_699 += wy, this->field_700 += wz;
+}
+
 void class_57::method_487(int32_t var1) {
     int32_t var2 = class_16::method_91(var1);
     int32_t var3 = class_16::method_92(var1);

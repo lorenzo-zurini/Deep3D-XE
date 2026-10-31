@@ -79,6 +79,16 @@ void class_23::method_230(int32_t var1) {
     }
 }
 
+/* Deep3D-PC: while a key is held these run every frame, and dt / 10 is 0 under
+   10 ms: the text moves a step's share */
+void class_23::deep3dHeldDown(int32_t var1, int32_t perStep) {
+    this->method_229(org::deep3d::Step::exact() ? var1 : (10 * org::deep3d::Step::share(perStep, this->deep3dScroll)));
+}
+
+void class_23::deep3dHeldUp(int32_t var1, int32_t perStep) {
+    this->method_230(org::deep3d::Step::exact() ? var1 : (10 * org::deep3d::Step::share(perStep, this->deep3dScroll)));
+}
+
 void class_23::method_231() {
     org::deep3d::GameUi::scrollArea(this->field_228, this->field_229, this->field_230, this->field_231, false);
     class_84::field_1117->setColor(class_67::field_844);

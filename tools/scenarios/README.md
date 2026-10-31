@@ -23,6 +23,15 @@ the per-frame hash of the whole game state with `golden/<scenario>.det`
 (`UPDATE=1` makes the run the golden one). `golden/smoke.det` matched the
 original Java build frame for frame.
 
+`steptest.sh [out] [frame times]` checks that game time does not depend on
+the frame time: `steptest.scn` runs at each forced frame time and `steptest.py`
+compares what the world did (distance flown, degrees turned, the camera's
+distance, ships, creatures, mines, shots, the gate's spin, bubbles).
+`DEEP3D_DET=1 DEEP3D_STEP_MS=<ms>` gives a run a virtual clock at that frame
+time: `Step::exact()` is false, so every share and carry runs, repeatably, and
+a script's frames count original steps of 33 ms. `DEEP3D_STEP_TRACE=1` writes
+`trace.tsv`, one line per original step of game time.
+
 ## Scenario commands
 
 One per line, `#` comments, `include <file>` (relative to the script).
@@ -56,7 +65,7 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `shot <name>` | a screenshot, logged to metrics.tsv with state, FPS and the sub's heading |
 | `pair <name>` | the same moment in Remastered and Enhanced (`<name>__alt`), without particles |
 | `describe` | log what the UI layer sees (rows, buttons, bar) |
-| `clock <ms>` | deterministic runs: the clock's step per pass from now on (2: as at 500 FPS) |
+| `clock <ms>` | deterministic runs: the frame time from now on, as `DEEP3D_STEP_MS` (2: as at 500 FPS; 33: back to the original step) |
 | `bench <label> <frames>`, `benchdone` | time the next frames (`<out>/bench.tsv`, frame times as CSV); wait until done (`Deep3D-XE --bench` uses them) |
 
 ## What the report checks

@@ -5,6 +5,11 @@ jrt::Ref<jrt::Array<int32_t>> class_55::field_598{};
 jrt::Ref<jrt::Array<int32_t>> class_55::field_599{};
 jrt::Ref<jrt::Array<jrt::Ref<jrt::Array<int32_t>>>> class_55::field_600{};
 
+/* Deep3D-PC: a slide's per-step amount, this frame's share */
+static float deep3dShare(float perStep) {
+    return org::deep3d::Step::exact() ? perStep : float(perStep * org::deep3d::Step::scale());
+}
+
 void class_55::__clinit() {
     class_55::field_598 = jrt::arrayOf<int32_t>({(-16755805), (-16752451), (-16748839), (-14382613), (-10046209), (-8207873), (-5253121), (-3677185)});
     class_55::field_599 = jrt::arrayOf<int32_t>({(-6697217), (-8864001), (-11360014), (-14448148), (-16748839), (-16752443)});
@@ -253,7 +258,9 @@ bool class_55::method_447(int32_t var1) {
                 this->field_627->at((2 * var11)) = int16_t((this->field_606 + jrt::f2i((var13 * float(this->field_604)))));
                 this->field_627->at(((2 * var11) + 1)) = int16_t((this->field_618->at(1) + jrt::f2i(((float(this->field_624->at(var11)->field_1137) / 100.0f) * float((this->field_605 - (2 * this->field_618->at(11))))))));
             }
-            float var12 = 1000.0f / float(this->field_602);
+            // Deep3D-PC: a second's worth of frames as long as the one of the key press: of steps,
+            // and a frame moves its share (with no ms in the frame this was a slide that never ended)
+            float var12 = 1000.0f / float(org::deep3d::Step::once(this->field_602));
             this->field_616 = (((float((this->field_606 + this->field_604)) - this->field_608) - float(this->field_610)) - 4.0f) / var12;
             this->field_617 = (((float((((this->field_607 + this->field_605) + this->field_611) + 8)) - this->field_609) - float(this->field_611)) - 4.0f) / var12;
             this->field_614 = this->field_608;
@@ -578,14 +585,14 @@ void class_55::method_451() {
             class_84::field_1117->fillRect(this->field_606, this->field_607, this->field_604, ((this->field_605 + this->field_611) + 8));
             this->method_453(jrt::f2i(this->field_614), jrt::f2i(this->field_615), this->field_610, this->field_611, this->field_672);
             if (this->field_614 < float((((this->field_606 + this->field_604) - this->field_610) - 4))) {
-                this->field_614 = this->field_614 + this->field_616;
+                this->field_614 = this->field_614 + deep3dShare(this->field_616);
             }
             if (this->field_615 < float((((((this->field_607 + this->field_605) + this->field_611) + 8) - this->field_611) - 4))) {
-                this->field_615 = this->field_615 + this->field_617;
+                this->field_615 = this->field_615 + deep3dShare(this->field_617);
             }
             for (int32_t var15 = 0; var15 < this->field_628->length; var15 += 2) {
-                this->field_628->at(var15) = this->field_628->at(var15) + this->field_616;
-                this->field_628->at((var15 + 1)) = this->field_628->at((var15 + 1)) + this->field_617;
+                this->field_628->at(var15) = this->field_628->at(var15) + deep3dShare(this->field_616);
+                this->field_628->at((var15 + 1)) = this->field_628->at((var15 + 1)) + deep3dShare(this->field_617);
                 int32_t var25 = this->field_624->at((var15 >> 1))->field_1134;
                 jrt::Ref<javax::microedition::lcdui::Image> var30 = this->field_662->at(var25) ? (this->field_663->at(var25) ? this->field_637 : this->field_636) : (this->field_663->at(var25) ? this->field_635 : this->field_634);
                 class_84::field_1117->drawImage(var30, jrt::f2i(this->field_628->at(var15)), jrt::f2i(this->field_628->at((var15 + 1))), 3);
@@ -766,14 +773,14 @@ void class_55::method_451() {
             class_84::field_1117->fillRect(this->field_606, this->field_607, this->field_604, this->field_605);
             this->method_453(jrt::f2i(this->field_614), jrt::f2i(this->field_615), this->field_610, this->field_611, this->field_672);
             if (this->field_608 < this->field_614) {
-                this->field_614 = this->field_614 + this->field_616;
+                this->field_614 = this->field_614 + deep3dShare(this->field_616);
             }
             if (this->field_609 < this->field_615) {
-                this->field_615 = this->field_615 + this->field_617;
+                this->field_615 = this->field_615 + deep3dShare(this->field_617);
             }
             for (int32_t var3 = 0; var3 < this->field_628->length; var3 += 2) {
-                this->field_628->at(var3) = this->field_628->at(var3) + this->field_616;
-                this->field_628->at((var3 + 1)) = this->field_628->at((var3 + 1)) + this->field_617;
+                this->field_628->at(var3) = this->field_628->at(var3) + deep3dShare(this->field_616);
+                this->field_628->at((var3 + 1)) = this->field_628->at((var3 + 1)) + deep3dShare(this->field_617);
                 int32_t var4 = this->field_624->at((var3 >> 1))->field_1134;
                 jrt::Ref<javax::microedition::lcdui::Image> var5 = this->field_662->at(var4) ? (this->field_663->at(var4) ? this->field_637 : this->field_636) : (this->field_663->at(var4) ? this->field_635 : this->field_634);
                 class_84::field_1117->drawImage(var5, jrt::f2i(this->field_628->at(var3)), jrt::f2i(this->field_628->at((var3 + 1))), 3);

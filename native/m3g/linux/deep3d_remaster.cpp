@@ -1309,10 +1309,34 @@ static void addGlow(const float *eye, float r, const float *c, int drawn) {
     }
 }
 
+/* the glows in use lately: one ahead of its rivals stays so for a moment, or
+   two of about the same score take turns, a light popping on and off a frame */
+#define GLOW_HOLD 0.35f
+#define GLOW_HOLD_GAIN 1.4f
+static float glowHeld[GLOW_USE][4];   /* xyz, the time it was last in use */
+static const bool glowHeldOn = !getenv("DEEP3D_DET") || getenv("DEEP3D_STEP_MS");
+
+static void holdGlow(const float *p, float t) {
+    int slot = 0;
+    for (int h = 0; h < GLOW_USE; h++) {
+        float dx = p[0] - glowHeld[h][0], dy = p[1] - glowHeld[h][1], dz = p[2] - glowHeld[h][2];
+        if (dx * dx + dy * dy + dz * dz < 200.0f * 200.0f) {
+            slot = h;
+            break;
+        }
+        if (glowHeld[h][3] < glowHeld[slot][3]) {
+            slot = h;
+        }
+    }
+    memcpy(glowHeld[slot], p, sizeof(float) * 3);
+    glowHeld[slot][3] = t;
+}
+
 /* the glows that matter most (bright, big, near the camera) for lighting
    and the post pass */
 static void chooseGlows() {
     const float *cam = F + F_CAM + 12;
+    const float now = F[F_TIME];
     float score[GLOW_MAX];
     for (int i = 0; i < glowNextN; i++) {
         Glow *g = &glowNext[i];
@@ -1321,6 +1345,14 @@ static void chooseGlows() {
         float lum = fmaxf(g->c[0], fmaxf(g->c[1], g->c[2]));
         float reach = g->r * 12.0f;
         score[i] = lum * reach * reach / (reach * reach + d2 * 0.05f);
+        for (int h = 0; glowHeldOn && h < GLOW_USE; h++) {
+            float hx = g->p[0] - glowHeld[h][0], hy = g->p[1] - glowHeld[h][1], hz = g->p[2] - glowHeld[h][2];
+            float age = now - glowHeld[h][3];
+            if (age >= 0.0f && age < GLOW_HOLD && hx * hx + hy * hy + hz * hz < 200.0f * 200.0f) {
+                score[i] *= GLOW_HOLD_GAIN;
+                break;
+            }
+        }
     }
     glowUseN = 0;
     for (int n = 0; n < GLOW_USE; n++) {
@@ -1335,6 +1367,9 @@ static void chooseGlows() {
         }
         score[best] = 0;
         Glow *g = &glowNext[best];
+        if (glowHeldOn) {
+            holdGlow(g->p, now);
+        }
         memcpy(glowUseP + n * 4, g->p, sizeof(float) * 3);
         glowUseP[n * 4 + 3] = g->r * 12.0f;    /* a light reaches 12x its core */
         for (int j = 0; j < 3; j++) glowUseC[n * 4 + j] = g->c[j] * (g->effect ? 0.7f : 2.2f);

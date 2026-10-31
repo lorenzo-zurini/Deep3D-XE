@@ -222,10 +222,10 @@ bool class_36::method_317(int32_t var1, int32_t var2) {
         return true;
     } else {
         if (((var1 & 2) != 0) && (this->field_355 == 1)) {
-            this->field_351->method_52(var2);
+            this->field_351->deep3dHeldUp(var2);
         }
         if (((var1 & 64) != 0) && (this->field_355 == 1)) {
-            this->field_351->method_53(var2);
+            this->field_351->deep3dHeldDown(var2);
         }
         this->method_320();
         return true;

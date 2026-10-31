@@ -209,11 +209,7 @@ void class_111::method_887() {
         class_111::field_1400->set(class_111::field_1401);
         if (this->field_1393 > 0) {
             for (int32_t var2 = 0; var2 < this->field_1402->length; var2++) {
-                if (int32_t(this->field_1399) == 3) {
-                    this->field_1402->at(var2)->animate((this->field_1395 - this->field_1396));
-                } else {
-                    this->field_1402->at(var2)->animate(this->field_1396);
-                }
+                this->deep3dAnimate(jrt::Ref<javax::microedition::m3g::Object3D>(this->field_1402->at(var2)));
                 class_72::field_1016->render(this->field_1402->at(var2), class_111::field_1400);
             }
             return;
@@ -230,11 +226,7 @@ void class_111::method_888() {
         class_111::field_1400->set(class_111::field_1401);
         if (this->field_1393 > 0) {
             for (int32_t var2 = 0; var2 < this->field_1403->length; var2++) {
-                if (int32_t(this->field_1399) == 3) {
-                    this->field_1403->at(var2)->animate((this->field_1395 - this->field_1396));
-                } else {
-                    this->field_1403->at(var2)->animate(this->field_1396);
-                }
+                this->deep3dAnimate(jrt::Ref<javax::microedition::m3g::Object3D>(this->field_1403->at(var2)));
                 class_72::field_1016->render(this->field_1403->at(var2), class_111::field_1400);
             }
             return;
@@ -251,7 +243,10 @@ void class_111::method_895(int64_t var1) {
             this->field_1397 = var1;
         }
         this->field_1396 = this->field_1394 + int32_t(jrt::div((var1 - this->field_1397), int64_t(this->class_102::field_1335)));
+        // Deep3D-PC: how far past the whole frame: what plays smoothly at high frame rates
+        this->deep3dFraction = org::deep3d::Step::exact() ? 0.0f : float((var1 - this->field_1397) % int64_t(this->class_102::field_1335)) / float(this->class_102::field_1335);
         if (this->field_1396 > this->field_1395) {
+            this->deep3dFraction = 0.0f;
             if (int32_t(this->field_1399) == 2) {
                 this->field_1396 = this->field_1394;
                 this->field_1397 = var1 - int64_t(((this->field_1396 - this->field_1394) * this->class_102::field_1335));
@@ -262,6 +257,21 @@ void class_111::method_895(int64_t var1) {
             this->field_1397 = int64_t(-1);
         }
     }
+}
+
+/* Deep3D-PC: Object3D.animate, at a time between two whole frames. The last
+   frame has nothing after it to go to */
+void class_111::deep3dAnimate(jrt::Ref<javax::microedition::m3g::Object3D> o) {
+    float f = (this->field_1398 && (this->field_1396 < this->field_1395)) ? this->deep3dFraction : 0.0f;
+    bool back = int32_t(this->field_1399) == 3;
+    int32_t frame = back ? (this->field_1395 - this->field_1396) : this->field_1396;
+    if (back && (f > 0.0f)) {
+        frame -= 1;
+        f = 1.0f - f;
+    }
+    javax::microedition::m3g::Object3D::setAnimationFraction(f);
+    o->animate(frame);
+    javax::microedition::m3g::Object3D::setAnimationFraction(0.0f);
 }
 
 int32_t class_111::method_875() {

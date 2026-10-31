@@ -123,7 +123,7 @@ void class_114::method_895(int64_t var1) {
                     return;
                 }
                 this->field_1422->method_22();
-                this->field_1422->method_18((int32_t(var1) * 10));
+                this->field_1422->method_18((org::deep3d::Step::exact() ? (int32_t(var1) * 10) : org::deep3d::Step::share(330.0, this->deep3dPull)));   // Deep3D-PC
                 this->field_1424->method_844(this->field_1422);
             } else if (this->class_112::field_1409->field_96->field_1238) {
                 this->class_112::field_1409->field_78->at(0)->method_9(this->field_1424->method_848(this->field_1422));

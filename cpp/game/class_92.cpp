@@ -38,7 +38,13 @@ void class_92::method_805(int64_t var1) {
     {
         switch (int32_t(this->class_91::field_1224)) {
         case 0:
-            this->class_91::field_1226->method_843(0, (this->field_1241 + (this->field_1242++)), 0);
+            if (org::deep3d::Step::exact()) {
+                this->class_91::field_1226->method_843(0, (this->field_1241 + (this->field_1242++)), 0);
+            } else {
+                // Deep3D-PC: speeds up by one unit a step, not a frame
+                this->class_91::field_1226->method_843(0, org::deep3d::Step::share((33 + this->field_1242), this->deep3dRise), 0);
+                this->field_1242 += org::deep3d::Step::steps(this->deep3dSteps);
+            }
             if (this->class_91::field_1226->method_853() > 75000) {
                 this->method_810();
                 return;

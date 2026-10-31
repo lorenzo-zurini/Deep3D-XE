@@ -214,7 +214,80 @@ int32_t Deep3dDebug::warp(int32_t n) {
     return st->field_1140;
 }
 
+/* DEEP3D_STEP_TRACE=1: what the world did, once per original step of game time,
+   in <scenario out>/trace.tsv: runs at different frame times are compared by
+   tools/scenarios/steptest.py. One object of each kind that moves on its own:
+   x y z of each, or - while there is none. */
+static void stepTrace() {
+    static const bool on = getenv("DEEP3D_STEP_TRACE") != nullptr;
+    static FILE* out = nullptr;
+    static double acc = 0;
+    if (!on || org::deep3d::Step::steps(acc) == 0) return;
+    auto* flight = dynamic_cast<class_64*>(currentScene().get());
+    Ref<class_26> w = world();
+    if (!flight || !w || !flight->field_787 || !flight->field_787->field_970 || !flight->field_790) return;
+    if (!out) {
+        const char* dir = getenv("DEEP3D_SCENARIO_OUT");
+        out = fopen(((dir ? std::string(dir) : std::string(".")) + "/trace.tsv").c_str(), "w");
+        if (!out) return;
+        fputs("ms\tsub\tfwd\tcam\tbank\tship\tbig\tcreature\tmine\tshot\tgate\tbubble\treload\n", out);
+    }
+    auto triple = [](int32_t x, int32_t y, int32_t z) {
+        return std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z);
+    };
+    auto first = [&](auto isKind) -> std::string {
+        Ref<jrt::Array<Ref<class_91>>> lists[] = {w->field_273, w->field_274, w->field_275, w->field_276};
+        for (auto& list : lists) {
+            if (!list) continue;
+            for (int32_t i = 0; i < list->length; i++) {
+                Ref<class_91> o = list->at(i);
+                if (o && o->field_1226 && o->field_1224 != 3 && o->field_1224 != 4 && isKind(o)) {
+                    return std::to_string(i) + " " + triple(o->field_1226->method_852(), o->field_1226->method_853(), o->field_1226->method_854());
+                }
+            }
+        }
+        return "-";
+    };
+    Ref<class_70> me = flight->field_787;
+    Ref<class_57> axes = me->field_970->field_1341;
+    Ref<class_3> cam = flight->field_790->field_457;
+    std::string shot = "-";
+    Ref<class_37> guns = me->field_969;
+    if (guns->field_359 && guns->field_359->length > 0 && guns->field_359->at(0)) {
+        Ref<class_9> s = guns->field_359->at(0)->at(0);
+        if (s && s->field_78 && s->field_83->at(0) > 0) {
+            shot = triple(s->field_78->at(0)->field_37, s->field_78->at(0)->field_38, s->field_78->at(0)->field_39);
+        }
+    }
+    std::string reload = "-";
+    if (guns->field_359 && guns->field_359->length > 0 && guns->field_359->at(0) && guns->field_359->at(0)->at(0)) {
+        reload = std::to_string(guns->field_359->at(0)->at(0)->field_90);
+    }
+    std::string gate = "-";
+    if (w->field_276) {
+        for (int32_t i = 0; i < w->field_276->length; i++) {
+            Ref<class_91> o = w->field_276->at(i);
+            if (o && jrt::isInstance<class_99>(o) && o->field_1226) gate = std::to_string(o->field_1226->field_1341->field_703);
+        }
+    }
+    std::string bubble = "-";
+    if (me->field_976 && me->field_976->field_718) {
+        bubble = std::to_string(me->field_976->field_718->at(1)) + " " + std::to_string(me->field_976->field_720->at(0));
+    }
+    fprintf(out, "%lld\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", (long long)org::deep3d::Det::millis(),
+            triple(me->field_970->method_852(), me->field_970->method_853(), me->field_970->method_854()).c_str(),
+            triple(axes->field_695, axes->field_696, axes->field_697).c_str(), triple(cam->field_37, cam->field_38, cam->field_39).c_str(),
+            me->field_986,
+            first([](const Ref<class_91>& o) { return jrt::isInstance<class_96>(o); }).c_str(),
+            first([](const Ref<class_91>& o) { return jrt::isInstance<class_95>(o); }).c_str(),
+            first([](const Ref<class_91>& o) { return jrt::isInstance<class_101>(o); }).c_str(),
+            first([](const Ref<class_91>& o) { return jrt::isInstance<class_93>(o) || jrt::isInstance<class_92>(o); }).c_str(),
+            shot.c_str(), gate.c_str(), bubble.c_str(), reload.c_str());
+    fflush(out);
+}
+
 void Deep3dDebug::tick() {
+    stepTrace();
     int32_t t = org::deep3d::Cheats::takeTeleport();
     if (t >= 0 && inGameNow()) {
         warp(t);
