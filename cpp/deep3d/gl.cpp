@@ -442,14 +442,15 @@ public:
         emit();
     }
 
-    /* fillTriangle as the phone build fills it in its emulator (measured, see
-       tools/phoneref): each row sampled at its top (y), each pixel at its middle
-       (x + 0.5), both ends of a row in; GL's rule puts edges a pixel off */
+    /* fillTriangle as Java2D fills it (the phone build in its emulator, measured
+       in tools/phoneref): the corners moved by a quarter pixel, then the pixels
+       whose middles are inside, a row's left end in and its right end out; GL's
+       own rule puts edges a pixel off */
     void tri(float x1, float y1, float x2, float y2, float x3, float y3) {
-        float xs[3] = {x1, x2, x3}, ys[3] = {y1, y2, y3};
-        float top = std::min({y1, y2, y3}), bottom = std::max({y1, y2, y3});
-        for (int32_t y = int32_t(std::ceil(top)); float(y) < bottom; y++) {
-            float yc = float(y), lo = 1e30f, hi = -1e30f;
+        float xs[3] = {x1 + 0.25f, x2 + 0.25f, x3 + 0.25f}, ys[3] = {y1 + 0.25f, y2 + 0.25f, y3 + 0.25f};
+        float top = std::min({ys[0], ys[1], ys[2]}), bottom = std::max({ys[0], ys[1], ys[2]});
+        for (int32_t y = int32_t(std::ceil(top - 0.5f)); float(y) + 0.5f < bottom; y++) {
+            float yc = float(y) + 0.5f, lo = 1e30f, hi = -1e30f;
             for (int k = 0; k < 3; k++) {
                 float ax = xs[k], ay = ys[k], bx = xs[(k + 1) % 3], by = ys[(k + 1) % 3];
                 if (ay == by || yc < std::min(ay, by) || yc >= std::max(ay, by)) continue;
@@ -458,7 +459,7 @@ public:
                 hi = std::max(hi, x);
             }
             if (lo > hi) continue;
-            int32_t from = int32_t(std::ceil(lo - 0.5f)), to = int32_t(std::floor(hi - 0.5f)) + 1;
+            int32_t from = int32_t(std::ceil(lo - 0.5f)), to = int32_t(std::ceil(hi - 0.5f));
             if (to > from) quad(float(from), float(y), float(to - from), 1);
         }
     }

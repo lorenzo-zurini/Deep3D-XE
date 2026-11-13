@@ -2,5 +2,5 @@
 # then the fishing lesson: turn at the nearest fish with the d-pad, fire in line.
 wait 4500
 until flight 3000
-aimkeys creature 1500 fire
+aimkeys creature 3000 fire
 wait 300

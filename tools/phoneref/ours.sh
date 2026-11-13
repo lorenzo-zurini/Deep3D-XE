@@ -14,6 +14,8 @@ rm -rf "$OUT"; mkdir -p "$OUT/home"
   echo "input.gamepad=false"; echo "input.mouse_flight=false"
   for l in "$@"; do echo "$l"; done
 } > "$OUT/home/deep3d.cfg"
+# SAVES=<our saves dir>: start from copies of those saves
+[ -n "${SAVES:-}" ] && mkdir -p "$OUT/home/saves" && cp "$SAVES"/*.rms "$OUT/home/saves/"
 # a screen of the phone's size: the window can be no bigger
 Xvfb -displayfd 1 -screen 0 240x320x24 -nolisten tcp > "$OUT/.xdisplay" 2>/dev/null & XPID=$!
 GPID=

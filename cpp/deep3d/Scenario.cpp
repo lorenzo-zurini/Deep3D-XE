@@ -460,7 +460,7 @@ bool run(const Args& s) {
                 float x = 0, y = 0;
                 if (g && g->aim(s[1], x, y)) {
                     want[0] = x < -0.12f, want[1] = x > 0.12f, want[2] = y < -0.12f, want[3] = y > 0.12f;
-                    if (s.size() > 3 && s[3] == "fire" && std::fabs(x) < 0.12f && std::fabs(y) < 0.12f && gStepFrame % 20 == 0)
+                    if (s.size() > 3 && s[3] == "fire" && std::fabs(x) < 0.3f && std::fabs(y) < 0.3f && gStepFrame % 8 == 0)
                         holdKey(Input::Action::FIRE, 4);
                 }
             }

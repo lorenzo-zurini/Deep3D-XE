@@ -1,0 +1,40 @@
+# From save slot 1 (Gosu): depart with the right soft key, autopilot (9) to the
+# S.T.R.E.A.M. gate, through it to the next station on the map, docking there.
+wait 40
+midp -5
+wait 220
+midp -2
+wait 30
+midp -5
+wait 60
+midp -5
+until station 1500
+wait 120
+midp -7
+wait 60
+midp -5
+until flight 1500
+wait 120
+midp 57 4
+wait 1200
+# the destination, on the map: Navigation, a station to the right, go
+midp -5
+wait 120
+midp -4
+wait 60
+midp -5
+wait 150
+# the depth view of the station picked: right to the next one, OK to go
+midp -4
+wait 80
+midp -6
+wait 120
+midp -5
+# the arrival; dock (0) when the station offers it
+wait 1300
+midp 48 4
+wait 100
+midp 48 4
+wait 100
+midp 48 4
+wait 1800

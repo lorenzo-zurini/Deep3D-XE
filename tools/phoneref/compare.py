@@ -9,7 +9,9 @@ whose colour (within 12 levels) is nowhere in the 3x3 around it in the other
 picture, both ways. The rasterisers (SwiftShader there, the GPU here) place
 texel edges a pixel apart now and then; that is not counted, a thing drawn
 differently is. The out dir gets report.tsv and sheet_*.png (reference | ours |
-difference x4).
+difference x4). A pair where one is the loading screen is marked so: the game
+draws it from a thread of its own, in real time, so which pass shows it is a
+matter of timing on either side.
 """
 import os
 import sys
@@ -18,6 +20,21 @@ import numpy as np
 from PIL import Image, ImageChops, ImageDraw
 
 TOLERANCE = 12
+LOADING_BACKGROUND = (30, 59, 74)   # class_67.field_845
+
+
+def loading(im):
+    return (np.asarray(im) == LOADING_BACKGROUND).all(axis=2).mean() > 0.75
+
+
+def verdict(same, off, a, b):
+    if same == 1.0:
+        return "identical"
+    if off < 0.001:
+        return "a pixel's shift"
+    if loading(a) or loading(b):
+        return "loading screen"
+    return "DIFFERENT"
 
 
 def unexplained(a, b):
@@ -57,15 +74,15 @@ def main():
             rows.append((f[1:7], "size", a.size, b.size))
             continue
         diff, same, mean, worst, q_off = stats(a, b)
-        rows.append((f[1:7], same, mean, worst, q_off))
+        rows.append((f[1:7], same, mean, worst, q_off, verdict(same, q_off, a, b)))
         tiles.append((f[1:7], a, b, diff.point(lambda v: min(255, v * 4))))
     with open(os.path.join(out, "report.tsv"), "w") as w:
-        w.write("pass\tidentical\tmean diff\tmax diff\tdiffers beyond a pixel's shift\n")
+        w.write("pass\tidentical\tmean diff\tmax diff\tdiffers beyond a pixel's shift\tverdict\n")
         for r in rows:
             if r[1] == "size":
                 w.write(f"{r[0]}\tsize {r[2]} vs {r[3]}\n")
             else:
-                w.write(f"{r[0]}\t{r[1]:.4f}\t{r[2]:.2f}\t{r[3]}\t{r[4]:.4f}\n")
+                w.write(f"{r[0]}\t{r[1]:.4f}\t{r[2]:.2f}\t{r[3]}\t{r[4]:.4f}\t{r[5]}\n")
     for i in range(0, len(tiles), 6):
         chunk = tiles[i:i + 6]
         w, h = chunk[0][1].size

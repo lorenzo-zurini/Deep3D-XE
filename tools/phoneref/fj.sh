@@ -3,6 +3,7 @@
 #   fj.sh <out dir> <keys file|-> <shot every n passes> <end pass>
 # Shots are the LCD as the game flushed it in that pass: <out dir>/p<pass>.png, 240x320.
 set -u
+HERE=$(cd "$(dirname "$0")" && pwd)
 OUT=$(realpath -m "$1"); KEYS=$2; EVERY=$3; END=$4
 PHONEREF=${PHONEREF:-$HOME/Storage/tools/freej2me}
 rm -rf "$OUT"; mkdir -p "$OUT/home"
@@ -18,6 +19,8 @@ trap cleanup EXIT
 trap 'exit 143' INT TERM HUP
 for _ in $(seq 50); do [ -s "$OUT/.xdisplay" ] && break; sleep 0.1; done
 mkdir -p "$OUT/home/tmp"
+# SAVES=<our saves dir>: start from those saves (as FreeJ2ME's record stores)
+[ -n "${SAVES:-}" ] && python3 "$HERE/rms2fj.py" "$(realpath "$SAVES")" "$OUT/home" > /dev/null
 [ "$KEYS" = - ] && KEYS= || KEYS=$(realpath "$KEYS")
 cd "$OUT/home"
 HOME="$OUT/home" FJ_DUMP=${DUMP:-} FJ_KEYS=$KEYS FJ_SHOTS=$EVERY FJ_END=$END FJ_OUT="$OUT" \

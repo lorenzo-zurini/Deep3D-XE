@@ -1521,7 +1521,9 @@ void class_26::method_265(int64_t var1) {
     Deep3dDebug::worldFrames++;
     if (!this->deep3dShown) {
         this->deep3dShown = true;
-        org::deep3d::gl::GLBackend::holdFrame();
+        // Deep3D-PC: a world's first frame lacks its skydome (the background
+        // flashes): the last picture stays up instead (the phone showed it)
+        if (org::deep3d::Config::pcAdditions()) org::deep3d::gl::GLBackend::holdFrame();
     }
 }
 
@@ -1576,7 +1578,9 @@ void class_26::method_266(int64_t var1) {
     Deep3dDebug::worldFrames++;
     if (!this->deep3dShown) {
         this->deep3dShown = true;
-        org::deep3d::gl::GLBackend::holdFrame();
+        // Deep3D-PC: a world's first frame lacks its skydome (the background
+        // flashes): the last picture stays up instead (the phone showed it)
+        if (org::deep3d::Config::pcAdditions()) org::deep3d::gl::GLBackend::holdFrame();
     }
 }
 
