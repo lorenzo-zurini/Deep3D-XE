@@ -1691,7 +1691,9 @@ void class_26::method_271() {
 }
 
 void class_26::deep3dSurface() {
-    if ((this->field_272 == nullptr) || (this->field_272->field_970 == nullptr)) {
+    // Remastered's sea has a surface, which nothing passes; the phone's had none
+    // (game state: as recorded in a demo, whatever is shown)
+    if ((this->field_272 == nullptr) || (this->field_272->field_970 == nullptr) || !org::deep3d::Demo::remasteredWorld()) {
         return;
     }
     int32_t var1 = this->field_272->field_1003 * 8;

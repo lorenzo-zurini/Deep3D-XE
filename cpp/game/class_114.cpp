@@ -47,7 +47,10 @@ void class_114::method_894() {
 
 void class_114::method_887() {
     this->class_112::field_1409->method_50();
-    if ((this->class_112::field_1411 != nullptr) && (this->class_112::field_1409->field_78->at(0)->field_37 != 50000)) {
+    // Deep3D-PC: not while parked at x 50000 (unfired) in Enhanced and Remastered: the phone's
+    // far plane hid it there, theirs reach it. Original draws it, as the phone: each draw
+    // moves the chase camera on a step (class_42), so this is game state, as recorded
+    if ((this->class_112::field_1411 != nullptr) && (!org::deep3d::Demo::enhancedWorld() || this->class_112::field_1409->field_78->at(0)->field_37 != 50000)) {
         class_84::field_1110->method_25(jrt::Ref<class_102>(this->class_112::field_1411));
     }
     if (this->class_112::field_1409->field_92) {

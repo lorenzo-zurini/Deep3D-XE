@@ -431,6 +431,43 @@ bool run(const Args& s) {
         }
         return false;
     }
+    if (c == "midp") {
+        // a phone key by its MIDP code, held for some frames: midp <code> [frames]
+        int32_t code = parseInt(s[1]);
+        Input::sendMidpKey(code, true);
+        gHeld = std::max(arg(s, 2, 2), 2);
+        gRelease = [code] { Input::sendMidpKey(code, false); };
+        return true;
+    }
+    if (c == "keysteer" || c == "aimkeys") {
+        // keys only, as a phone has them (tools/phoneref replays what was pressed):
+        //   keysteer <left|right|up|down> <frames>: hold a direction
+        //   aimkeys <creature|ship> <frames> [fire]: turn at the nearest one ahead, firing when it is in line
+        static bool held[4];
+        static const Input::Action dirs[4] = {Input::Action::LEFT, Input::Action::RIGHT, Input::Action::UP, Input::Action::DOWN};
+        auto set = [](int k, bool on) {
+            if (held[k] == on) return;
+            held[k] = on;
+            Input::handleAction(dirs[k], on);
+        };
+        int n = arg(s, 2, 120);
+        bool want[4] = {false, false, false, false};
+        if (gStepFrame < n) {
+            if (c == "keysteer") {
+                const std::string& d = s[1];
+                want[d == "left" ? 0 : d == "right" ? 1 : d == "up" ? 2 : 3] = true;
+            } else {
+                float x = 0, y = 0;
+                if (g && g->aim(s[1], x, y)) {
+                    want[0] = x < -0.12f, want[1] = x > 0.12f, want[2] = y < -0.12f, want[3] = y > 0.12f;
+                    if (s.size() > 3 && s[3] == "fire" && std::fabs(x) < 0.12f && std::fabs(y) < 0.12f && gStepFrame % 20 == 0)
+                        holdKey(Input::Action::FIRE, 4);
+                }
+            }
+        }
+        for (int k = 0; k < 4; k++) set(k, want[k]);
+        return gStepFrame >= n;
+    }
     if (c == "boost") {
         holdKey(Input::Action::BOOST, arg(s, 1, 90));
         return true;

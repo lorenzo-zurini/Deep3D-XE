@@ -44,6 +44,9 @@ int32_t gShotEvery = 0;
    same passes, the frame of every n-th pass, an end */
 std::map<int32_t, std::vector<std::pair<int32_t, int32_t>>> gScheduled;
 int32_t gShotPassEvery = 0, gEndPass = 0, gShotPending = 0;
+/* DEEP3D_DET_KEYLOG: every key as the game gets it, in DEEP3D_DET_KEYS's form,
+   so what a test scenario pressed replays in the phone reference */
+FILE* gKeyLog = nullptr;
 int32_t gPresents = 0;
 std::set<int32_t> gDumpFrames;
 
@@ -233,6 +236,7 @@ void Det::frame() {
         if (const char* n = getenv("DEEP3D_DET_SHOTS")) gShotEvery = atoi(n);
         if (const char* n = getenv("DEEP3D_DET_SHOT_PASSES")) gShotPassEvery = atoi(n);
         if (const char* n = getenv("DEEP3D_DET_END")) gEndPass = atoi(n);
+        if (const char* f = getenv("DEEP3D_DET_KEYLOG")) gKeyLog = fopen(f, "w");
         if (const char* f = getenv("DEEP3D_DET_KEYS")) {
             // lines "<pass> p|r <MIDP key code>", as tools/phoneref's FJ_KEYS
             std::ifstream in(f);
@@ -292,6 +296,11 @@ void Det::frame() {
 namespace {
 void send(int32_t code, int32_t kind) {
     Demo::event(code, kind);
+    if (gKeyLog) {
+        if (kind <= 1) fprintf(gKeyLog, "%d %c %d\n", gFrame, kind ? 'p' : 'r', code);
+        else fprintf(gKeyLog, "# %d: not a key (kind %d, %d): the reference cannot replay it\n", gFrame, kind, code);
+        fflush(gKeyLog);
+    }
     if (kind == 2) {
         GameUi::select(code);
         return;

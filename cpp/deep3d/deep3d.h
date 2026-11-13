@@ -169,6 +169,8 @@ public:
     // settings and debug options that are game state: as recorded, whatever is shown
     /** Remastered's wider ring of creatures. */
     static bool remasteredWorld();
+    /** Enhanced or Remastered: the PC's longer view (what is drawn steers the camera). */
+    static bool enhancedWorld();
     static bool openSea();
     static int32_t fov();
     static bool god();

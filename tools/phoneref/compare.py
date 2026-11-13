@@ -4,27 +4,43 @@
   compare.py <reference dir> <our dir> [out dir]
 
 Per pass: the share of identical pixels, the mean and largest channel
-difference, and the share that still differs after both are cut to 4 bits a
-channel (our Original mode's colour depth, the phones' 12-bit displays). The
-out dir gets report.tsv and sheet_*.png (reference | ours | difference x4).
+difference, and the share that differs even allowing a pixel's shift: a pixel
+whose colour (within 12 levels) is nowhere in the 3x3 around it in the other
+picture, both ways. The rasterisers (SwiftShader there, the GPU here) place
+texel edges a pixel apart now and then; that is not counted, a thing drawn
+differently is. The out dir gets report.tsv and sheet_*.png (reference | ours |
+difference x4).
 """
 import os
 import sys
 
+import numpy as np
 from PIL import Image, ImageChops, ImageDraw
+
+TOLERANCE = 12
+
+
+def unexplained(a, b):
+    """the share of pixels of a with no close colour in b's 3x3 around them"""
+    a = np.asarray(a, dtype=np.int16)
+    b = np.pad(np.asarray(b, dtype=np.int16), ((1, 1), (1, 1), (0, 0)), mode="edge")
+    h, w = a.shape[:2]
+    near = np.zeros((h, w), dtype=bool)
+    for dy in range(3):
+        for dx in range(3):
+            near |= np.abs(a - b[dy:dy + h, dx:dx + w]).max(axis=2) <= TOLERANCE
+    return ~near
 
 
 def stats(a, b):
     diff = ImageChops.difference(a, b)
-    px = list(diff.getdata())
+    px = list(diff.get_flattened_data())
     n = len(px)
     same = sum(1 for p in px if p == (0, 0, 0))
     total = sum(sum(p) for p in px)
     worst = max(max(p) for p in px)
-    q = lambda im: im.point(lambda v: v & 0xF0)
-    qd = ImageChops.difference(q(a), q(b)).getdata()
-    q_off = sum(1 for p in qd if p != (0, 0, 0))
-    return diff, same / n, total / (3 * n), worst, q_off / n
+    off = unexplained(a, b) | unexplained(b, a)
+    return diff, same / n, total / (3 * n), worst, float(off.mean())
 
 
 def main():
@@ -44,7 +60,7 @@ def main():
         rows.append((f[1:7], same, mean, worst, q_off))
         tiles.append((f[1:7], a, b, diff.point(lambda v: min(255, v * 4))))
     with open(os.path.join(out, "report.tsv"), "w") as w:
-        w.write("pass\tidentical\tmean diff\tmax diff\tdiffers at 4 bits\n")
+        w.write("pass\tidentical\tmean diff\tmax diff\tdiffers beyond a pixel's shift\n")
         for r in rows:
             if r[1] == "size":
                 w.write(f"{r[0]}\tsize {r[2]} vs {r[3]}\n")
