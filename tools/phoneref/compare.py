@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Compares the phone reference's shots (fj.sh) with ours (ours.sh), pass by pass.
+
+  compare.py <reference dir> <our dir> [out dir]
+
+Per pass: the share of identical pixels, the mean and largest channel
+difference, and the share that still differs after both are cut to 4 bits a
+channel (our Original mode's colour depth, the phones' 12-bit displays). The
+out dir gets report.tsv and sheet_*.png (reference | ours | difference x4).
+"""
+import os
+import sys
+
+from PIL import Image, ImageChops, ImageDraw
+
+
+def stats(a, b):
+    diff = ImageChops.difference(a, b)
+    px = list(diff.getdata())
+    n = len(px)
+    same = sum(1 for p in px if p == (0, 0, 0))
+    total = sum(sum(p) for p in px)
+    worst = max(max(p) for p in px)
+    q = lambda im: im.point(lambda v: v & 0xF0)
+    qd = ImageChops.difference(q(a), q(b)).getdata()
+    q_off = sum(1 for p in qd if p != (0, 0, 0))
+    return diff, same / n, total / (3 * n), worst, q_off / n
+
+
+def main():
+    ref, ours = sys.argv[1], sys.argv[2]
+    out = sys.argv[3] if len(sys.argv) > 3 else ours
+    os.makedirs(out, exist_ok=True)
+    passes = sorted(set(f for f in os.listdir(ref) if f.startswith("p") and f.endswith(".png"))
+                    & set(f for f in os.listdir(ours) if f.startswith("p") and f.endswith(".png")))
+    rows, tiles = [], []
+    for f in passes:
+        a = Image.open(os.path.join(ref, f)).convert("RGB")
+        b = Image.open(os.path.join(ours, f)).convert("RGB")
+        if a.size != b.size:
+            rows.append((f[1:7], "size", a.size, b.size))
+            continue
+        diff, same, mean, worst, q_off = stats(a, b)
+        rows.append((f[1:7], same, mean, worst, q_off))
+        tiles.append((f[1:7], a, b, diff.point(lambda v: min(255, v * 4))))
+    with open(os.path.join(out, "report.tsv"), "w") as w:
+        w.write("pass\tidentical\tmean diff\tmax diff\tdiffers at 4 bits\n")
+        for r in rows:
+            if r[1] == "size":
+                w.write(f"{r[0]}\tsize {r[2]} vs {r[3]}\n")
+            else:
+                w.write(f"{r[0]}\t{r[1]:.4f}\t{r[2]:.2f}\t{r[3]}\t{r[4]:.4f}\n")
+    for i in range(0, len(tiles), 6):
+        chunk = tiles[i:i + 6]
+        w, h = chunk[0][1].size
+        sheet = Image.new("RGB", (3 * w + 20, len(chunk) * (h + 14)), (40, 0, 40))
+        d = ImageDraw.Draw(sheet)
+        for j, (p, a, b, df) in enumerate(chunk):
+            y = j * (h + 14)
+            for k, im in enumerate((a, b, df)):
+                sheet.paste(im, (k * (w + 10), y))
+            d.text((2, y + h + 1), f"pass {p}: reference | ours | difference x4", fill=(255, 255, 0))
+        sheet.save(os.path.join(out, f"sheet_{i // 6:03d}.png"))
+    for r in rows:
+        print("\t".join(str(x) if not isinstance(x, float) else f"{x:.4f}" for x in r))
+
+
+if __name__ == "__main__":
+    main()

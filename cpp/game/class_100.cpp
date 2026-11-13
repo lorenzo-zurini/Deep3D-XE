@@ -130,6 +130,18 @@ void class_100::method_805(int64_t var1) {
         this->class_91::field_1232 = class_84::field_1110->field_40->method_849(this->class_91::field_1232);
         this->class_91::field_1233->method_10(this->field_1308->at((var3 * 3)), this->field_1308->at(((var3 * 3) + 1)), this->field_1308->at(((var3 * 3) + 2)));
         this->class_91::field_1233->method_16(this->class_91::field_1232, class_98::field_1299);
+        // Deep3D-PC: Enhanced and Remastered see far parts where they are; Original,
+        // as the phone, brings those past 30000 in to 30000 and shrinks them to match
+        int32_t var4;
+        if (!org::deep3d::Config::enhanced && (var4 = class_98::field_1299->method_23()) > 30000) {
+            class_98::field_1299->method_22();
+            class_98::field_1299->method_18(30000);
+            class_98::field_1299->method_15(this->class_91::field_1232);
+            this->field_1307->at(var3)->method_846(class_98::field_1299);
+            int32_t var5 = jrt::f2i((30000.0f / float(var4)) * 4096.0f);
+            this->field_1307->at(var3)->method_869(var5, var5, var5);
+            continue;
+        }
         this->field_1307->at(var3)->method_869(4096, 4096, 4096);
         this->field_1307->at(var3)->method_845(this->field_1308->at((var3 * 3)), this->field_1308->at(((var3 * 3) + 1)), this->field_1308->at(((var3 * 3) + 2)));
     }

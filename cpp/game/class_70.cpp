@@ -319,7 +319,7 @@ void class_70::method_671(int64_t var1) {
             if (this->field_1015) {
                 this->field_971->method_870(class_84::field_1110->field_40->field_1341);
                 this->field_971->method_847((-4200));
-                this->deep3dCornerArrow();
+                if (org::deep3d::Config::pcAdditions()) this->deep3dCornerArrow();
                 this->field_973->method_839(false);
             }
             // Deep3D-PC: the open sea has no edge (the game kept under its fixed-point limit here)

@@ -415,16 +415,52 @@ public:
             quad(x1, std::min(y1, y2), 1, std::fabs(y2 - y1) + 1);
             return;
         }
-        ensure(whiteTex, GL_LINES, 2);
-        vertex(x1 + 0.5f, y1 + 0.5f, 0, 0, color);
-        vertex(x2 + 0.5f, y2 + 0.5f, 0, 0, color);
+        // the others pixel by pixel, both ends included, as MIDP draws them
+        // (GL_LINES leaves the last pixel out); a run along the major axis is one quad
+        int32_t ax = int32_t(x1), ay = int32_t(y1), bx = int32_t(x2), by = int32_t(y2);
+        int32_t dx = std::abs(bx - ax), dy = std::abs(by - ay), sx = bx > ax ? 1 : -1, sy = by > ay ? 1 : -1;
+        bool xMajor = dx >= dy;
+        int32_t major = xMajor ? dx : dy, minor = xMajor ? dy : dx, err = major / 2;
+        int32_t runX = ax, runY = ay, len = 1, x = ax, y = ay;
+        auto emit = [&] {
+            if (xMajor) quad(float(sx > 0 ? runX : runX - len + 1), float(runY), float(len), 1);
+            else quad(float(runX), float(sy > 0 ? runY : runY - len + 1), 1, float(len));
+        };
+        for (int32_t i = 0; i < major; i++) {
+            err -= minor;
+            bool step = err < 0;
+            if (step) err += major;
+            if (xMajor) x += sx; else y += sy;
+            if (step) {
+                emit();
+                if (xMajor) y += sy; else x += sx;
+                runX = x, runY = y, len = 1;
+            } else {
+                len++;
+            }
+        }
+        emit();
     }
 
+    /* fillTriangle as the phone build fills it in its emulator (measured, see
+       tools/phoneref): each row sampled at its top (y), each pixel at its middle
+       (x + 0.5), both ends of a row in; GL's rule puts edges a pixel off */
     void tri(float x1, float y1, float x2, float y2, float x3, float y3) {
-        ensure(whiteTex, GL_TRIANGLES, 3);
-        vertex(x1, y1, 0, 0, color);
-        vertex(x2, y2, 0, 0, color);
-        vertex(x3, y3, 0, 0, color);
+        float xs[3] = {x1, x2, x3}, ys[3] = {y1, y2, y3};
+        float top = std::min({y1, y2, y3}), bottom = std::max({y1, y2, y3});
+        for (int32_t y = int32_t(std::ceil(top)); float(y) < bottom; y++) {
+            float yc = float(y), lo = 1e30f, hi = -1e30f;
+            for (int k = 0; k < 3; k++) {
+                float ax = xs[k], ay = ys[k], bx = xs[(k + 1) % 3], by = ys[(k + 1) % 3];
+                if (ay == by || yc < std::min(ay, by) || yc >= std::max(ay, by)) continue;
+                float x = ax + (yc - ay) * (bx - ax) / (by - ay);
+                lo = std::min(lo, x);
+                hi = std::max(hi, x);
+            }
+            if (lo > hi) continue;
+            int32_t from = int32_t(std::ceil(lo - 0.5f)), to = int32_t(std::floor(hi - 0.5f)) + 1;
+            if (to > from) quad(float(from), float(y), float(to - from), 1);
+        }
     }
 
     void arc(int32_t x, int32_t y, int32_t w, int32_t h, int32_t start, int32_t angle, bool filled) {

@@ -2,6 +2,8 @@
 // Java build's reflection dump (runtime/src/org/deep3d/Det.java), so the
 // two builds can be compared frame by frame.
 #pragma once
+
+#include <cstring>
 #include "jrt.h"
 
 #include <string>
@@ -15,6 +17,14 @@ public:
     std::unordered_map<const void*, int> ids;
     /** Set: the field list goes to the cycle collector instead (no text). */
     Tracer* gc = nullptr;
+    /** The original game's state only, without what the PC added (fields
+        deep3d*, classes Deep3d*): to compare with the phone build. */
+    bool original = false;
+    static bool added(const char* name) {
+        const char* dot = strrchr(name, '.');
+        const char* field = dot ? dot + 1 : name;
+        return strncmp(field, "deep3d", 6) == 0 || strncmp(name, "Deep3d", 6) == 0;
+    }
 
     void v(bool x) { out += x ? "true" : "false"; }
     void v(int8_t x) { out += std::to_string(int(x)); }
@@ -40,6 +50,7 @@ public:
             if constexpr (isRef<T>::value) (*gc)(const_cast<T&>(value));
             return;
         }
+        if (original && added(name)) return;
         out += name;
         out += '=';
         v(value);
@@ -47,6 +58,7 @@ public:
     }
     template <class T>
     void staticField(const char* name, const T& value) {
+        if (original && added(name)) return;
         out += name;
         out += '=';
         v(value);

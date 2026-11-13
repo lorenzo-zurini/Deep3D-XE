@@ -28,11 +28,14 @@ void class_62::method_551() {
     this->field_726 = true;
     this->field_729 = 0;
     java::lang::System::gc();
-    class_84::field_1080 = true;
-    class_84::field_1083 = 1;
-    class_84::field_1122->method_765(100);
-    class_84::field_1122->method_768(0);
-    this->field_728 = 1;
+    // Deep3D-PC: no "music on or off?" first: the settings have the volumes
+    if (org::deep3d::Config::pcAdditions()) {
+        class_84::field_1080 = true;
+        class_84::field_1083 = 1;
+        class_84::field_1122->method_765(100);
+        class_84::field_1122->method_768(0);
+        this->field_728 = 1;
+    }
 }
 
 void class_62::method_552() {

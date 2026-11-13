@@ -417,6 +417,7 @@ void Overlay::showToast(const std::string& message) {
 void Overlay::applyGraphics() {
     javax::microedition::m3g::Platform::setTextureFilter(Config::smoothTexturesOn());
     javax::microedition::m3g::Platform::setPhoneTextures(!Config::fullColourOn());
+    javax::microedition::m3g::Platform::setRawTextures(!Config::enhanced);   // Original: as the phone build
     if (gl::GLBackend::isActive()) gl::GLBackend::updateVirtualSize();
 }
 

@@ -257,6 +257,31 @@ void class_67::method_601(jrt::Ref<java::lang::String> var0, jrt::Ref<java::lang
 
 void class_67::method_602(jrt::Ref<java::lang::String> var0, jrt::Ref<java::lang::String> var1, bool var2, bool var3) {
     jrt::Ref<javax::microedition::lcdui::Graphics> g = class_84::field_1117;
+    if (!org::deep3d::Config::pcAdditions()) {
+        // the phone's soft-key bar (the game compared
+        // with the "" literal, so by content here)
+        auto empty = [](const jrt::Ref<java::lang::String>& s) { return s != nullptr && s->length() == 0; };
+        int32_t by = (class_84::field_1121 - 3) - class_67::field_852;
+        g->setColor(class_67::field_845);
+        g->setColor(((!class_67::field_861 || class_67::field_860 <= 0 || empty(var0)) && !class_67::field_862) ? class_67::field_846 : class_67::field_844);
+        g->fillRect(1, by, class_67::field_850, class_67::field_852);
+        g->setColor((!class_67::field_861 && class_67::field_860 > 0 && !empty(var1)) ? class_67::field_844 : class_67::field_846);
+        g->fillRect((class_84::field_1120 - class_67::field_850) - 1, by, class_67::field_850 - 1, class_67::field_852);
+        g->setColor(class_67::field_846);
+        g->fillRect(3 + class_67::field_850, by, class_67::field_851, class_67::field_852);
+        g->setColor(class_67::field_844);
+        g->drawRect(1, by, class_67::field_850, class_67::field_852);
+        g->drawRect((class_84::field_1120 - class_67::field_850) - 1, by, class_67::field_850 - 1, class_67::field_852);
+        g->drawRect(3 + class_67::field_850, by, class_67::field_851, class_67::field_852);
+        class_67::method_599(var0, 1 + (class_67::field_850 >> 1), class_84::field_1121 - 2, class_67::field_850 + 2, 1, 40);
+        class_67::method_599(var1, (class_84::field_1120 - 1) - (class_67::field_850 >> 1), class_84::field_1121 - 2, class_67::field_850 + 2, 1, 40);
+        if (var2) {
+            class_67::method_590(class_21::method_182(), false, class_84::field_1120 >> 1, class_84::field_1121 - 2, 0, 40);
+        } else if (var3) {
+            g->drawImage(class_67::field_855, class_84::field_1120 >> 1, class_84::field_1121 - 3, 33);
+        }
+        return;
+    }
     int32_t h = class_67::field_852;
     int32_t y = (class_84::field_1121 - 3) - h;
     int32_t w = class_84::field_1120;

@@ -17,7 +17,7 @@ bool gLoaded = false;
 int64_t gShareDisplay = 0;
 int64_t gShareContext = 0;
 bool gTextureFilter = true;
-bool gPhoneTextures = false;
+bool gPhoneTextures = false, gRawTextures = false;
 
 /** First use: the engine takes its settings (Java: loading the library). */
 void ensureLoaded() {
@@ -26,6 +26,7 @@ void ensureLoaded() {
     gLoaded = true;
     Java_javax_microedition_m3g_Platform__1setTextureFilter(env(), nullptr, gTextureFilter);
     Java_javax_microedition_m3g_Platform__1setPhoneTextures(env(), nullptr, gPhoneTextures);
+    Java_javax_microedition_m3g_Platform__1setRawTextures(env(), nullptr, gRawTextures);
     if (gShareContext != 0) {
         Java_javax_microedition_m3g_Platform__1setShareContext(env(), nullptr, gShareDisplay, gShareContext);
     }
@@ -57,6 +58,12 @@ void Platform::setShareContext(int64_t display, int64_t context) {
 }
 
 bool Platform::sharesWindowContext() { return gShareContext != 0; }
+
+void Platform::setRawTextures(bool raw) {
+    std::lock_guard<std::mutex> g(gPlatformLock);
+    gRawTextures = raw;
+    if (gLoaded) Java_javax_microedition_m3g_Platform__1setRawTextures(env(), nullptr, raw);
+}
 
 void Platform::setPhoneTextures(bool phone) {
     std::lock_guard<std::mutex> g(gPlatformLock);

@@ -1,0 +1,6 @@
+# From launch: music on, the two logos, the main menu over the flyby.
+# MIDP key codes: -5 select, -6/-7 soft keys, -1 up, -2 down, -3 left, -4 right
+# every 10
+# end 400
+40 p -5
+42 r -5

@@ -578,7 +578,9 @@ bool readEntry(zip_t* jar, const std::string& entry, std::vector<uint8_t>& out) 
 std::optional<std::vector<uint8_t>> readRaw(const std::string& path) {
     zip_t* jar = gGameJar;
     std::string entry = path;
-    if (path.rfind("data/lang/ru/", 0) == 0) {
+    if (Det::PHONE) {
+        // the game jar's own text and font, as the phone shows them
+    } else if (path.rfind("data/lang/ru/", 0) == 0) {
         jar = gTextJar;
         entry = "data/lang/en/" + path.substr(13);
     } else if (path == "data/interface/font_deep_white.png") {

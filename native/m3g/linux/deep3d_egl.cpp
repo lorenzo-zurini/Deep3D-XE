@@ -40,6 +40,9 @@ extern "C" void *deep3d_target_fence = NULL;
 /* Texture colour depth: phone (16-bit texels) or full; the generation
  * number makes every texture re-upload when it changes. */
 extern "C" int deep3d_phone_textures = 0;
+/* textures exactly as the game gives them (Original graphics, as the phone
+   build in an emulator shows them): neither of the above */
+extern "C" int deep3d_raw_textures = 0;
 extern "C" int deep3d_texture_gen = 1;
 
 /* Underlay of the current pass: the window's frame so far (0 = none) */
@@ -599,6 +602,14 @@ JNIEXPORT void JNICALL
 Java_javax_microedition_m3g_Platform__1setPhoneTextures(JNIEnv *, jclass, jboolean phone) {
     if ((phone ? 1 : 0) != deep3d_phone_textures) {
         deep3d_phone_textures = phone ? 1 : 0;
+        deep3d_texture_gen++;
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_javax_microedition_m3g_Platform__1setRawTextures(JNIEnv *, jclass, jboolean raw) {
+    if ((raw ? 1 : 0) != deep3d_raw_textures) {
+        deep3d_raw_textures = raw ? 1 : 0;
         deep3d_texture_gen++;
     }
 }

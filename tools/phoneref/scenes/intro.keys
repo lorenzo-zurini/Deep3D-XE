@@ -1,0 +1,22 @@
+# New game: music on, logos, New game, name "Aa" by multi-tap, portrait,
+# keep the settings, the story intro, the first flight and Mai's first line.
+# every 25
+# end 4500
+40 p -5
+42 r -5
+260 p -5
+262 r -5
+300 p 50
+302 r 50
+340 p 50
+342 r 50
+400 p -6
+402 r -6
+460 p -5
+462 r -5
+520 p -2
+522 r -2
+560 p -6
+562 r -6
+640 p -5
+642 r -5

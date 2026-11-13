@@ -72,6 +72,7 @@ extern "C" {
 #endif
 extern int deep3d_texture_filter;
 extern int deep3d_phone_textures;
+extern int deep3d_raw_textures;
 /* Remastered: draw structures even out of view (their shadows reach into it) */
 int deep3d_rm_keep_unculled(void);
 extern int deep3d_texture_gen;
@@ -248,7 +249,7 @@ static inline void deep3d_glCompressedTexImage2D(GLenum target, GLint level, GLe
         for (GLsizei i = 0; i < w * h; i++) {
             memcpy(out + (size_t)i * comps, pal + (size_t)idx[i] * comps, comps);
         }
-        unsigned char *q = deep3d_phone_textures
+        unsigned char *q = deep3d_raw_textures ? NULL : deep3d_phone_textures
             ? deep3d_phone_texels(comps == 4 ? GL_RGBA : GL_RGB, out, w, h)
             : deep3d_clean_alpha(comps == 4 ? GL_RGBA : GL_RGB, out, (size_t)w * h);
         if (q) {

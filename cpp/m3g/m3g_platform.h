@@ -19,6 +19,8 @@ public:
     static void setShareContext(int64_t display, int64_t context);
     static bool sharesWindowContext();
     static void setPhoneTextures(bool phone);
+    /** Textures as the game gives them (Original graphics); over setPhoneTextures. */
+    static void setRawTextures(bool raw);
     static void setTextureFilter(bool smooth);
     static void hardExitIfLoaded(int32_t status);
     static void remaster(jrt::Ref<jrt::Array<float>> frame);
@@ -70,6 +72,7 @@ JNIEXPORT void JNICALL Java_javax_microedition_m3g_Platform__1getTargetTexture(J
 JNIEXPORT jlong JNICALL Java_javax_microedition_m3g_Platform__1takeTargetFence(JNIEnv*, jclass);
 JNIEXPORT void JNICALL Java_javax_microedition_m3g_Platform__1setUnderlay(JNIEnv*, jclass, jint, jint, jint, jlong);
 JNIEXPORT void JNICALL Java_javax_microedition_m3g_Platform__1setPhoneTextures(JNIEnv*, jclass, jboolean);
+JNIEXPORT void JNICALL Java_javax_microedition_m3g_Platform__1setRawTextures(JNIEnv*, jclass, jboolean);
 JNIEXPORT void JNICALL Java_javax_microedition_m3g_Platform__1remaster(JNIEnv*, jclass, jfloatArray);
 JNIEXPORT void JNICALL Java_javax_microedition_m3g_Platform__1remasterLayer(JNIEnv*, jclass);
 JNIEXPORT void JNICALL Java_javax_microedition_m3g_Platform__1remasterObject(JNIEnv*, jclass, jint);

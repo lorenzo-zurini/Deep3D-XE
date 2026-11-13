@@ -75,9 +75,23 @@ void class_95::method_805(int64_t var1) {
     this->class_91::field_1232 = class_84::field_1110->field_40->method_849(this->class_91::field_1232);
     this->class_91::field_1233->method_10(this->class_91::field_1226->method_852(), this->class_91::field_1226->method_853(), this->class_91::field_1226->method_854());
     this->class_91::field_1233->method_16(this->class_91::field_1232, this->field_1260);
-    this->field_1262->method_869(4096, 4096, 4096);
-    this->field_1262->method_845(this->class_91::field_1226->method_852(), this->class_91::field_1226->method_853(), this->class_91::field_1226->method_854());
-    this->field_1263 = false;
+    // Deep3D-PC: Enhanced and Remastered see far ships where they are; Original,
+    // as the phone, draws a copy brought in to 30000 and shrunk to match
+    int32_t var6;
+    if (!org::deep3d::Config::enhanced && (var6 = this->field_1260->method_23()) > 30000) {
+        this->field_1262->method_870(this->class_91::field_1226->field_1341);
+        this->field_1260->method_22();
+        this->field_1260->method_18(30000);
+        this->field_1260->method_15(this->class_91::field_1232);
+        this->field_1262->method_846(this->field_1260);
+        int32_t var4 = jrt::f2i((30000.0f / float(var6)) * 4096.0f);
+        this->field_1262->method_869(var4, var4, var4);
+        this->field_1263 = true;
+    } else {
+        this->field_1262->method_869(4096, 4096, 4096);
+        this->field_1262->method_845(this->class_91::field_1226->method_852(), this->class_91::field_1226->method_853(), this->class_91::field_1226->method_854());
+        this->field_1263 = false;
+    }
     if (((this->class_91::field_1225->field_363 <= 0) && (int32_t(this->class_91::field_1224) != 3)) && (int32_t(this->class_91::field_1224) != 4)) {
         this->class_91::field_1225->field_375 = false;
         if (this->class_91::field_1228) {

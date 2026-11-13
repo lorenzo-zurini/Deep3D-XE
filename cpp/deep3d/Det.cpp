@@ -5,6 +5,7 @@
 #include <cmath>
 #include <deque>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <set>
 #include <thread>
@@ -14,6 +15,7 @@ namespace org::deep3d {
 const bool Det::ON = getenv("DEEP3D_DET") != nullptr || getenv("DEEP3D_DEMO") != nullptr || demoSession();
 const bool Det::BENCH = ON && getenv("DEEP3D_BENCH") != nullptr;
 const bool Det::DEMO = getenv("DEEP3D_DEMO") != nullptr || demoSession();
+const bool Det::PHONE = getenv("DEEP3D_PHONE") != nullptr;
 
 namespace {
 /* DEEP3D_DET=1 DEEP3D_STEP_MS=<ms>, or the scenario command `clock`: a virtual
@@ -38,6 +40,10 @@ FILE* gLog = nullptr;
 FILE* gEvents = nullptr;
 uint64_t gEventHash = Det::FNV;
 int32_t gShotEvery = 0;
+/* comparisons with the phone reference (tools/phoneref): the same keys at the
+   same passes, the frame of every n-th pass, an end */
+std::map<int32_t, std::vector<std::pair<int32_t, int32_t>>> gScheduled;
+int32_t gShotPassEvery = 0, gEndPass = 0, gShotPending = 0;
 int32_t gPresents = 0;
 std::set<int32_t> gDumpFrames;
 
@@ -225,6 +231,19 @@ void Det::frame() {
         gLog = fopen((outDir() + "/det.log").c_str(), "w");
         gEvents = fopen((outDir() + "/det_events.txt").c_str(), "w");
         if (const char* n = getenv("DEEP3D_DET_SHOTS")) gShotEvery = atoi(n);
+        if (const char* n = getenv("DEEP3D_DET_SHOT_PASSES")) gShotPassEvery = atoi(n);
+        if (const char* n = getenv("DEEP3D_DET_END")) gEndPass = atoi(n);
+        if (const char* f = getenv("DEEP3D_DET_KEYS")) {
+            // lines "<pass> p|r <MIDP key code>", as tools/phoneref's FJ_KEYS
+            std::ifstream in(f);
+            std::string l;
+            while (std::getline(in, l)) {
+                l = l.substr(0, l.find('#'));
+                int32_t at = 0, code = 0;
+                char kind = 0;
+                if (sscanf(l.c_str(), "%d %c %d", &at, &kind, &code) == 3) gScheduled[at].push_back({code, kind == 'p' ? 1 : 0});
+            }
+        }
         if (const char* d = getenv("DEEP3D_DET_DUMP")) {
             std::string s = d;
             size_t p = 0;
@@ -239,9 +258,12 @@ void Det::frame() {
     gFrame++;
     tick();
     jrt::Dumper d;
-    bool hash = gForcedMs <= 0.0 || gDumpFrames.count(gFrame);   // forced: many short frames, not compared
+    // forced: many short frames, not compared; DEEP3D_DET_NOHASH: shots only (tools/phoneref)
+    static const bool noHash = getenv("DEEP3D_DET_NOHASH") != nullptr;
+    bool hash = (gForcedMs <= 0.0 && !noHash) || gDumpFrames.count(gFrame);
     if (hash) {
         d.out.reserve(1 << 20);
+        d.original = PHONE;   // the phone build's state, to compare with it
         game_dumpStatics(d);
     }
     uint64_t h = hash ? hashBytes(FNV, d.out.data(), d.out.size()) : 0;
@@ -252,6 +274,17 @@ void Det::frame() {
     if (gEvents) fflush(gEvents);
     if (gDumpFrames.count(gFrame)) {
         std::ofstream(outDir() + "/det_" + std::to_string(gFrame) + ".txt", std::ios::binary) << d.out;
+    }
+    auto due = gScheduled.find(gFrame);
+    if (due != gScheduled.end()) {
+        std::lock_guard<std::mutex> g(gKeysLock);
+        gKeys.insert(gKeys.begin(), due->second.begin(), due->second.end());   // as the reference has them
+    }
+    if (gShotPassEvery > 0 && gFrame % gShotPassEvery == 0) gShotPending = gFrame;
+    if (gEndPass > 0 && gFrame > gEndPass) {
+        printf("[det] end at pass %d\n", gFrame);
+        fflush(stdout);
+        Runtime::halt(0);
     }
     deliverKeys();
 }
@@ -282,6 +315,7 @@ void logState() {
     if (!gLog) gLog = fopen((outDir() + "/det.log").c_str(), "w");
     jrt::Dumper d;
     d.out.reserve(1 << 20);
+    d.original = Det::PHONE;
     game_dumpStatics(d);
     fprintf(gLog, "%d %016lx\n", gFrame, (unsigned long)Det::hashBytes(Det::FNV, d.out.data(), d.out.size()));
     fflush(gLog);
@@ -373,6 +407,13 @@ void Det::present(const gl::Draw2D& frame) {
         event(t);
     }
     gPresents++;
+    if (gShotPending > 0) {
+        // the first frame shown from that pass on, as the reference takes it
+        char name[64];
+        snprintf(name, sizeof name, "/p%06d.png", gShotPending);
+        gShotPending = 0;
+        gl::GLBackend::screenshotTo(outDir() + name);
+    }
     if (gShotEvery > 0 && gPresents % gShotEvery == 0) {
         char name[64];
         snprintf(name, sizeof name, "/det_shot_%06d.png", gPresents);

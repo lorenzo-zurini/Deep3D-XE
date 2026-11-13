@@ -99,6 +99,7 @@ int run(int argc, char** argv) {
 
     javax::microedition::m3g::Platform::setTextureFilter(Config::smoothTexturesOn());
     javax::microedition::m3g::Platform::setPhoneTextures(!Config::fullColourOn());
+    javax::microedition::m3g::Platform::setRawTextures(!Config::enhanced);   // Original: as the phone build
     media::AudioSettings::master = Config::masterVolume;
     media::AudioSettings::music = Config::musicVolume;
     media::AudioSettings::sfx = Config::sfxVolume;

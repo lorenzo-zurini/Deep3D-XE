@@ -17,7 +17,8 @@ void class_108::__init() {
 }
 
 void class_108::method_837(jrt::Ref<class_106> var1, jrt::Ref<class_4> var2) {
-    if (this->class_102::field_1338) {
+    // Deep3D-PC: culled against the camera in Original only, as the phone (see class_103)
+    if (this->class_102::field_1338 && (org::deep3d::Config::enhanced || var1->method_884(this->class_102::field_1343) != 0)) {
         this->field_1368 = var1->field_1342->method_503(this->field_1368);
         if (this->field_1364 != 0) {
             class_108::field_1365->method_469();

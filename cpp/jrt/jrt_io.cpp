@@ -504,7 +504,7 @@ void Dumper::obj(java::lang::Object* o) {
     }
     auto* a = dynamic_cast<ArrayBase*>(o);
     // class_33 is the loading screen: its own thread animates it
-    if (!a && (!o->__dumpable() || !strcmp(o->__javaName(), "class_33"))) {
+    if (!a && (!o->__dumpable() || !strcmp(o->__javaName(), "class_33") || (original && added(o->__javaName())))) {
         out += "<obj>";
         return;
     }

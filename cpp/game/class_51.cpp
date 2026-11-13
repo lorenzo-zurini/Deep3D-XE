@@ -285,7 +285,13 @@ bool class_51::method_419() {
                     this->field_559 = 0;
                     return false;
                 case 3:
-                    org::deep3d::GameSettings::open(jrt::Ref<org::deep3d::GameSettings_Toggle>(([&]() { jrt::Ref<class_51__anon1> __o(new class_51__anon1()); __o->__outer = this; __o->__init(); return __o; }())));
+                    // Deep3D-PC: the PC's settings (the phone had its own page, 3)
+                    if (org::deep3d::Config::pcAdditions()) {
+                        org::deep3d::GameSettings::open(jrt::Ref<org::deep3d::GameSettings_Toggle>(([&]() { jrt::Ref<class_51__anon1> __o(new class_51__anon1()); __o->__outer = this; __o->__init(); return __o; }())));
+                        return false;
+                    }
+                    this->field_560 = 3;
+                    this->field_559 = 0;
                     return false;
                 case 4:
                     this->field_560 = 4;
@@ -428,7 +434,13 @@ bool class_51::method_419() {
                 {
                     switch (this->field_559) {
                     case 0:
-                        org::deep3d::GameSettings::open(jrt::Ref<org::deep3d::GameSettings_Toggle>(([&]() { jrt::Ref<class_51__anon2> __o(new class_51__anon2()); __o->__outer = this; __o->__init(); return __o; }())));
+                        // Deep3D-PC: the PC's settings (the phone had its own page, 3)
+                        if (org::deep3d::Config::pcAdditions()) {
+                            org::deep3d::GameSettings::open(jrt::Ref<org::deep3d::GameSettings_Toggle>(([&]() { jrt::Ref<class_51__anon2> __o(new class_51__anon2()); __o->__outer = this; __o->__init(); return __o; }())));
+                            return false;
+                        }
+                        this->field_560 = 3;
+                        this->field_559 = 0;
                         return false;
                     case 1:
                         this->field_560 = 4;

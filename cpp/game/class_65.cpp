@@ -50,7 +50,7 @@ void class_65::method_551() {
                     for (int32_t var2 = 0; var2 < this->field_835->length; var2++) {
                         this->field_835->at(var2) = class_43::method_381(int32_t(class_90::field_1205->at(var1->at(var2)->field_863)));
                     }
-                    this->field_825 = class_106::method_886(class_84::field_1120, class_84::field_1121, 800, 100, 4194304);
+                    this->field_825 = class_106::method_886(class_84::field_1120, class_84::field_1121, 800, 100, org::deep3d::Config::enhanced ? 4194304 : 31768);
                     this->field_825->method_843(0, 1000, (-1400));
                     this->field_825->method_860(400, 2048, 0);
                     this->field_836 = jrt::New<class_103>();
@@ -113,7 +113,7 @@ void class_65::method_568(int32_t var1, int32_t var2) {
 void class_65::method_569(int32_t var1) {
     this->field_833 = var1;
     if (this->field_825 == nullptr) {
-        this->field_825 = class_106::method_886(class_84::field_1120, class_84::field_1121, 800, 100, 4194304);
+        this->field_825 = class_106::method_886(class_84::field_1120, class_84::field_1121, 800, 100, org::deep3d::Config::enhanced ? 4194304 : 31768);
         this->field_825->method_843(0, 1000, (-2200));
         this->field_825->method_860(400, 2048, 0);
         this->field_836 = jrt::New<class_103>();

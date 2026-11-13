@@ -36,8 +36,10 @@ void class_11::method_56() {
 
 void class_11::method_57(jrt::Ref<class_106> var1) {
     var1->method_883(this->field_117);
-    int32_t var2 = class_84::field_1120 >> 1;
-    int32_t var3 = (class_84::field_1121 * 157) / 320;
+    // Deep3D-PC: the reticle holds still near the middle (mouse flight aims from
+    // there); the phone's drifted with the point ahead of the sub
+    int32_t var2 = org::deep3d::Config::pcAdditions() ? class_84::field_1120 >> 1 : this->field_117->field_37;
+    int32_t var3 = org::deep3d::Config::pcAdditions() ? (class_84::field_1121 * 157) / 320 : this->field_117->field_38;
     class_84::field_1117->drawImage(this->field_116, var2, var3, 3);
     org::deep3d::MouseFlight::crosshair(var2, var3);
 }

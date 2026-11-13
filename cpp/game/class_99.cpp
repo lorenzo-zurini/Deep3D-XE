@@ -63,6 +63,18 @@ void class_99::method_805(int64_t var1) {
     this->class_91::field_1232 = class_84::field_1110->field_40->method_849(this->class_91::field_1232);
     this->class_91::field_1233->method_10(this->class_98::field_1300, this->class_98::field_1301, this->class_98::field_1302);
     this->class_91::field_1233->method_16(this->class_91::field_1232, class_98::field_1299);
+    // Deep3D-PC: Enhanced and Remastered see far stations where they are; Original,
+    // as the phone, brings them in to 30000 and shrinks them to match
+    int32_t var3;
+    if (!org::deep3d::Config::enhanced && (var3 = class_98::field_1299->method_23()) > 30000) {
+        class_98::field_1299->method_22();
+        class_98::field_1299->method_18(30000);
+        class_98::field_1299->method_15(this->class_91::field_1232);
+        this->class_91::field_1226->method_846(class_98::field_1299);
+        int32_t var4 = jrt::f2i((30000.0f / float(var3)) * 4096.0f);
+        this->class_91::field_1226->method_869(var4, var4, var4);
+        return;
+    }
     this->class_91::field_1226->method_869(4096, 4096, 4096);
     this->class_91::field_1226->method_845(this->class_98::field_1300, this->class_98::field_1301, this->class_98::field_1302);
 }

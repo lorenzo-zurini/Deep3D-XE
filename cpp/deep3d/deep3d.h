@@ -47,6 +47,9 @@ public:
     static const bool BENCH;
     /** A demo being recorded or replayed (see Demo): ON, on the demo's clock. */
     static const bool DEMO;
+    /** DEEP3D_PHONE=1, for comparisons with the phone build (tools/phoneref):
+        its own (Russian) text, and the PC's changes to what it does undone. */
+    static const bool PHONE;
     static int64_t millis();
     static int64_t nanos();
     /** The clock of what isn't the game (menus, toasts, the loading screen): a
@@ -234,6 +237,9 @@ public:
     static bool smoothTexturesOn() { return enhanced && textureFilter; }
     static bool antialiasingOn() { return enhanced && antialiasing; }
     static bool fullColourOn() { return enhanced && fullColour; }
+    /** The PC's additions to the game's own screens (the key hints' bar, the
+        depth label, the corner arrow, no music question); off with DEEP3D_PHONE */
+    static bool pcAdditions() { return !Det::PHONE; }
     static bool openSeaLive() { return enhanced && openSea; }
     static bool openSeaOn() { return Det::DEMO ? Demo::openSea() : openSeaLive(); }
     static int32_t flightFovLive() { return int32_t(float(fov) * 4096.0f / 360.0f); }

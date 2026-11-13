@@ -390,7 +390,7 @@ void class_69::method_644(int64_t var0, int64_t var2, jrt::Ref<class_70> var4, b
     class_84::field_1117->fillTriangle((class_69::field_911 - 4), (class_69::field_940 + 6), (class_69::field_911 + 2), class_69::field_940, (class_69::field_911 - 4), (class_69::field_940 - 6));
     class_84::field_1117->setColor(class_67::field_844);
     class_84::field_1117->fillTriangle((class_69::field_911 - 3), (class_69::field_940 + 4), (class_69::field_911 + 1), class_69::field_940, (class_69::field_911 - 3), (class_69::field_940 - 4));
-    if ((!class_69::field_942) || class_67::method_581()) {
+    if (org::deep3d::Config::pcAdditions() && ((!class_69::field_942) || class_67::method_581())) {   // Deep3D-PC: the depth, by its arrow
         class_58::method_516(jrt::concat(org::deep3d::Scale::depth(var4->field_1004), JRT_LIT(u" m")), (class_69::field_911 - 7), class_69::field_940, 0, 6);
     }
     class_69::method_642(var0, var4, false);
