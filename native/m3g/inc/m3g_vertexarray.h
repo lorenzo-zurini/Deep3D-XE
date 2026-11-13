@@ -60,6 +60,11 @@ struct M3GVertexArrayImpl
      */
     M3Gint cachedAlphaFactor;
     M3Gint timestamp;
+
+    /* Deep3D-PC: byte texture coordinates and vertices widened to shorts
+     * for desktop OpenGL, which takes no GL_BYTE there (see m3g_vertexarray.c) */
+    M3Gshort *deep3dWide;
+    M3Gsizei deep3dWideCount;
 };
 
 /* If this assert fails, check the compiler padding settings */

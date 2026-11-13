@@ -28,6 +28,7 @@
 #endif
 
 #include "m3g_vertexarray.h"
+#include <stdlib.h>
 
 #define DIRTY_ALPHA_FACTOR (-1)
 
@@ -68,6 +69,7 @@ static void m3gDestroyVertexArray(Object *obj)
         m3gFreeObject(m3g, array->data);
         m3gFreeObject(m3g, array->cachedColors);
     }
+    free(array->deep3dWide);
     m3gDestroyObject(&array->object);
 }
 
@@ -195,6 +197,48 @@ static void m3gLockNormalArray(const VertexArray *array)
 
 /*!
  * \internal
+ * \brief Deep3D-PC: the array as OpenGL can take it for texture
+ * coordinates or vertices. OpenGL ES takes bytes there, desktop OpenGL
+ * (the zero-copy path's context, shared with the window) does not: Mesa
+ * refuses the call and the previous mesh's array stays, read at this one's
+ * scale (stations covered in noise). Bytes become shorts of the same values,
+ * so the vertex buffer's scale and bias still apply. Done at every lock, as
+ * morphing and skinning rewrite their arrays without telling.
+ */
+static const void *deep3dGLArray(const VertexArray *array, const void *src,
+                                 GLenum *type, GLsizei *stride)
+{
+    VertexArray *a = (VertexArray *) array;
+    M3Gsizei n, v;
+    M3Gint c, srcStride;
+    *type = array->elementType;
+    *stride = array->stride;
+    if (array->elementType != GL_BYTE || src == NULL) {
+        return src;
+    }
+    n = array->vertexCount * array->elementSize;
+    if (a->deep3dWideCount < n) {
+        M3Gshort *wide = (M3Gshort *) realloc(a->deep3dWide, (size_t) n * sizeof(M3Gshort));
+        if (wide == NULL) {
+            return src;
+        }
+        a->deep3dWide = wide;
+        a->deep3dWideCount = n;
+    }
+    srcStride = array->stride ? array->stride : array->elementSize;
+    for (v = 0; v < array->vertexCount; ++v) {
+        for (c = 0; c < array->elementSize; ++c) {
+            a->deep3dWide[v * array->elementSize + c] =
+                (M3Gshort) ((const M3Gbyte *) src)[v * srcStride + c];
+        }
+    }
+    *type = GL_SHORT;
+    *stride = 0;
+    return a->deep3dWide;
+}
+
+/*!
+ * \internal
  * \brief Sends texture coordinate array to OpenGL.
  *
  * \param array VertexArray object
@@ -204,10 +248,13 @@ static void m3gLockTexCoordArray(const VertexArray *array)
     M3G_VALIDATE_OBJECT(array);
     M3G_ASSERT(!array->mapCount);
 
-    glTexCoordPointer(array->elementSize,
-                      array->elementType,
-                      array->stride,
-                      m3gMapObject(M3G_INTERFACE(array), array->data));
+    {
+        GLenum type;
+        GLsizei stride;
+        const void *ptr = deep3dGLArray(array, m3gMapObject(M3G_INTERFACE(array), array->data),
+                                        &type, &stride);
+        glTexCoordPointer(array->elementSize, type, stride, ptr);
+    }
     M3G_ASSERT_GL;
     
     ++((VertexArray*)array)->numLocks;
@@ -224,10 +271,13 @@ static void m3gLockVertexArray(const VertexArray *array)
     M3G_VALIDATE_OBJECT(array);
     M3G_ASSERT(!array->mapCount);
 
-    glVertexPointer(array->elementSize,
-                    array->elementType,
-                    array->stride,
-                    m3gMapObject(M3G_INTERFACE(array), array->data));
+    {
+        GLenum type;
+        GLsizei stride;
+        const void *ptr = deep3dGLArray(array, m3gMapObject(M3G_INTERFACE(array), array->data),
+                                        &type, &stride);
+        glVertexPointer(array->elementSize, type, stride, ptr);
+    }
     M3G_ASSERT_GL;
     
     ++((VertexArray*)array)->numLocks;
@@ -274,6 +324,8 @@ static VertexArray *m3gCloneVertexArray(const VertexArray *array)
 
 	m3gCopy(clone, array, sizeof(VertexArray));
     m3gInitObject((Object*) clone, m3g, M3G_CLASS_VERTEX_ARRAY);
+    clone->deep3dWide = NULL;       /* Deep3D-PC: its own */
+    clone->deep3dWideCount = 0;
 
 	clone->data = m3gAllocObject(m3g, array->vertexCount * array->stride);
 
