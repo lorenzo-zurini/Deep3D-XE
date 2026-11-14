@@ -1,0 +1,138 @@
+# Builds the Linux AppImage and the Windows zip on every push and pull
+# request; a tag v* also publishes both as a GitHub release.
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GLFW_VERSION: "3.5.1"
+  SDL_VERSION: "release-3.4.18"
+
+jobs:
+  linux:
+    name: Linux AppImage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the commit's description for demos (build_info.sh)
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ pkg-config file \
+            libfluidsynth-dev libzip-dev libpng-dev zlib1g-dev libfreetype-dev libfontconfig-dev \
+            libgl-dev libegl-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+            libwayland-dev libxkbcommon-dev wayland-protocols \
+            libasound2-dev libpulse-dev libpipewire-0.3-dev
+
+      - name: Cache GLFW and SDL3
+        id: deps
+        uses: actions/cache@v4
+        with:
+          path: /opt/deps
+          key: deps-ubuntu-24.04-glfw${{ env.GLFW_VERSION }}-sdl${{ env.SDL_VERSION }}
+
+      - name: Build GLFW and SDL3 (newer than Ubuntu's)
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "$GLFW_VERSION" https://github.com/glfw/glfw.git /tmp/glfw
+          cmake -S /tmp/glfw -B /tmp/glfw/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/deps \
+            -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
+          cmake --build /tmp/glfw/build && cmake --install /tmp/glfw/build
+          git clone --depth 1 --branch "$SDL_VERSION" https://github.com/libsdl-org/SDL.git /tmp/sdl
+          # the game uses SDL for audio only
+          cmake -S /tmp/sdl -B /tmp/sdl/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/deps \
+            -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
+            -DSDL_VIDEO=OFF -DSDL_RENDER=OFF -DSDL_GPU=OFF -DSDL_CAMERA=OFF -DSDL_JOYSTICK=OFF \
+            -DSDL_HAPTIC=OFF -DSDL_SENSOR=OFF -DSDL_HIDAPI=OFF -DSDL_DIALOG=OFF
+          cmake --build /tmp/sdl/build && cmake --install /tmp/sdl/build
+
+      - name: Build
+        run: |
+          export PKG_CONFIG_PATH=/opt/deps/lib/pkgconfig:/opt/deps/lib/x86_64-linux-gnu/pkgconfig
+          cmake -S cpp -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          ninja -C build
+
+      - name: Package the AppImage
+        run: |
+          curl -fsSLo /tmp/linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x /tmp/linuxdeploy
+          export LD_LIBRARY_PATH=/opt/deps/lib:/opt/deps/lib/x86_64-linux-gnu
+          LINUXDEPLOY=/tmp/linuxdeploy packaging/appimage.sh
+          ./Deep3D-XE-x86_64.AppImage --appimage-extract-and-run --help
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Deep3D-XE-linux-x86_64
+          path: Deep3D-XE-x86_64.AppImage
+          if-no-files-found: error
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git zip
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-glfw
+            mingw-w64-ucrt-x86_64-sdl3
+            mingw-w64-ucrt-x86_64-fluidsynth
+            mingw-w64-ucrt-x86_64-libzip
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-freetype
+
+      - name: Build
+        run: |
+          cmake -S cpp -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          ninja -C build
+
+      - name: Package
+        run: |
+          packaging/windows.sh
+          dist/Deep3D-XE/Deep3D-XE.exe --help
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Deep3D-XE-windows-x64
+          path: Deep3D-XE-windows-x64.zip
+          if-no-files-found: error
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Deep3D-XE $GITHUB_REF_NAME" \
+            --generate-notes Deep3D-XE-x86_64.AppImage Deep3D-XE-windows-x64.zip

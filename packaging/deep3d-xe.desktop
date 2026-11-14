@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Deep3D-XE
+GenericName=Submarine game
+Comment=Deep - Submarine Odyssey, the 2009 mobile 3D game, as a PC game
+Exec=Deep3D-XE
+Icon=deep3d-xe
+StartupWMClass=deep3d
+Categories=Game;Simulation;
+Terminal=false
