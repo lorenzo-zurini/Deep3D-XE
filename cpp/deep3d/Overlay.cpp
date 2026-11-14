@@ -211,8 +211,12 @@ std::vector<Item> buildItems() {
         case Page::CONTROLS: {
             Ref<GameSettings_Toggle> inv = GameSettings::invertPitch();
             if (inv) items.push_back(Item::toggle("Invert pitch", [inv] { return inv->get(); }, [inv] { inv->set(!inv->get()); }));
-            items.push_back(Item::choice("Controller", [] { return std::string(Config::gamepadEnabled ? "On" : "Off"); },
+            items.push_back(Item::choice("Controller", [] { return Config::gamepadEnabled ? Gamepad::getStatus() : std::string("Off"); },
                                          [](int) { Config::gamepadEnabled = !Config::gamepadEnabled; }));
+            items.push_back(Item::toggle("Rumble", [] { return Config::rumble; }, [] {
+                Config::rumble = !Config::rumble;
+                Gamepad::rumble(Config::rumble ? 150 : 0);   // as the game did turning its vibration on
+            }));
             for (int a = 0; a < int(Input::Action::COUNT); a++) items.push_back(Item::bind(Input::Action(a)));
             items.push_back(Item::button("Reset keys", [] { Input::resetBindings(); }));
             break;

@@ -84,7 +84,7 @@ void handle(const Parts& parts) {
         sleepMs(parseInt(parts[2]));
         Input::handleKey(code, u'\0', false, false, true);
     } else if (c == "pad") {
-        // a controller button (A=0 B=1 X=2 Y=3 LB=4 RB=5 Select=6 Start=7) or a direction
+        // a controller button (A=0 B=1 X=2 Y=3 LB=4 RB=5 Select=6 Start=7 R3=10 Share=11) or a direction
         const std::string& b = parts[1];
         std::optional<Input::Action> dir;
         if (b == "up") dir = Input::Action::UP;

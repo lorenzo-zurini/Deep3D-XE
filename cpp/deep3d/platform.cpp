@@ -14,7 +14,6 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <commdlg.h>
-#include <xinput.h>
 #include <fcntl.h>
 #include <io.h>
 #else
@@ -323,32 +322,6 @@ std::string osName() {
 
 std::string libcName() { return "UCRT"; }
 
-bool pad(int i, int buttons[8], int axes[8]) {
-    // found at run time: an import would tie the game to one XInput DLL (1.3 is DirectX's
-    // redistributable, missing from most systems)
-    using GetState = DWORD(WINAPI*)(DWORD, XINPUT_STATE*);
-    static GetState getState = [] {
-        for (const wchar_t* dll : {L"xinput1_4.dll", L"xinput1_3.dll", L"xinput9_1_0.dll"})
-            if (HMODULE m = LoadLibraryW(dll)) return (GetState) (void*) GetProcAddress(m, "XInputGetState");
-        return (GetState) nullptr;
-    }();
-    XINPUT_STATE st{};
-    if (!getState || getState(DWORD(i), &st) != ERROR_SUCCESS) return false;
-    const XINPUT_GAMEPAD& g = st.Gamepad;
-    const WORD order[8] = {XINPUT_GAMEPAD_A, XINPUT_GAMEPAD_B, XINPUT_GAMEPAD_X, XINPUT_GAMEPAD_Y,
-                           XINPUT_GAMEPAD_LEFT_SHOULDER, XINPUT_GAMEPAD_RIGHT_SHOULDER, XINPUT_GAMEPAD_BACK,
-                           XINPUT_GAMEPAD_START};
-    for (int b = 0; b < 8; b++) buttons[b] = (g.wButtons & order[b]) ? 1 : 0;
-    auto trigger = [](BYTE t) { return int(t) * 65534 / 255 - 32767; };
-    auto stick = [](SHORT v) { return std::max(int(v), -32767); };
-    auto hat = [&](WORD neg, WORD pos) { return (g.wButtons & pos) ? 32767 : (g.wButtons & neg) ? -32767 : 0; };
-    int a[8] = {stick(g.sThumbLX), -stick(g.sThumbLY), trigger(g.bLeftTrigger), stick(g.sThumbRX), -stick(g.sThumbRY),
-                trigger(g.bRightTrigger), hat(XINPUT_GAMEPAD_DPAD_LEFT, XINPUT_GAMEPAD_DPAD_RIGHT),
-                hat(XINPUT_GAMEPAD_DPAD_UP, XINPUT_GAMEPAD_DPAD_DOWN)};
-    for (int k = 0; k < 8; k++) axes[k] = a[k];
-    return true;
-}
-
 #else
 
 // ---------------------------------------------------------------------
@@ -534,8 +507,6 @@ std::string osName() {
 }
 
 std::string libcName() { return std::string("glibc ") + gnu_get_libc_version(); }
-
-bool pad(int, int*, int*) { return false; }   // Linux reads its joystick devices itself (input.cpp)
 
 #endif
 

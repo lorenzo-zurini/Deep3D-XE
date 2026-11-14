@@ -46,11 +46,6 @@ void tee(int fd, int logFd);
 /** Opens a file for the log (truncated): its descriptor, -1 on failure. */
 int openLog(const std::string& path);
 
-/** Windows: XInput pad i (0-3), as Linux's js interface reports an Xbox pad: buttons
-    A B X Y LB RB Back Start (0/1); axes LX LY LT RX RY RT, the d-pad's X and Y
-    (-32767..32767, down and right positive). False: not connected. */
-bool pad(int i, int buttons[8], int axes[8]);
-
 /** For a demo's metadata. */
 std::string osName();
 std::string libcName();

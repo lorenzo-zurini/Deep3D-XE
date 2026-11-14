@@ -384,6 +384,11 @@ void Display::setCurrent(Ref<Displayable> d) {
 
 Ref<Displayable> Display::getCurrent() { return org::deep3d::Runtime::getCurrent(); }
 
+bool Display::vibrate(int32_t ms) {
+    org::deep3d::Gamepad::rumble(ms);
+    return false;   // what the game sees stays the phone's
+}
+
 void Display::callSerially(Ref<java::lang::Runnable> r) {
     org::deep3d::Runtime::postEvent([r]() { r->run(); });
 }

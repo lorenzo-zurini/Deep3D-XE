@@ -652,12 +652,12 @@ std::string GameUi::actionKeyName(int32_t act) {
     bool pad = gPadLastUsed;
     switch (act) {
         case ACT_CONFIRM: {
-            if (pad) return "A";
+            if (pad) return Gamepad::label(Gamepad::A);
             auto keys = Input::getKeys(Input::Action::OK);
             return keys.empty() ? "Enter" : Input::keyName(keys[0]);
         }
-        case ACT_BACK: return pad ? "B" : "Esc";
-        case ACT_SECONDARY: return pad ? "X" : "Tab";
+        case ACT_BACK: return pad ? Gamepad::label(Gamepad::B) : "Esc";
+        case ACT_SECONDARY: return pad ? Gamepad::label(Gamepad::X) : "Tab";
         default: return "";
     }
 }

@@ -102,6 +102,7 @@ int32_t Config::masterVolume = 100;
 int32_t Config::musicVolume = 80;
 int32_t Config::sfxVolume = 100;
 bool Config::gamepadEnabled = true;
+bool Config::rumble = true;
 int32_t Config::fov = 44;
 
 namespace {
@@ -456,6 +457,7 @@ void Config::load() {
     musicVolume = clampVol(getInt("audio.music", musicVolume));
     sfxVolume = clampVol(getInt("audio.sfx", sfxVolume));
     gamepadEnabled = getBool("input.gamepad", gamepadEnabled);
+    rumble = getBool("input.rumble", rumble);
     mouseFlight = getBool("input.mouse_flight", mouseFlight);
     textureFilter = getBool("display.texture_filter", textureFilter);
     showFps = getBool("display.show_fps", showFps);
@@ -507,6 +509,7 @@ void Config::save() {
     gProps["audio.music"] = i(musicVolume);
     gProps["audio.sfx"] = i(sfxVolume);
     gProps["input.gamepad"] = b(gamepadEnabled);
+    gProps["input.rumble"] = b(rumble);
     gProps["input.mouse_flight"] = b(mouseFlight);
     // Properties.store: the comment, the date, the entries sorted by key
     // (String order: UTF-16), written over the file in place
@@ -563,7 +566,7 @@ bool Config::setField(const std::string& name, const std::string& value) {
         {"mouseFlight", &mouseFlight}, {"nativeResolution", &nativeResolution}, {"textureFilter", &textureFilter},
         {"antialiasing", &antialiasing}, {"fullscreen", &fullscreen},
         {"integerScaling", &integerScaling}, {"showFps", &showFps}, {"gamepadEnabled", &gamepadEnabled},
-        {"believableScale", &believableScale}, {"openSea", &openSea}};
+        {"rumble", &rumble}, {"believableScale", &believableScale}, {"openSea", &openSea}};
     static const I ints[] = {{"originalLines", &originalLines}, {"internalWidth", &internalWidth},
         {"internalHeight", &internalHeight}, {"windowWidth", &windowWidth}, {"windowHeight", &windowHeight},
         {"fpsCap", &fpsCap}, {"brightness", &brightness}, {"masterVolume", &masterVolume},

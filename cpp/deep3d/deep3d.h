@@ -232,6 +232,8 @@ public:
     static int32_t musicVolume;
     static int32_t sfxVolume;
     static bool gamepadEnabled;
+    /** The controller rumbles where the phone vibrated (the sub hit) */
+    static bool rumble;
     static int32_t fov;
 
     static bool remasteredOn() { return remastered; }
@@ -355,11 +357,19 @@ constexpr int32_t ENTER = 10, BACK_SPACE = 8, TAB = 9, SHIFT = 16, CONTROL = 17,
 
 class Gamepad {
 public:
+    /** Buttons, numbered as Linux's js interface numbers an Xbox pad's (whatever the pad) */
+    static constexpr int32_t A = 0, B = 1, X = 2, Y = 3, LB = 4, RB = 5, BACK = 6, START = 7, GUIDE = 8, L3 = 9,
+                             R3 = 10, SHARE = 11, LT = 12, RT = 13;
     static void init();
+    /** "Off", "None found" or the pad's name */
     static std::string getStatus();
     static void testButton(int32_t number, bool pressed);
+    /** A button's name on the pad used last (Cross, Circle… on a PlayStation pad) */
+    static std::string label(int32_t button);
     /** The button bound to a gameplay action, for on-screen hints (or empty). */
     static std::string buttonFor(Input::Action a);
+    /** The phone's vibrator: the pad used last rumbles (0 stops it) */
+    static void rumble(int32_t ms);
 };
 
 class AnalogInput {

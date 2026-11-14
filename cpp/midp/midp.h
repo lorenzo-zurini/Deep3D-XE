@@ -243,7 +243,7 @@ public:
     void callSerially(Ref<java::lang::Runnable> r);
     bool isColor() { return true; }
     int32_t numColors() { return 1 << 24; }
-    bool vibrate(int32_t) { return false; }
+    bool vibrate(int32_t ms);   // Deep3D-PC: the controller rumbles
     bool flashBacklight(int32_t) { return false; }
 };
 

@@ -1,23 +1,21 @@
 // Input: rebindable keys (AWT codes, as deep3d.cfg stores them), gamepads
-// (Linux's joystick devices, Windows's XInput), analogue steering, mouse flight; and the small hand-
+// (SDL's), analogue steering, mouse flight; and the small hand-
 // overs: Remaster, Cheats, GameSettings, MenuToolkit (Java: Input, Gamepad,
 // AnalogInput, MouseFlight, Remaster, Cheats, GameSettings, MenuToolkit).
 #include "deep3d.h"
 #include "m3g.h"
 
-#include "platform.h"
-
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
+#include <map>
 #include <mutex>
 #include <set>
 #include <thread>
-#ifndef _WIN32
-#include <dirent.h>
-#include <fcntl.h>
-#include <unistd.h>
-#endif
+
+#include <SDL3/SDL.h>
 
 namespace org::deep3d {
 
@@ -376,18 +374,26 @@ void Input::sendMidpKey(int32_t code, bool pressed) {
 }
 
 // ---------------------------------------------------------------------
-// Gamepad: /dev/input/js* (Windows: XInput), hot-plugged
+// Gamepad: SDL's gamepads (Xbox, PlayStation, Switch and most others, by
+// SDL's controller database), hot-plugged; whatever the pad, its buttons
+// are numbered as an Xbox pad's (Gamepad::A…) and its d-pad is a hat
 // ---------------------------------------------------------------------
 
 namespace {
 
-constexpr int BTN_A = 0, BTN_B = 1, BTN_X = 2, BTN_Y = 3, BTN_LB = 4, BTN_RB = 5, BTN_SELECT = 6, BTN_START = 7;
-constexpr int AXIS_LX = 0, AXIS_LY = 1, AXIS_LT = 2, AXIS_RT = 5, AXIS_HATX = 6, AXIS_HATY = 7;
+constexpr int BTN_A = Gamepad::A, BTN_B = Gamepad::B, BTN_X = Gamepad::X, BTN_Y = Gamepad::Y, BTN_LB = Gamepad::LB,
+              BTN_RB = Gamepad::RB, BTN_SELECT = Gamepad::BACK, BTN_START = Gamepad::START, BTN_R3 = Gamepad::R3,
+              BTN_SHARE = Gamepad::SHARE;
+constexpr int AXIS_LX = 0, AXIS_LY = 1, AXIS_LT = 2, AXIS_RX = 3, AXIS_RY = 4, AXIS_RT = 5, AXIS_HATX = 6, AXIS_HATY = 7;
 constexpr int STICK_PRESS = 12000, STICK_RELEASE = 9000, TRIGGER_PRESS = 16000, TRIGGER_RELEASE = 8000;
 
+/* what the pad used last is called and can rumble (the game's thread rumbles it) */
 std::mutex gPadLock;
-std::set<std::string> gReaders;
-std::string gPadStatus = "Not found";
+std::string gPadStatus = "None found";
+SDL_Gamepad* gLastPad = nullptr;
+using Labels = std::array<std::string, 14>;
+const Labels XBOX = {"A", "B", "X", "Y", "LB", "RB", "Back", "Start", "Guide", "LS", "RS", "Share", "LT", "RT"};
+Labels gLabels = XBOX;
 bool gFlightHeld[16];
 
 void setStatus(const std::string& s) {
@@ -452,6 +458,11 @@ void handleButton(int number, bool pressed) {
         case BTN_Y:
             Input::handleAction(Input::Action::DOCK, true);
             return;
+        case BTN_R3:
+        case BTN_SHARE:
+            // F9 (the last minute kept as a demo) and F12 (a screenshot)
+            Input::handleKey(number == BTN_R3 ? vk::F9 : vk::F12, u'\0', true, false, false);
+            return;
         default: break;
     }
     if (GameUi::profile()) {
@@ -481,15 +492,19 @@ void handleButton(int number, bool pressed) {
 
 /** What a pad's events have held down so far. */
 struct PadState {
+    bool buttons[16] = {};
     bool dir[4] = {};
+    bool thrust[2] = {};
     bool lt = false, rt = false;
     float stickX = 0, stickY = 0;
+    int hatX = 0, hatY = 0;
 };
 
-/** One joystick event, as Linux's js interface numbers them (an Xbox layout). */
+/** One event, as Linux's js interface numbers an Xbox pad's (type 1: a button, 2: an axis). */
 void padEvent(PadState& p, int type, int number, int value) {
     jrt::MutatorScope running;   // the handlers may call into the game
     if (type == 0x01) {
+        if (number < 16) p.buttons[number] = value != 0;
         handleButton(number, value != 0);
     } else if (type == 0x02) {
         if (number == AXIS_LX) {
@@ -510,6 +525,11 @@ void padEvent(PadState& p, int type, int number, int value) {
                 p.dir[0] = axial(p.dir[0], -value, Input::Action::UP);
                 p.dir[1] = axial(p.dir[1], value, Input::Action::DOWN);
                 break;
+            case AXIS_RY:
+                // the right stick is the throttle: up opens it, down closes it
+                p.thrust[0] = axial(p.thrust[0], -value, Input::Action::THRUST_UP);
+                p.thrust[1] = axial(p.thrust[1], value, Input::Action::THRUST_DOWN);
+                break;
             case AXIS_LT: p.lt = trigger(p.lt, value, Input::Action::KEY7); break;
             case AXIS_RT: p.rt = trigger(p.rt, value, Input::Action::AUTOPILOT); break;
             default: break;
@@ -517,115 +537,208 @@ void padEvent(PadState& p, int type, int number, int value) {
     }
 }
 
-/** The pad is gone: what it held is let go. */
+/** The pad is gone (or turned off): what it held is let go. */
 void padGone(PadState& p) {
+    jrt::MutatorScope running;
+    for (int b = 0; b < 16; b++)
+        if (p.buttons[b]) handleButton(b, false);
     AnalogInput::setStick(0, 0);
     if (p.dir[0]) Input::handleAction(Input::Action::UP, false);
     if (p.dir[1]) Input::handleAction(Input::Action::DOWN, false);
     if (p.dir[2]) Input::handleAction(Input::Action::LEFT, false);
     if (p.dir[3]) Input::handleAction(Input::Action::RIGHT, false);
+    if (p.thrust[0]) Input::handleAction(Input::Action::THRUST_UP, false);
+    if (p.thrust[1]) Input::handleAction(Input::Action::THRUST_DOWN, false);
+    if (p.lt) Input::handleAction(Input::Action::KEY7, false);
+    if (p.rt) Input::handleAction(Input::Action::AUTOPILOT, false);
+    p = PadState();
 }
 
-#ifdef _WIN32
-/** XInput (os::pad), polled: its changes as js events. */
-void xinputLoop() {
-    constexpr int PADS = 4;
-    PadState pads[PADS];
-    int last[PADS][16] = {};
-    bool connected[PADS] = {};
+/** What a pad's buttons are called: SDL's face labels, the shoulders by the family */
+Labels labelsOf(SDL_Gamepad* g) {
+    Labels l = XBOX;
+    const std::pair<SDL_GamepadButton, int> face[] = {{SDL_GAMEPAD_BUTTON_SOUTH, BTN_A}, {SDL_GAMEPAD_BUTTON_EAST, BTN_B},
+                                                      {SDL_GAMEPAD_BUTTON_WEST, BTN_X}, {SDL_GAMEPAD_BUTTON_NORTH, BTN_Y}};
+    for (auto [b, ours] : face) {
+        switch (SDL_GetGamepadButtonLabel(g, b)) {
+            case SDL_GAMEPAD_BUTTON_LABEL_A: l[ours] = "A"; break;
+            case SDL_GAMEPAD_BUTTON_LABEL_B: l[ours] = "B"; break;
+            case SDL_GAMEPAD_BUTTON_LABEL_X: l[ours] = "X"; break;
+            case SDL_GAMEPAD_BUTTON_LABEL_Y: l[ours] = "Y"; break;
+            case SDL_GAMEPAD_BUTTON_LABEL_CROSS: l[ours] = "Cross"; break;
+            case SDL_GAMEPAD_BUTTON_LABEL_CIRCLE: l[ours] = "Circle"; break;
+            case SDL_GAMEPAD_BUTTON_LABEL_SQUARE: l[ours] = "Square"; break;
+            case SDL_GAMEPAD_BUTTON_LABEL_TRIANGLE: l[ours] = "Triangle"; break;
+            default: break;
+        }
+    }
+    auto rest = [&](const char* lb, const char* rb, const char* lt, const char* rt, const char* back, const char* start,
+                    const char* share) {
+        l[Gamepad::LB] = lb, l[Gamepad::RB] = rb, l[Gamepad::LT] = lt, l[Gamepad::RT] = rt;
+        l[Gamepad::BACK] = back, l[Gamepad::START] = start, l[Gamepad::SHARE] = share;
+    };
+    switch (SDL_GetGamepadType(g)) {
+        case SDL_GAMEPAD_TYPE_PS3: rest("L1", "R1", "L2", "R2", "Select", "Start", "Touchpad"); l[Gamepad::L3] = "L3", l[Gamepad::R3] = "R3"; break;
+        case SDL_GAMEPAD_TYPE_PS4: rest("L1", "R1", "L2", "R2", "Share", "Options", "Touchpad"); l[Gamepad::L3] = "L3", l[Gamepad::R3] = "R3"; break;
+        case SDL_GAMEPAD_TYPE_PS5: rest("L1", "R1", "L2", "R2", "Create", "Options", "Touchpad"); l[Gamepad::L3] = "L3", l[Gamepad::R3] = "R3"; break;
+        case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_PRO:
+        case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_LEFT:
+        case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_RIGHT:
+        case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_PAIR: rest("L", "R", "ZL", "ZR", "-", "+", "Capture"); break;
+        default: break;
+    }
+    return l;
+}
+
+int ourButton(int sdl) {
+    switch (sdl) {
+        case SDL_GAMEPAD_BUTTON_SOUTH: return Gamepad::A;
+        case SDL_GAMEPAD_BUTTON_EAST: return Gamepad::B;
+        case SDL_GAMEPAD_BUTTON_WEST: return Gamepad::X;
+        case SDL_GAMEPAD_BUTTON_NORTH: return Gamepad::Y;
+        case SDL_GAMEPAD_BUTTON_BACK: return Gamepad::BACK;
+        case SDL_GAMEPAD_BUTTON_GUIDE: return Gamepad::GUIDE;
+        case SDL_GAMEPAD_BUTTON_START: return Gamepad::START;
+        case SDL_GAMEPAD_BUTTON_LEFT_STICK: return Gamepad::L3;
+        case SDL_GAMEPAD_BUTTON_RIGHT_STICK: return Gamepad::R3;
+        case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER: return Gamepad::LB;
+        case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER: return Gamepad::RB;
+        case SDL_GAMEPAD_BUTTON_MISC1:   // Xbox Share, Switch Capture
+        case SDL_GAMEPAD_BUTTON_TOUCHPAD: return Gamepad::SHARE;
+        default: return -1;
+    }
+}
+
+int ourAxis(int sdl) {
+    switch (sdl) {
+        case SDL_GAMEPAD_AXIS_LEFTX: return AXIS_LX;
+        case SDL_GAMEPAD_AXIS_LEFTY: return AXIS_LY;
+        case SDL_GAMEPAD_AXIS_RIGHTX: return AXIS_RX;
+        case SDL_GAMEPAD_AXIS_RIGHTY: return AXIS_RY;
+        case SDL_GAMEPAD_AXIS_LEFT_TRIGGER: return AXIS_LT;
+        case SDL_GAMEPAD_AXIS_RIGHT_TRIGGER: return AXIS_RT;
+        default: return -1;
+    }
+}
+
+struct Pad {
+    SDL_Gamepad* g;
+    std::string name;
+    Labels labels;
+    PadState state;
+};
+
+/** The pads' events, on their own thread (SDL's joystick thread watches the devices on Windows). */
+void padLoop() {
+    std::map<SDL_JoystickID, Pad> pads;
+    bool enabled = true;
+    auto used = [&](Pad& p) {
+        std::lock_guard<std::mutex> g(gPadLock);
+        gLastPad = p.g;
+        gLabels = p.labels;
+        gPadStatus = p.name;
+    };
     while (true) {
-        int found = 0;
-        for (int i = 0; i < PADS; i++) {
-            int now[16];
-            bool on = Config::gamepadEnabled && os::pad(i, now, now + 8);
-            if (!on) {
-                if (connected[i]) {
-                    padGone(pads[i]);
-                    pads[i] = PadState();
-                    memset(last[i], 0, sizeof last[i]);
-                    connected[i] = false;
+        if (enabled != Config::gamepadEnabled) {
+            enabled = Config::gamepadEnabled;
+            if (!enabled)
+                for (auto& [id, p] : pads) padGone(p.state);
+        }
+        SDL_Event e;
+        while (SDL_PollEvent(&e)) {
+            switch (e.type) {
+                case SDL_EVENT_GAMEPAD_ADDED:
+                    if (SDL_Gamepad* g = SDL_OpenGamepad(e.gdevice.which)) {
+                        const char* n = SDL_GetGamepadName(g);
+                        Pad& p = pads[e.gdevice.which] = {g, n ? n : "Controller", labelsOf(g), {}};
+                        fprintf(stderr, "[gamepad] %s connected\n", p.name.c_str());
+                        used(p);
+                    }
+                    break;
+                case SDL_EVENT_GAMEPAD_REMOVED: {
+                    auto it = pads.find(e.gdevice.which);
+                    if (it == pads.end()) break;
+                    padGone(it->second.state);
+                    fprintf(stderr, "[gamepad] %s disconnected\n", it->second.name.c_str());
+                    {
+                        std::lock_guard<std::mutex> g(gPadLock);
+                        if (gLastPad == it->second.g) gLastPad = nullptr;
+                    }
+                    SDL_CloseGamepad(it->second.g);
+                    pads.erase(it);
+                    if (!pads.empty()) used(pads.begin()->second);
+                    break;
                 }
-                continue;
-            }
-            found++;
-            connected[i] = true;
-            for (int k = 0; k < 16; k++) {
-                if (now[k] != last[i][k]) padEvent(pads[i], k < 8 ? 0x01 : 0x02, k % 8, last[i][k] = now[k]);
+                case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+                case SDL_EVENT_GAMEPAD_BUTTON_UP: {
+                    auto it = pads.find(e.gbutton.which);
+                    if (it == pads.end() || !enabled) break;
+                    Pad& p = it->second;
+                    if (e.gbutton.down) used(p);
+                    bool down = e.gbutton.down;
+                    switch (e.gbutton.button) {
+                        // the d-pad as a hat
+                        case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
+                        case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: {
+                            int x = SDL_GetGamepadButton(p.g, SDL_GAMEPAD_BUTTON_DPAD_RIGHT) ? 32767
+                                    : SDL_GetGamepadButton(p.g, SDL_GAMEPAD_BUTTON_DPAD_LEFT) ? -32767 : 0;
+                            if (x != p.state.hatX) padEvent(p.state, 0x02, AXIS_HATX, p.state.hatX = x);
+                            break;
+                        }
+                        case SDL_GAMEPAD_BUTTON_DPAD_UP:
+                        case SDL_GAMEPAD_BUTTON_DPAD_DOWN: {
+                            int y = SDL_GetGamepadButton(p.g, SDL_GAMEPAD_BUTTON_DPAD_DOWN) ? 32767
+                                    : SDL_GetGamepadButton(p.g, SDL_GAMEPAD_BUTTON_DPAD_UP) ? -32767 : 0;
+                            if (y != p.state.hatY) padEvent(p.state, 0x02, AXIS_HATY, p.state.hatY = y);
+                            break;
+                        }
+                        default: {
+                            int b = ourButton(e.gbutton.button);
+                            if (b >= 0 && p.state.buttons[b] != down) padEvent(p.state, 0x01, b, down);
+                        }
+                    }
+                    break;
+                }
+                case SDL_EVENT_GAMEPAD_AXIS_MOTION: {
+                    auto it = pads.find(e.gaxis.which);
+                    int a = ourAxis(e.gaxis.axis);
+                    if (it == pads.end() || !enabled || a < 0) break;
+                    int value = std::max(int(e.gaxis.value), -32767);
+                    // a trigger's pull (sticks resting off-centre don't count)
+                    if (a == AXIS_LT || a == AXIS_RT ? value > TRIGGER_PRESS : std::abs(value) > STICK_PRESS) used(it->second);
+                    padEvent(it->second.state, 0x02, a, value);
+                    break;
+                }
+                default: break;
             }
         }
-        setStatus(!Config::gamepadEnabled ? "Disabled" : found ? "Connected" : "Not found");
-        std::this_thread::sleep_for(std::chrono::milliseconds(found ? 8 : 1000));
-    }
-}
-#else
-void readLoop(std::string path) {
-    int fd = ::open(path.c_str(), O_RDONLY);
-    PadState pad;
-    if (fd >= 0) {
-        setStatus("Connected");
-        uint8_t ev[8];
-        while (true) {
-            size_t n = 0;
-            while (n < 8) {
-                ssize_t r = read(fd, ev + n, 8 - n);
-                if (r <= 0) goto done;
-                n += size_t(r);
-            }
-            if (!Config::gamepadEnabled) continue;
-            int value = int16_t(ev[4] | (ev[5] << 8));
-            int type = ev[6] & 0x7F;
-            bool isInit = (ev[6] & 0x80) != 0;
-            int number = ev[7];
-            if (isInit) continue;
-            padEvent(pad, type, number, value);
+        {
+            std::lock_guard<std::mutex> g(gPadLock);
+            if (!enabled) gPadStatus = "Off";
+            else if (pads.empty()) gPadStatus = "None found";
+            else if (gPadStatus == "Off" || gPadStatus == "None found") gPadStatus = pads.begin()->second.name;
         }
-    done:
-        close(fd);
+        SDL_Delay(pads.empty() ? 100 : 4);
     }
-    padGone(pad);
-    std::lock_guard<std::mutex> g(gPadLock);
-    gReaders.erase(path);
-    if (gReaders.empty()) gPadStatus = "Not found";
 }
-#endif
 
 }  // namespace
 
 void Gamepad::init() {
-#ifdef _WIN32
-    std::thread(xinputLoop).detach();
-#else
-    std::thread([]() {
-        while (true) {
-            if (Config::gamepadEnabled) {
-                std::vector<std::string> devices;
-                if (DIR* d = opendir("/dev/input")) {
-                    while (dirent* e = readdir(d))
-                        if (strncmp(e->d_name, "js", 2) == 0) devices.push_back(std::string("/dev/input/") + e->d_name);
-                    closedir(d);
-                }
-                for (auto& dev : devices) {
-                    {
-                        std::lock_guard<std::mutex> g(gPadLock);
-                        if (gReaders.count(dev)) continue;
-                    }
-                    if (access(dev.c_str(), R_OK) != 0) {
-                        setStatus("No permission");
-                        continue;
-                    }
-                    {
-                        std::lock_guard<std::mutex> g(gPadLock);
-                        gReaders.insert(dev);
-                    }
-                    std::thread(readLoop, dev).detach();
-                }
-            } else {
-                setStatus("Disabled");
-            }
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-        }
-    }).detach();
-#endif
+    // SDL's own thread for the device notifications (Windows: no SDL window to receive them), and the
+    // pads read whichever window has the focus (the game's is GLFW's, not SDL's)
+    SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+    if (!SDL_InitSubSystem(SDL_INIT_GAMEPAD)) {
+        fprintf(stderr, "[gamepad] unavailable: %s\n", SDL_GetError());
+        setStatus("Unavailable");
+        return;
+    }
+    // more pads: SDL_GAMECONTROLLERCONFIG (Steam sets it), or gamecontrollerdb.txt next to the game
+    std::string db = AppDirs::file("gamecontrollerdb.txt");
+    if (std::filesystem::exists(db) && SDL_AddGamepadMappingsFromFile(db.c_str()) < 0)
+        fprintf(stderr, "[gamepad] %s: %s\n", db.c_str(), SDL_GetError());
+    std::thread(padLoop).detach();
 }
 
 std::string Gamepad::getStatus() {
@@ -635,16 +748,27 @@ std::string Gamepad::getStatus() {
 
 void Gamepad::testButton(int32_t number, bool pressed) { handleButton(number, pressed); }
 
+std::string Gamepad::label(int32_t button) {
+    std::lock_guard<std::mutex> g(gPadLock);
+    return button >= 0 && button < int32_t(gLabels.size()) ? gLabels[size_t(button)] : "";
+}
+
 std::string Gamepad::buttonFor(Input::Action a) {
     switch (a) {
-        case Input::Action::FIRE: return "A";
-        case Input::Action::DOCK: return "Y";
-        case Input::Action::KEY1: return "LB";
-        case Input::Action::BOOST: return "RB";
-        case Input::Action::KEY7: return "LT";
-        case Input::Action::AUTOPILOT: return "Back";
+        case Input::Action::FIRE: return label(A);
+        case Input::Action::DOCK: return label(Y);
+        case Input::Action::KEY1: return label(LB);
+        case Input::Action::BOOST: return label(RB);
+        case Input::Action::KEY7: return label(LT);
+        case Input::Action::AUTOPILOT: return label(BACK);
         default: return "";
     }
+}
+
+void Gamepad::rumble(int32_t ms) {
+    if (!Config::rumble && ms > 0) return;
+    std::lock_guard<std::mutex> g(gPadLock);
+    if (gLastPad) SDL_RumbleGamepad(gLastPad, ms > 0 ? 0x7000 : 0, ms > 0 ? 0xC000 : 0, uint32_t(std::max(ms, 0)));
 }
 
 // ---------------------------------------------------------------------
