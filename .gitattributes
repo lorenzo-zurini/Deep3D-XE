@@ -1,0 +1,6 @@
+# LF everywhere, Windows checkouts too (the MSYS2 build runs the shell scripts)
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.sf2 binary
+*.jpg binary

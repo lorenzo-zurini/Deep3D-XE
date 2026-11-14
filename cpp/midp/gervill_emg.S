@@ -8,4 +8,6 @@
 deep3d_gervill_emg:
     .incbin "gervill_emg.sf2"
 deep3d_gervill_emg_end:
+#ifdef __ELF__
     .section .note.GNU-stack,"",@progbits
+#endif

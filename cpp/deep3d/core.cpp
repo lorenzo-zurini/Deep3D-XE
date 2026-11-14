@@ -2,6 +2,7 @@
 // pacing, quitting, diagnostics (Java: AppDirs, Config, Assets, FirstRun,
 // Runtime, Diagnostics).
 #include "deep3d.h"
+#include "platform.h"
 
 #include <algorithm>
 #include <condition_variable>
@@ -10,9 +11,6 @@
 #include <cstdio>
 #include <ctime>
 #include <deque>
-#include <fcntl.h>
-#include <spawn.h>
-#include <sys/wait.h>
 #include <filesystem>
 #include <fstream>
 #include <limits.h>
@@ -21,7 +19,6 @@
 #include <set>
 #include <sstream>
 #include <thread>
-#include <unistd.h>
 #include <zip.h>
 
 extern "C" {
@@ -39,13 +36,7 @@ Ref<String> jstr(const std::string& s) { return String::fromUtf8(s); }
 // ---------------------------------------------------------------------
 
 std::string AppDirs::exeDir() {
-    static std::string dir = [] {
-        char buf[PATH_MAX];
-        ssize_t n = readlink("/proc/self/exe", buf, sizeof buf - 1);
-        if (n <= 0) return std::string(".");
-        buf[n] = 0;
-        return fs::path(buf).parent_path().string();
-    }();
+    static std::string dir = fs::path(os::exePath()).parent_path().string();
     return dir;
 }
 
@@ -350,10 +341,18 @@ std::string javaDate() {
     static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
     time_t now = time(nullptr);
     struct tm t;
+#ifdef _WIN32
+    // no zone names: the offset, as Java shows a zone it has no name for
+    localtime_s(&t, &now);
+    std::string zone;
+    {
+        long off = long(_mkgmtime(&t) - now);
+#else
     localtime_r(&now, &t);
     std::string zone = t.tm_zone ? t.tm_zone : "GMT";
     if (zone.empty() || zone[0] == '+' || zone[0] == '-') {
         long off = t.tm_gmtoff;
+#endif
         char z[16];
         snprintf(z, sizeof z, "GMT%c%02ld:%02ld", off < 0 ? '-' : '+', labs(off) / 3600, labs(off) % 3600 / 60);
         zone = off == 0 ? "GMT" : z;
@@ -655,59 +654,16 @@ void fixWavSizes(std::vector<uint8_t>& wav) {
 
 std::optional<std::vector<uint8_t>> amrToWav(const std::vector<uint8_t>& amr) {
     if (gFfmpeg == 0) return std::nullopt;
-    int in[2], out[2], err[2];
-    if (pipe2(in, O_CLOEXEC) != 0) return std::nullopt;
-    if (pipe2(out, O_CLOEXEC) != 0) {
-        close(in[0]), close(in[1]);
-        return std::nullopt;
-    }
-    if (pipe2(err, O_CLOEXEC) != 0) {
-        close(in[0]), close(in[1]), close(out[0]), close(out[1]);
-        return std::nullopt;
-    }
-    posix_spawn_file_actions_t fa;
-    posix_spawn_file_actions_init(&fa);
-    posix_spawn_file_actions_adddup2(&fa, in[0], 0);
-    posix_spawn_file_actions_adddup2(&fa, out[1], 1);
-    posix_spawn_file_actions_adddup2(&fa, err[1], 2);
-    const char* argv[] = {"ffmpeg", "-loglevel", "error", "-f", "amr", "-i", "pipe:0", "-ar", "22050", "-f", "wav", "pipe:1", nullptr};
-    pid_t pid;
-    int rc = posix_spawnp(&pid, "ffmpeg", &fa, nullptr, const_cast<char* const*>(argv), environ);
-    posix_spawn_file_actions_destroy(&fa);
-    close(in[0]), close(out[1]), close(err[1]);
-    if (rc != 0) {
-        close(in[1]), close(out[0]), close(err[0]);
+    bool missing = false;
+    auto wav = os::filter({"ffmpeg", "-loglevel", "error", "-f", "amr", "-i", "pipe:0", "-ar", "22050", "-f", "wav", "pipe:1"},
+                          amr, &missing);
+    if (missing) {
         if (gFfmpeg.exchange(0) == -1) printf("[assets] ffmpeg not found: sound effects are silent (music is unaffected)\n");
         return std::nullopt;
     }
-    std::thread feeder([&] {
-        size_t done = 0;
-        while (done < amr.size()) {
-            ssize_t n = write(in[1], amr.data() + done, amr.size() - done);
-            if (n <= 0) break;
-            done += size_t(n);
-        }
-        close(in[1]);
-    });
-    std::thread drain([&] {
-        char buf[4096];
-        while (read(err[0], buf, sizeof buf) > 0) {
-        }
-        close(err[0]);
-    });
-    std::vector<uint8_t> wav;
-    uint8_t buf[65536];
-    ssize_t n;
-    while ((n = read(out[0], buf, sizeof buf)) > 0) wav.insert(wav.end(), buf, buf + n);
-    close(out[0]);
-    feeder.join();
-    drain.join();
-    int status = 0;
-    while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
-    }
-    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0 || wav.size() <= 44) return std::nullopt;
+    if (!wav || wav->size() <= 44) return std::nullopt;
     gFfmpeg = 1;
-    fixWavSizes(wav);
+    fixWavSizes(*wav);
     return wav;
 }
 
@@ -856,35 +812,15 @@ bool FirstRun::ensureAssets() {
         "Deep \xE2\x80\x94 Submarine Odyssey plays from two original J2ME releases of \"Deep\" v1.0.8, "
         "which are not included: the Nokia / JSR-184 (M3G) build (game data and 3D models) and the "
         "international build (English text). Select both .jar files.";
-    if (getenv("DISPLAY") || getenv("WAYLAND_DISPLAY")) {
-        // a desktop file dialog (KDE's, else GTK's)
-        std::string cmd;
-        if (system("command -v kdialog >/dev/null 2>&1") == 0) {
-            cmd = "kdialog --title 'Deep - first launch' --msgbox \"" + std::string(msg) +
-                  "\" && kdialog --multiple --separate-output --getopenfilename ~ '*.jar' 2>/dev/null";
-        } else if (system("command -v zenity >/dev/null 2>&1") == 0) {
-            cmd = "zenity --info --title='Deep - first launch' --text=\"" + std::string(msg) +
-                  "\" && zenity --file-selection --multiple --separator='\n' --file-filter='*.jar' 2>/dev/null";
-        }
-        if (!cmd.empty()) {
-            FILE* p = popen(cmd.c_str(), "r");
-            std::string game, text;
-            if (p) {
-                char line[4096];
-                while (fgets(line, sizeof line, p)) {
-                    std::string f = line;
-                    while (!f.empty() && (f.back() == '\n' || f.back() == '\r')) f.pop_back();
-                    Assets::Kind k = Assets::classify(f);
-                    if (game.empty() && k == Assets::Kind::GAME) game = f;
-                    else if (text.empty() && k == Assets::Kind::TEXT) text = f;
-                }
-                pclose(p);
-            }
-            if (!game.empty() && !text.empty() && Assets::use(game, text)) {
-                Config::save();
-                return true;
-            }
-        }
+    std::string game, text;
+    for (auto& f : os::askForFiles("Deep - first launch", msg, "*.jar")) {
+        Assets::Kind k = Assets::classify(f);
+        if (game.empty() && k == Assets::Kind::GAME) game = f;
+        else if (text.empty() && k == Assets::Kind::TEXT) text = f;
+    }
+    if (!game.empty() && !text.empty() && Assets::use(game, text)) {
+        Config::save();
+        return true;
     }
     fprintf(stderr,
             "Game data not found: put the original Deep JARs (the Nokia/M3G build and the international "
@@ -1119,7 +1055,7 @@ void Runtime::halt(int status) {
     fflush(stderr);
     // skip exit handlers: the GPU drivers' teardown crashes with the
     // engine's context still live (see Runtime.java)
-    _exit(status);
+    std::_Exit(status);
 }
 
 const std::vector<uint32_t>& Runtime::windowIcon() {
@@ -1184,23 +1120,6 @@ void checkStalledPresenters() {
 int64_t gLastLoopErrorAt = 0;
 int gSuppressedLoopErrors = 0;
 
-/** Copies the process's stdout/stderr to the terminal and logs/deep3d.log. */
-void teeOutput(int fd, int logFd) {
-    int pipeFds[2];
-    if (pipe(pipeFds) != 0) return;
-    int terminal = dup(fd);
-    dup2(pipeFds[1], fd);
-    close(pipeFds[1]);
-    std::thread([readFd = pipeFds[0], terminal, logFd]() {
-        char buf[4096];
-        ssize_t n;
-        while ((n = read(readFd, buf, sizeof buf)) > 0) {
-            ssize_t w = write(terminal, buf, size_t(n));
-            w = write(logFd, buf, size_t(n));
-            (void)w;
-        }
-    }).detach();
-}
 }  // namespace
 
 void Diagnostics::init() {
@@ -1208,12 +1127,13 @@ void Diagnostics::init() {
     std::string log = dir + "/deep3d.log";
     std::error_code ec;
     if (fs::is_regular_file(log)) fs::rename(log, dir + "/deep3d.prev.log", ec);
-    int logFd = ::open(log.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0644);
+    // stdout and stderr to the terminal and logs/deep3d.log
+    int logFd = os::openLog(log);
     if (logFd >= 0) {
         setvbuf(stdout, nullptr, _IOLBF, 0);
         setvbuf(stderr, nullptr, _IONBF, 0);
-        teeOutput(1, logFd);
-        teeOutput(2, logFd);
+        os::tee(1, logFd);
+        os::tee(2, logFd);
     }
     gLastFrameAt = nowMillis();
     std::thread([]() {

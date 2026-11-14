@@ -1,0 +1,5 @@
+// The Windows executable's icon and manifest.
+#include <winuser.h>
+
+1 ICON "deep3d.ico"
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "deep3d.manifest"

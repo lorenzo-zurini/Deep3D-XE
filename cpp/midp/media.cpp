@@ -374,8 +374,8 @@ std::string soundbank() {
         std::string n = e.path().filename().string();
         for (auto& c : n) c = char(tolower(c));
         if (n.size() > 4 && (n.compare(n.size() - 4, 4, ".sf2") == 0 || n.compare(n.size() - 4, 4, ".dls") == 0)) {
-            if (fluid_is_soundfont(e.path().c_str())) {
-                printf("[audio] using soundbank %s\n", e.path().filename().c_str());
+            if (fluid_is_soundfont(e.path().string().c_str())) {
+                printf("[audio] using soundbank %s\n", e.path().filename().string().c_str());
                 return gBank = e.path().string();
             }
             break;   // Java took the first one; one it cannot use leaves the default bank

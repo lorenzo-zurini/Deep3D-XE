@@ -8,17 +8,27 @@
  * EGL on the GPU's device platform with a desktop OpenGL context; passes
  * are read back to memory.
  *
+ * Windows: WGL mode (win32/deep3d_wgl.inc), as the GLX mode.
+ *
  * All engine calls happen on the game's threads; state is guarded by one
  * mutex where it is shared.
  */
 #define DEEP3D_EGL_IMPL
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#ifdef _WIN32
+#include <GL/gl.h>
+#include <GL/wglext.h>
+#else
 #include <GL/glx.h>
 #include <GL/gl.h>
 #include <GL/glext.h>
-#include <jni.h>
 #include <pthread.h>
+#endif
+#include <jni.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,9 +37,6 @@
 /* ------------------------------------------------------------------ */
 /* Shared state                                                        */
 /* ------------------------------------------------------------------ */
-
-static Display *glxDisplay = NULL;       /* the window's X display (GLX mode) */
-static GLXContext glxShare = NULL;       /* the window's GLX context */
 
 extern "C" unsigned deep3d_target_texture = 0;
 extern "C" int deep3d_target_texture_mode = 0;
@@ -50,6 +57,13 @@ extern "C" unsigned deep3d_underlay_texture = 0;
 extern "C" int deep3d_underlay_w = 0;
 extern "C" int deep3d_underlay_h = 0;
 extern "C" void *deep3d_underlay_fence = NULL;
+
+#ifdef _WIN32
+#include "../win32/deep3d_wgl.inc"
+#else
+
+static Display *glxDisplay = NULL;       /* the window's X display (GLX mode) */
+static GLXContext glxShare = NULL;       /* the window's GLX context */
 
 static bool glxMode() {
     return glxDisplay != NULL && glxShare != NULL;
@@ -576,15 +590,26 @@ EGLBoolean deep3d_eglCopyBuffers(EGLDisplay, EGLSurface surf, EGLNativePixmapTyp
     return eglCopyBuffers(eglDeviceDisplay(), surf, target);
 }
 
+} /* extern "C" */
+
+static void deep3d_set_share(jlong display, jlong context) {
+    glxDisplay = (Display *) (intptr_t) display;
+    glxShare = (GLXContext) (intptr_t) context;
+}
+
+#endif /* _WIN32 */
+
 /* ------------------------------------------------------------------ */
 /* JNI                                                                 */
 /* ------------------------------------------------------------------ */
 
+extern "C" {
+
+/* the window's display and context (Windows: its DC and WGL context) */
 JNIEXPORT void JNICALL
 Java_javax_microedition_m3g_Platform__1setShareContext(JNIEnv *, jclass, jlong display,
                                                        jlong context) {
-    glxDisplay = (Display *) (intptr_t) display;
-    glxShare = (GLXContext) (intptr_t) context;
+    deep3d_set_share(display, context);
 }
 
 /* texture: GL name to copy into (0 = allocate); w/h: its allocated size */

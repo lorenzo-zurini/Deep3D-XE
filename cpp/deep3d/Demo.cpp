@@ -9,17 +9,11 @@
 // 64 passes a check of the game's state.
 #include "game.h"
 #include "build_info.h"
-
-#include <gnu/libc-version.h>
-#include <sys/prctl.h>
-#include <sys/utsname.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#include "platform.h"
 
 #include <atomic>
 #include <chrono>
 #include <cmath>
-#include <csignal>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -522,20 +516,12 @@ std::string hashOf(const std::string& bytes) {
     return Det::hex(Det::hashBytes(Det::FNV, bytes.data(), bytes.size())) + " " + std::to_string(bytes.size());
 }
 
-std::string exeHash() { return hashOf(readFile("/proc/self/exe")); }
+std::string exeHash() { return hashOf(readFile(os::exePath())); }
 
 /* the game's data, as "hash size": the same JARs, or not the same game */
 std::string jarHash(const char* key) {
     auto v = Config::get(key);
     return v ? hashOf(readFile(*v)) : "";
-}
-
-std::string cpuName() {
-    std::ifstream in("/proc/cpuinfo");
-    std::string l;
-    while (std::getline(in, l))
-        if (l.rfind("model name", 0) == 0) return l.substr(l.find(':') + 2);
-    return "unknown";
 }
 
 std::string stamp(const char* format) {
@@ -558,8 +544,6 @@ std::map<std::string, std::string> parseInfo(const std::string& text) {
 
 /* what tells whether another copy of the game can replay this */
 std::string startInfo() {
-    utsname u{};
-    uname(&u);
     std::ostringstream m;
     m << "build_hash=" << exeHash() << "\n";
     m << "build_commit=" << DEEP3D_COMMIT << "\n";
@@ -569,9 +553,9 @@ std::string startInfo() {
     m << "seed=" << Demo::seed() << "\n";
     m << "started=" << stamp("%Y-%m-%d %H:%M:%S %z") << "\n";
     m << "graphics=" << Config::graphicsMode() << "\n";
-    m << "os=" << u.sysname << " " << u.release << " " << u.machine << "\n";
-    m << "libc=glibc " << gnu_get_libc_version() << "\n";
-    m << "cpu=" << cpuName() << "\n";
+    m << "os=" << os::osName() << "\n";
+    m << "libc=" << os::libcName() << "\n";
+    m << "cpu=" << os::cpuName() << "\n";
     return m.str();
 }
 
@@ -607,7 +591,7 @@ std::string sessionFile() {
     }
     std::sort(old.begin(), old.end());
     for (size_t i = 0; i + (KEEP_SESSIONS - 1) < old.size(); i++) fs::remove(old[i], ec);
-    return dir + "/session-" + stamp("%Y-%m-%d-%H%M%S") + "-" + std::to_string(getpid()) + ".demo";
+    return dir + "/session-" + stamp("%Y-%m-%d-%H%M%S") + "-" + std::to_string(os::processId()) + ".demo";
 }
 
 int32_t record(std::string name, char** argv, const std::vector<char*>& rest) {
@@ -619,14 +603,11 @@ int32_t record(std::string name, char** argv, const std::vector<char*>& rest) {
     }
     printf("Recording to %s\n", path.c_str());
     fflush(stdout);
-    setenv("DEEP3D_DEMO", ("record:" + path).c_str(), 1);
-    std::string exe = fs::read_symlink("/proc/self/exe").string();
-    std::vector<char*> args = {argv[0]};
+    std::vector<std::string> args = {argv[0]};
     args.insert(args.end(), rest.begin(), rest.end());
-    args.push_back(nullptr);
-    execv(exe.c_str(), args.data());
-    perror("[demo] exec");
-    return 1;
+    os::Child how;
+    how.env = {{"DEEP3D_DEMO", "record:" + path}};
+    return os::replaceWith(os::exePath(), args, how);
 }
 
 /* the header: what's in it, and where its passes start */
@@ -688,12 +669,11 @@ int32_t play(const std::string& name, std::string at, std::vector<std::string> c
     if (at.empty() && meta.count("play_at")) at = meta["play_at"];
     std::string warning = differences(meta);
     if (!warning.empty()) fprintf(stderr, "[demo] %s\n", warning.c_str());
-    char tmpl[] = "/tmp/deep3d-demo-XXXXXX";
-    if (!mkdtemp(tmpl)) {
-        perror("[demo] mkdtemp");
+    std::string home = os::makeTempDir("deep3d-demo");
+    if (home.empty()) {
+        fprintf(stderr, "[demo] no temporary folder\n");
         return 1;
     }
-    std::string home = tmpl;
     fs::create_directories(home + "/saves");
     for (auto& f : files)
         if (f.first == "deep3d.cfg" || f.first.rfind("saves/", 0) == 0) std::ofstream(home + "/" + f.first, std::ios::binary) << f.second;
@@ -707,32 +687,23 @@ int32_t play(const std::string& name, std::string at, std::vector<std::string> c
         for (auto& l : cfg) out << "\n" << l;
         out << "\n";
     }
-    fflush(stdout);
-    pid_t pid = fork();
-    if (pid < 0) return 1;
-    if (pid == 0) {
-        prctl(PR_SET_PDEATHSIG, SIGTERM);
-        setenv("DEEP3D_HOME", home.c_str(), 1);
-        unsetenv("DEEP3D_CONFIG");     // the run's own settings and saves, never the player's
-        unsetenv("DEEP3D_SAVE_DIR");
-        unsetenv("DEEP3D_SCENARIO");
-        setenv("DEEP3D_DEMO", ("play:" + path).c_str(), 1);
-        setenv("DEEP3D_DEMO_START", std::to_string(start).c_str(), 1);
-        setenv("DEEP3D_DEMO_SEED", meta["seed"].c_str(), 1);
-        if (!warning.empty()) setenv("DEEP3D_DEMO_WARNING", warning.c_str(), 1);
-        if (!at.empty()) setenv("DEEP3D_DEMO_AT", at.c_str(), 1);
-        std::string exe = fs::read_symlink("/proc/self/exe").string();
-        std::vector<char*> args = {argv[0]};
-        args.insert(args.end(), rest.begin(), rest.end());
-        args.push_back(nullptr);
-        execv(exe.c_str(), args.data());
-        _exit(127);
-    }
-    int status = 0;
-    waitpid(pid, &status, 0);
+    os::Child how;
+    how.diesWithUs = true;
+    how.env = {{"DEEP3D_HOME", home},
+               {"DEEP3D_CONFIG", std::nullopt},     // the run's own settings and saves, never the player's
+               {"DEEP3D_SAVE_DIR", std::nullopt},
+               {"DEEP3D_SCENARIO", std::nullopt},
+               {"DEEP3D_DEMO", "play:" + path},
+               {"DEEP3D_DEMO_START", std::to_string(start)},
+               {"DEEP3D_DEMO_SEED", meta["seed"]}};
+    if (!warning.empty()) how.env.push_back({"DEEP3D_DEMO_WARNING", warning});
+    if (!at.empty()) how.env.push_back({"DEEP3D_DEMO_AT", at});
+    std::vector<std::string> args = {argv[0]};
+    args.insert(args.end(), rest.begin(), rest.end());
+    int status = os::run(os::exePath(), args, how);
     std::error_code ec;
     fs::remove_all(home, ec);
-    return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
+    return status < 0 ? 1 : status;
 }
 }  // namespace
 

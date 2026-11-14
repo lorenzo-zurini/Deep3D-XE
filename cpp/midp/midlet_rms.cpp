@@ -4,6 +4,7 @@
 #include "deep3d/deep3d.h"
 
 #include <cstdio>
+#include <filesystem>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -26,7 +27,8 @@ namespace {
 std::string saveDir() {
     const char* env = getenv("DEEP3D_SAVE_DIR");
     if (env && *env) {
-        mkdir(env, 0755);
+        std::error_code ec;
+        std::filesystem::create_directory(env, ec);
         return env;
     }
     return org::deep3d::AppDirs::dir("saves");
@@ -138,7 +140,9 @@ void RecordStore::save() {
     }
     bool ok = fflush(f) == 0;
     fclose(f);
-    if (!ok || rename(tmp.c_str(), path.c_str()) != 0) fail<RecordStoreException>("cannot write " + name);
+    std::error_code ec;
+    if (ok) std::filesystem::rename(tmp, path, ec);   // replaces the old file (Windows too)
+    if (!ok || ec) fail<RecordStoreException>("cannot write " + name);
 }
 
 void RecordStore::checkOpen() {

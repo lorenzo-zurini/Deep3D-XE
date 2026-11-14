@@ -8,10 +8,10 @@
 #include <charconv>
 #include <condition_variable>
 #include <cxxabi.h>
+#include "deep3d/platform.h"
 #include <mutex>
 #include <unordered_map>
 #include <vector>
-#include <unistd.h>
 
 namespace jrt {
 
@@ -1163,8 +1163,9 @@ Ref<Thread> Thread::currentThread() {
         tCurrent = new Thread();
         jrt::retain(tCurrent);
         tCurrent->alive = true;
-        tCurrent->name = gettid() == getpid() ? JRT_LIT(u"main")
-                                               : String::fromUtf8("native-" + std::to_string(gettid()));
+        tCurrent->name = org::deep3d::os::isMainThread()
+                             ? JRT_LIT(u"main")
+                             : String::fromUtf8("native-" + std::to_string(org::deep3d::os::threadId()));
     }
     return Ref<Thread>(tCurrent);
 }

@@ -1,10 +1,13 @@
 // Deep3D-XE: the C++ build's entry point (Java: org.deep3d.Main).
 #include "game.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <X11/Xlib.h>
 #include <execinfo.h>
+#endif
 #include <csignal>
-#include <unistd.h>
 
 #include <cstdio>
 #include <cstring>
@@ -18,6 +21,7 @@ extern Ref<java::io::InputStream> (*gResourceHook)(const Ref<java::lang::String>
 using namespace org::deep3d;
 
 namespace {
+#ifndef _WIN32
 /**
  * X errors are logged, not fatal (as in the Java build, whose toolkit
  * ignores them): Mesa's software GL under Xvfb trips over its own
@@ -38,6 +42,7 @@ int xError(Display* d, XErrorEvent* e) {
     }
     return 0;
 }
+#endif
 }  // namespace
 
 /* The JVM's report of an exception nothing caught on the main thread */
@@ -90,7 +95,11 @@ int run(int argc, char** argv) {
         }
     }
     // SIGTERM/SIGINT/SIGHUP: Java's shutdown hook halted with status 0
+#ifdef SIGHUP
     for (int sig : {SIGTERM, SIGINT, SIGHUP}) signal(sig, [](int) { Runtime::halt(0); });
+#else
+    for (int sig : {SIGTERM, SIGINT}) signal(sig, [](int) { Runtime::halt(0); });
+#endif
 
     Runtime::setAppProperty("MIDlet-Name", "Deep");
     Runtime::setAppProperty("MIDlet-Vendor", "www.fishlabs.net");
@@ -140,6 +149,13 @@ int run(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+#ifdef _WIN32
+    // a windowed program: started from a terminal, it writes to that terminal
+    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+        freopen("CONOUT$", "w", stdout);
+        freopen("CONOUT$", "w", stderr);
+    }
+#endif
     // the window's X connection is used from several threads (the game's
     // presenting threads, the M3G engine's GLX contexts)
     // the benchmark: this process only starts the runs (DEEP3D_BENCH=1 is the same)
@@ -163,8 +179,10 @@ int main(int argc, char** argv) {
         }
     }
     if (Det::BENCH) setvbuf(stdout, nullptr, _IOLBF, 0);   // a benchmark run: its log as it happens
+#ifndef _WIN32
     XInitThreads();
     XSetErrorHandler(xError);
+#endif
     try {
         return run(argc, argv);
     } catch (const jrt::Thrown& t) {

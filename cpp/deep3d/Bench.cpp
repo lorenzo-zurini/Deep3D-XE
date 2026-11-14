@@ -9,14 +9,12 @@
 // and draws the same frames however fast it renders them. The scenario's
 // "bench" step records the time between presented frames.
 #include "gl.h"
+#include "platform.h"
 
-#include <sys/wait.h>
-#include <unistd.h>
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <csignal>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -165,46 +163,21 @@ std::string runMode(const std::string& exe, const std::string& tmp, const std::s
     std::string scn = replaceAll(replaceAll(kScenario, "%LABEL%", mode), "%FRAMES%", std::to_string(frames));
     std::ofstream(home + "/bench.scn", std::ios::binary) << scn;
     std::string log = home + "/game.log";
-    fflush(stdout);
-    pid_t pid = fork();
-    if (pid < 0) return "";
-    if (pid == 0) {
-        setenv("DEEP3D_HOME", home.c_str(), 1);
-        unsetenv("DEEP3D_CONFIG");     // the run's own settings and saves, never the player's
-        unsetenv("DEEP3D_SAVE_DIR");
-        setenv("DEEP3D_SCENARIO", (home + "/bench.scn").c_str(), 1);
-        setenv("DEEP3D_SCENARIO_OUT", home.c_str(), 1);
-        setenv("DEEP3D_DET", "1", 1);
-        setenv("DEEP3D_BENCH", "1", 1);
-        setenv("DEEP3D_NO_AUDIO", "1", 1);
-        // drivers' own frame limits off (NVIDIA and Mesa)
-        setenv("__GL_SYNC_TO_VBLANK", "0", 1);
-        setenv("vblank_mode", "0", 1);
-        FILE* f = freopen(log.c_str(), "w", stdout);
-        (void) f;
-        dup2(fileno(stdout), 2);
-        execl(exe.c_str(), exe.c_str(), (char*) nullptr);
-        _exit(127);
-    }
-    auto start = std::chrono::steady_clock::now();
-    int status = 0;
-    bool done = false;
-    while (!done) {
-        pid_t r = waitpid(pid, &status, WNOHANG);
-        if (r == pid) {
-            done = true;
-            break;
-        }
-        if (std::chrono::steady_clock::now() - start > std::chrono::minutes(15)) {
-            fprintf(stderr, "[bench] %s: no result after 15 minutes, stopping it\n", mode.c_str());
-            kill(pid, SIGTERM);
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-            kill(pid, SIGKILL);
-            waitpid(pid, &status, 0);
-            break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    os::Child how;
+    how.output = log;
+    how.timeoutMs = 15 * 60 * 1000;
+    how.env = {{"DEEP3D_HOME", home},
+               {"DEEP3D_CONFIG", std::nullopt},     // the run's own settings and saves, never the player's
+               {"DEEP3D_SAVE_DIR", std::nullopt},
+               {"DEEP3D_SCENARIO", home + "/bench.scn"},
+               {"DEEP3D_SCENARIO_OUT", home},
+               {"DEEP3D_DET", "1"},
+               {"DEEP3D_BENCH", "1"},
+               {"DEEP3D_NO_AUDIO", "1"},
+               // drivers' own frame limits off (NVIDIA and Mesa)
+               {"__GL_SYNC_TO_VBLANK", "0"},
+               {"vblank_mode", "0"}};
+    os::run(exe, {exe}, how);
     std::string text = readFile(log);
     size_t r = text.find("[gl] renderer: ");
     if (r != std::string::npos) renderer = text.substr(r + 15, text.find('\n', r) - r - 15);
@@ -298,13 +271,12 @@ int Bench::main(int argc, char** argv) {
             if (v) extraCfg.insert(extraCfg.begin(), std::string(k) + "=" + *v);
         }
     }
-    char tmpl[] = "/tmp/deep3d-bench-XXXXXX";
-    if (!mkdtemp(tmpl)) {
-        perror("[bench] mkdtemp");
+    std::string tmp = os::makeTempDir("deep3d-bench");
+    if (tmp.empty()) {
+        fprintf(stderr, "[bench] no temporary folder\n");
         return 1;
     }
-    std::string tmp = tmpl;
-    std::string exe = fs::read_symlink("/proc/self/exe").string();
+    std::string exe = os::exePath();
     printf("Deep3D-XE benchmark: %zu mode(s), %d frames each, vsync and FPS limit off\n", modes.size(), frames);
     printf("(each run starts the game, flies to a station and back out; the window shows it)\n");
     fflush(stdout);

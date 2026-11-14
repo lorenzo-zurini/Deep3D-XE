@@ -4,6 +4,9 @@
 # M3G engine.
 cmake_minimum_required(VERSION 3.20)
 project(Deep3D-XE C CXX ASM)
+if(WIN32)
+    enable_language(RC)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,10 +19,19 @@ set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(M3G ${ROOT}/native/m3g)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(DEPS REQUIRED IMPORTED_TARGET glfw3 sdl3 fluidsynth libzip libpng zlib freetype2 fontconfig)
-find_package(OpenGL REQUIRED COMPONENTS OpenGL GLX EGL)
-find_package(X11 REQUIRED)
 find_package(Threads REQUIRED)
+if(WIN32)
+    # MSYS2 (UCRT64): the engine's contexts are WGL's (native/m3g/win32), and
+    # windows.h stays lean (its "interface" macro would break the engine)
+    pkg_check_modules(DEPS REQUIRED IMPORTED_TARGET glfw3 sdl3 fluidsynth libzip libpng zlib freetype2)
+    set(PLATFORM_LIBS opengl32 gdi32 comdlg32 xinput)
+    add_compile_definitions(WIN32_LEAN_AND_MEAN NOMINMAX)
+else()
+    pkg_check_modules(DEPS REQUIRED IMPORTED_TARGET glfw3 sdl3 fluidsynth libzip libpng zlib freetype2 fontconfig)
+    find_package(OpenGL REQUIRED COMPONENTS OpenGL GLX EGL)
+    find_package(X11 REQUIRED)
+    set(PLATFORM_LIBS OpenGL::OpenGL OpenGL::GLX OpenGL::EGL ${X11_LIBRARIES})
+endif()
 
 # Java semantics: wrapping integers, no fused multiply-add (Java's float
 # results bit for bit)
@@ -39,6 +51,10 @@ add_library(m3gengine STATIC
     ${M3G}/m3g_android_java_api.cpp)
 target_include_directories(m3gengine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/jni ${M3G}/linux/include ${M3G}/inc
     ${CMAKE_CURRENT_SOURCE_DIR})
+if(WIN32)
+    # Khronos's EGL headers, after the engine's wrappers (their #include_next)
+    target_include_directories(m3gengine PRIVATE ${M3G}/win32/include)
+endif()
 target_compile_options(m3gengine PRIVATE ${M3G_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-fpermissive>)
 set_target_properties(m3gengine PROPERTIES C_STANDARD 11)
 
@@ -64,6 +80,12 @@ target_include_directories(deep3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CU
     ${CMAKE_CURRENT_SOURCE_DIR}/m3g ${CMAKE_CURRENT_SOURCE_DIR}/game)
 target_compile_options(deep3d PRIVATE ${JAVA_FLAGS} -Wall -Wno-unused -Wno-unused-variable -Wno-unused-but-set-variable
     -Wno-parentheses -Wno-sign-compare -Wno-dangling-else)
-target_link_libraries(deep3d PRIVATE m3gengine PkgConfig::DEPS OpenGL::OpenGL OpenGL::GLX OpenGL::EGL ${X11_LIBRARIES}
-    Threads::Threads)
+target_link_libraries(deep3d PRIVATE m3gengine PkgConfig::DEPS ${PLATFORM_LIBS} Threads::Threads)
 set_target_properties(deep3d PROPERTIES OUTPUT_NAME Deep3D-XE RUNTIME_OUTPUT_DIRECTORY ${ROOT}/build/bin)
+if(WIN32)
+    # a windowed program (main.cpp attaches to a terminal it was started from),
+    # with its icon and manifest (UTF-8 paths, Windows 10's behaviour)
+    target_sources(deep3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/deep3d.rc)
+    set_target_properties(deep3d PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_link_options(deep3d PRIVATE -static-libgcc -static-libstdc++)
+endif()

@@ -1,18 +1,23 @@
-// Input: rebindable keys (AWT codes, as deep3d.cfg stores them), the Linux
-// joystick devices, analogue steering, mouse flight; and the small hand-
+// Input: rebindable keys (AWT codes, as deep3d.cfg stores them), gamepads
+// (Linux's joystick devices, Windows's XInput), analogue steering, mouse flight; and the small hand-
 // overs: Remaster, Cheats, GameSettings, MenuToolkit (Java: Input, Gamepad,
 // AnalogInput, MouseFlight, Remaster, Cheats, GameSettings, MenuToolkit).
 #include "deep3d.h"
 #include "m3g.h"
 
+#include "platform.h"
+
 #include <chrono>
 #include <cmath>
-#include <dirent.h>
-#include <fcntl.h>
+#include <cstring>
 #include <mutex>
 #include <set>
 #include <thread>
+#ifndef _WIN32
+#include <dirent.h>
+#include <fcntl.h>
 #include <unistd.h>
+#endif
 
 namespace org::deep3d {
 
@@ -371,7 +376,7 @@ void Input::sendMidpKey(int32_t code, bool pressed) {
 }
 
 // ---------------------------------------------------------------------
-// Gamepad: /dev/input/js*, hot-plugged
+// Gamepad: /dev/input/js* (Windows: XInput), hot-plugged
 // ---------------------------------------------------------------------
 
 namespace {
@@ -474,11 +479,88 @@ void handleButton(int number, bool pressed) {
     }
 }
 
-void readLoop(std::string path) {
-    int fd = ::open(path.c_str(), O_RDONLY);
+/** What a pad's events have held down so far. */
+struct PadState {
     bool dir[4] = {};
     bool lt = false, rt = false;
     float stickX = 0, stickY = 0;
+};
+
+/** One joystick event, as Linux's js interface numbers them (an Xbox layout). */
+void padEvent(PadState& p, int type, int number, int value) {
+    jrt::MutatorScope running;   // the handlers may call into the game
+    if (type == 0x01) {
+        handleButton(number, value != 0);
+    } else if (type == 0x02) {
+        if (number == AXIS_LX) {
+            p.stickX = value / 32767.0f;
+            AnalogInput::setStick(p.stickX, p.stickY);
+        } else if (number == AXIS_LY) {
+            p.stickY = value / 32767.0f;
+            AnalogInput::setStick(p.stickX, p.stickY);
+        }
+        switch (number) {
+            case AXIS_LX:
+            case AXIS_HATX:
+                p.dir[2] = axial(p.dir[2], -value, Input::Action::LEFT);
+                p.dir[3] = axial(p.dir[3], value, Input::Action::RIGHT);
+                break;
+            case AXIS_LY:
+            case AXIS_HATY:
+                p.dir[0] = axial(p.dir[0], -value, Input::Action::UP);
+                p.dir[1] = axial(p.dir[1], value, Input::Action::DOWN);
+                break;
+            case AXIS_LT: p.lt = trigger(p.lt, value, Input::Action::KEY7); break;
+            case AXIS_RT: p.rt = trigger(p.rt, value, Input::Action::AUTOPILOT); break;
+            default: break;
+        }
+    }
+}
+
+/** The pad is gone: what it held is let go. */
+void padGone(PadState& p) {
+    AnalogInput::setStick(0, 0);
+    if (p.dir[0]) Input::handleAction(Input::Action::UP, false);
+    if (p.dir[1]) Input::handleAction(Input::Action::DOWN, false);
+    if (p.dir[2]) Input::handleAction(Input::Action::LEFT, false);
+    if (p.dir[3]) Input::handleAction(Input::Action::RIGHT, false);
+}
+
+#ifdef _WIN32
+/** XInput (os::pad), polled: its changes as js events. */
+void xinputLoop() {
+    constexpr int PADS = 4;
+    PadState pads[PADS];
+    int last[PADS][16] = {};
+    bool connected[PADS] = {};
+    while (true) {
+        int found = 0;
+        for (int i = 0; i < PADS; i++) {
+            int now[16];
+            bool on = Config::gamepadEnabled && os::pad(i, now, now + 8);
+            if (!on) {
+                if (connected[i]) {
+                    padGone(pads[i]);
+                    pads[i] = PadState();
+                    memset(last[i], 0, sizeof last[i]);
+                    connected[i] = false;
+                }
+                continue;
+            }
+            found++;
+            connected[i] = true;
+            for (int k = 0; k < 16; k++) {
+                if (now[k] != last[i][k]) padEvent(pads[i], k < 8 ? 0x01 : 0x02, k % 8, last[i][k] = now[k]);
+            }
+        }
+        setStatus(!Config::gamepadEnabled ? "Disabled" : found ? "Connected" : "Not found");
+        std::this_thread::sleep_for(std::chrono::milliseconds(found ? 8 : 1000));
+    }
+}
+#else
+void readLoop(std::string path) {
+    int fd = ::open(path.c_str(), O_RDONLY);
+    PadState pad;
     if (fd >= 0) {
         setStatus("Connected");
         uint8_t ev[8];
@@ -495,50 +577,24 @@ void readLoop(std::string path) {
             bool isInit = (ev[6] & 0x80) != 0;
             int number = ev[7];
             if (isInit) continue;
-            jrt::MutatorScope running;   // the handlers may call into the game
-            if (type == 0x01) {
-                handleButton(number, value != 0);
-            } else if (type == 0x02) {
-                if (number == AXIS_LX) {
-                    stickX = value / 32767.0f;
-                    AnalogInput::setStick(stickX, stickY);
-                } else if (number == AXIS_LY) {
-                    stickY = value / 32767.0f;
-                    AnalogInput::setStick(stickX, stickY);
-                }
-                switch (number) {
-                    case AXIS_LX:
-                    case AXIS_HATX:
-                        dir[2] = axial(dir[2], -value, Input::Action::LEFT);
-                        dir[3] = axial(dir[3], value, Input::Action::RIGHT);
-                        break;
-                    case AXIS_LY:
-                    case AXIS_HATY:
-                        dir[0] = axial(dir[0], -value, Input::Action::UP);
-                        dir[1] = axial(dir[1], value, Input::Action::DOWN);
-                        break;
-                    case AXIS_LT: lt = trigger(lt, value, Input::Action::KEY7); break;
-                    case AXIS_RT: rt = trigger(rt, value, Input::Action::AUTOPILOT); break;
-                    default: break;
-                }
-            }
+            padEvent(pad, type, number, value);
         }
     done:
         close(fd);
     }
-    AnalogInput::setStick(0, 0);
-    if (dir[0]) Input::handleAction(Input::Action::UP, false);
-    if (dir[1]) Input::handleAction(Input::Action::DOWN, false);
-    if (dir[2]) Input::handleAction(Input::Action::LEFT, false);
-    if (dir[3]) Input::handleAction(Input::Action::RIGHT, false);
+    padGone(pad);
     std::lock_guard<std::mutex> g(gPadLock);
     gReaders.erase(path);
     if (gReaders.empty()) gPadStatus = "Not found";
 }
+#endif
 
 }  // namespace
 
 void Gamepad::init() {
+#ifdef _WIN32
+    std::thread(xinputLoop).detach();
+#else
     std::thread([]() {
         while (true) {
             if (Config::gamepadEnabled) {
@@ -569,6 +625,7 @@ void Gamepad::init() {
             std::this_thread::sleep_for(std::chrono::seconds(2));
         }
     }).detach();
+#endif
 }
 
 std::string Gamepad::getStatus() {

@@ -3,15 +3,24 @@
 // whichever thread presents (the game thread, its loader thread), which
 // claims the context for the frame. The game's 2D output is a recorded
 // command stream replayed as batched quads; M3G passes arrive as shared
-// textures (GLX) and are spliced in.
+// textures (GLX; Windows: WGL) and are spliced in.
 #define GL_GLEXT_PROTOTYPES 1
 #include <GL/gl.h>
 #include <GL/glext.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#ifdef _WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#else
 #define GLFW_EXPOSE_NATIVE_X11
 #define GLFW_EXPOSE_NATIVE_GLX
+#endif
 #include <GLFW/glfw3native.h>
+#ifdef _WIN32
+#undef DELETE   // windows.h's macros, not vk::DELETE or AlertType::ERROR
+#undef ERROR
+#endif
 
 #include "gl.h"
 #include "m3g.h"
@@ -19,7 +28,9 @@
 #include <png.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#ifndef _WIN32
 #include <fontconfig/fontconfig.h>
+#endif
 
 #include <chrono>
 #include <cmath>
@@ -1106,6 +1117,10 @@ void updateMouseCapture() {
 /* deep3d_egl.cpp: the context the engine's GLX mode goes back to when it
    releases its own (instead of none) */
 extern "C" void deep3d_egl_set_home(void* display, unsigned long drawable, void* context);
+#ifdef _WIN32
+/* deep3d_wgl.inc: the WGL extensions, loaded while the window's context is current */
+extern "C" void deep3d_wgl_load(void);
+#endif
 
 namespace org::deep3d::gl {
 namespace {
@@ -1119,11 +1134,13 @@ namespace {
    window's context there would stop the loading screen until the game
    thread let go, and it does not while it loads. Elsewhere (EGL, Wayland)
    the context follows the presenter as before. */
-bool gKeepContexts = false;
+bool gKeepContexts = false;           // Windows: never (the engine's contexts release to none)
+#ifndef _WIN32
 Display* gGlxDpy = nullptr;
 GLXDrawable gGlxWin = 0;
 GLXContext gWinCtx = nullptr;
 GLXContext gOtherCtx = nullptr;
+#endif
 int64_t gOtherAt = 0;                    // the last time the second context was used
 GLsync gSectionFence = nullptr;          // the last section's work, for the next one in the other context
 bool gSectionOther = false;              // ... made in the second context
@@ -1131,6 +1148,7 @@ GLuint gFrameFbos[2], gUnderlayFbos[2];  // framebuffer objects are per context
 int gCtxIndex = 0;                       // the context in use (under gGlLock): 1 = the second
 thread_local bool tHome = false;
 
+#ifndef _WIN32
 GLXContext newSharedContext() {
     int id = 0;
     glXQueryContext(gGlxDpy, gWinCtx, GLX_FBCONFIG_ID, &id);
@@ -1141,10 +1159,12 @@ GLXContext newSharedContext() {
     if (cfg) XFree(cfg);
     return c;
 }
+#endif
 
 /** The game presents from more than one thread: the context follows the presenter. */
 void claimContext() {
     auto me = std::this_thread::get_id();
+#ifndef _WIN32
     if (gKeepContexts) {
         bool home = jrt::onSafePointThread();   // the game loop's thread
         if (home && !tHome) {
@@ -1161,7 +1181,9 @@ void claimContext() {
         // the other context's last section first
         if (gSectionFence && gSectionOther == home) glWaitSync(gSectionFence, 0, GL_TIMEOUT_IGNORED);
         if (!home) gOtherAt = millis();
-    } else if (gCtxOwner != me) {
+    } else
+#endif
+    if (gCtxOwner != me) {
         glfwMakeContextCurrent(gWindow);
         gCtxOwner = me;
         if (glfwGetCurrentContext() != gWindow) fprintf(stderr, "[gl] could not make the context current\n");
@@ -1186,6 +1208,7 @@ void claimContext() {
 
 /** Always released (unless kept, GLX): a context stuck on a thread blocks every other presenter. */
 void releaseContext() {
+#ifndef _WIN32
     if (gKeepContexts) {
         // while the second context is in use, the next section may be in the other one: it waits for this one
         bool other = gCtxIndex == 1;
@@ -1204,6 +1227,7 @@ void releaseContext() {
         }
         return;
     }
+#endif
     glfwMakeContextCurrent(nullptr);
     gCtxOwner = std::thread::id();
 }
@@ -1288,6 +1312,15 @@ private:
     FT_Face face = nullptr;
 
     AwtText() {
+#ifdef _WIN32
+        // Windows has no fontconfig: its own bold sans
+        if (FT_Init_FreeType(&lib) != 0) return;
+        const char* windir = getenv("WINDIR");
+        std::string fonts = std::string(windir ? windir : "C:\\Windows") + "\\Fonts\\";
+        for (const char* f : {"arialbd.ttf", "segoeuib.ttf", "tahomabd.ttf"})
+            if (FT_New_Face(lib, (fonts + f).c_str(), 0, &face) == 0) break;
+            else face = nullptr;
+#else
         if (!FcInit() || FT_Init_FreeType(&lib) != 0) return;
         FcPattern* p = FcNameParse(reinterpret_cast<const FcChar8*>("sans:bold"));
         FcConfigSubstitute(nullptr, p, FcMatchPattern);
@@ -1302,6 +1335,7 @@ private:
         }
         if (m) FcPatternDestroy(m);
         FcPatternDestroy(p);
+#endif
         if (!face) fprintf(stderr, "[gl] no sans bold font: the FPS counter is not drawn\n");
     }
 };
@@ -1634,6 +1668,21 @@ void GLBackend::init() {
         GLFWimage img{64, 64, px.data()};
         glfwSetWindowIcon(gWindow, 1, &img);
     }
+#ifdef _WIN32
+    // the engine's WGL contexts share the window's objects (deep3d_wgl.inc)
+    {
+        HGLRC ctx = glfwGetWGLContext(gWindow);
+        HDC dc = GetDC(glfwGetWin32Window(gWindow));
+        if (ctx && dc) {
+            glfwMakeContextCurrent(gWindow);
+            deep3d_wgl_load();
+            glfwMakeContextCurrent(nullptr);
+            javax::microedition::m3g::Platform::setShareContext(int64_t(reinterpret_cast<intptr_t>(dc)),
+                                                                int64_t(reinterpret_cast<intptr_t>(ctx)));
+            printf("[gl] 3D engine shares the window's WGL context\n");
+        }
+    }
+#else
     if (glfwGetPlatform() == GLFW_PLATFORM_X11 && !getenv("DEEP3D_M3G_READBACK")) {
         Display* dpy = glfwGetX11Display();
         GLXContext ctx = glfwGetGLXContext(gWindow);
@@ -1655,6 +1704,7 @@ void GLBackend::init() {
         XGetWindowAttributes(glfwGetX11Display(), glfwGetX11Window(gWindow), &wa);
         printf("[gl] window visual depth %d (id 0x%lx)\n", wa.depth, wa.visual ? XVisualIDFromVisual(wa.visual) : 0);
     }
+#endif
     int fw = 0, fh = 0;
     glfwGetFramebufferSize(gWindow, &fw, &fh);
     fbWidth = fw;
