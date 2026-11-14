@@ -433,7 +433,7 @@ bool Overlay::captureKey(int32_t keyCode) {
     if (!gOpen || !gCapturing) return false;
     if (keyCode == vk::ESCAPE) {
         gCapturing.reset();
-    } else if (keyCode < vk::F8 || keyCode > vk::F12) {   // the global hotkeys never reach the game
+    } else if (keyCode < vk::F9 || keyCode > vk::F12) {   // the global hotkeys never reach the game
         Input::rebindPrimary(*gCapturing, keyCode);
         gCapturing.reset();
     }

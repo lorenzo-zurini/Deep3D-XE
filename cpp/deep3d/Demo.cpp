@@ -753,7 +753,7 @@ void Demo::begin() {
 
 void Demo::gpu(const std::string& name) { gGpu = name; }
 
-std::string Demo::exportSession(const std::string& kind, const std::string& diagnostics) {
+std::string Demo::exportSession(const std::string& diagnostics) {
     if (!RECORDING || !gFile) return "";
     long end;
     double seconds;
@@ -773,7 +773,7 @@ std::string Demo::exportSession(const std::string& kind, const std::string& diag
     m << "play_at=" << std::max(0.0, seconds - LAST_S) << "\n";
     files[0].second += m.str();
     if (!diagnostics.empty()) files.push_back({"diagnostics.txt", readFile(diagnostics)});
-    std::string path = AppDirs::dir("demos") + "/" + kind + "-" + stamp("%Y-%m-%d-%H%M%S") + ".demo";
+    std::string path = AppDirs::dir("demos") + "/bug-" + stamp("%Y-%m-%d-%H%M%S") + ".demo";
     FILE* out = fopen(path.c_str(), "wb");
     FILE* in = fopen(gPath.c_str(), "rb");
     if (!out || !in) {

@@ -135,8 +135,7 @@ private:
  * or a free one, in any graphics mode. The game's own state is the same pass
  * for pass, so what the free camera shows is the recorded game.
  *
- * Normal play records too, into logs/: F9 exports it for a bug report, F8 as
- * a clip (for a trailer, say). There
+ * Normal play records too, into logs/: F9 exports it for a bug report. There
  * are no savestates, so a demo always holds the session from its start; an
  * export marks the last minute, and a replay gets there at top speed.
  */
@@ -151,10 +150,9 @@ public:
     static int32_t main(int32_t argc, char** argv);
     /** The start of a recording: what it replays from. */
     static void begin();
-    /** F9 and F8: the session so far as demos/<kind>-<date>.demo, opening at
-        its last minute (its path; none: empty), with the diagnostics file in
-        it when there is one. */
-    static std::string exportSession(const std::string& kind, const std::string& diagnostics);
+    /** F9: the session so far as demos/<name>.demo (its path; none: empty),
+        with the diagnostics file in it. */
+    static std::string exportSession(const std::string& diagnostics);
     /** For the metadata: what renders the game. */
     static void gpu(const std::string& name);
     /** The session's seed for the game's randoms. */
@@ -351,7 +349,7 @@ namespace vk {
 constexpr int32_t ENTER = 10, BACK_SPACE = 8, TAB = 9, SHIFT = 16, CONTROL = 17, ALT = 18, ESCAPE = 27,
                   SPACE = 32, LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40, COMMA = 44, MINUS = 45, PERIOD = 46,
                   K0 = 48, K9 = 57, EQUALS = 61, A = 65, Z = 90, NUMPAD0 = 96, DELETE = 127, F1 = 112,
-                  F8 = 119, F9 = 120, F10 = 121, F11 = 122, F12 = 123, C = 67, D = 68, E = 69, H = 72, P = 80,
+                  F9 = 120, F10 = 121, F11 = 122, F12 = 123, C = 67, D = 68, E = 69, H = 72, P = 80,
                   S = 83, W = 87, X = 88, K1 = 49, K3 = 51, K7 = 55;
 }
 

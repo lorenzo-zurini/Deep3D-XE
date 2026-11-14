@@ -199,9 +199,8 @@ takes a few tens of MB an hour. The last three sessions stay in `logs/`, so a
 crash's can still be replayed with `--play logs/session-....demo`.
 `DEEP3D_NO_DEMO=1` turns the log off.
 
-**Clips.** Press **F8** right after something worth keeping: it saves
-`demos/clip-<date>.demo`, the same as F9 without the diagnostics, opening at
-the last minute. `--play` it with the free camera, in either graphics mode.
+The same file keeps a moment worth replaying: press F9 right after it, and
+`--play` it with the free camera, in either graphics mode.
 
 **On purpose.**
 
@@ -261,7 +260,6 @@ picks a station in the depth view and sets amounts in the trade screens.
 | Pause / menu             | Esc                  | Start            |
 | Settings                 | F10 (or Options in the pause menu) | Start on the title / station |
 | Fullscreen / Screenshot  | F11 / F12            | —                |
-| Save the last minute (a clip) / bug report | F8 / F9 | —      |
 
 "Options" in the game's menus (title, station, pause) opens the settings:
 display and graphics, audio, controls and the game's inverted pitch.
