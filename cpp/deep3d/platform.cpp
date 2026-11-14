@@ -1,4 +1,4 @@
-// platform.h: Linux (POSIX) and Windows.
+// platform.h: Linux (POSIX), macOS (POSIX) and Windows.
 #include "platform.h"
 
 #include <cerrno>
@@ -20,10 +20,17 @@
 #else
 #include <csignal>
 #include <fcntl.h>
+#ifdef __APPLE__
+#include <climits>
+#include <mach-o/dyld.h>
+#include <pthread.h>
+#include <sys/sysctl.h>
+#else
 #include <gnu/libc-version.h>
-#include <spawn.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
+#endif
+#include <spawn.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -47,6 +54,11 @@ std::string cpuName() {
     if (RegGetValueA(HKEY_LOCAL_MACHINE, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", "ProcessorNameString",
                      RRF_RT_REG_SZ, nullptr, name, &size) == ERROR_SUCCESS)
         return name;
+    return "unknown";
+#elif defined(__APPLE__)
+    char name[256] = {};
+    size_t size = sizeof name - 1;
+    if (sysctlbyname("machdep.cpu.brand_string", name, &size, nullptr, 0) == 0 && name[0]) return name;
     return "unknown";
 #else
     std::ifstream in("/proc/cpuinfo");
@@ -352,10 +364,21 @@ bool pad(int i, int buttons[8], int axes[8]) {
 #else
 
 // ---------------------------------------------------------------------
-// Linux
+// Linux and macOS
 // ---------------------------------------------------------------------
 
+#ifdef __APPLE__
+std::string exePath() {
+    uint32_t size = 0;
+    _NSGetExecutablePath(nullptr, &size);
+    std::vector<char> buf(size + 1, '\0');
+    if (_NSGetExecutablePath(buf.data(), &size) != 0) return ".";
+    char real[PATH_MAX];
+    return realpath(buf.data(), real) ? std::string(real) : std::string(buf.data());
+}
+#else
 std::string exePath() { return fs::read_symlink("/proc/self/exe").string(); }
+#endif
 
 void setEnv(const char* name, const char* value) {
     if (value) {
@@ -373,9 +396,29 @@ std::string makeTempDir(const std::string& prefix) {
 }
 
 int64_t processId() { return int64_t(getpid()); }
+#ifdef __APPLE__
+int64_t threadId() {
+    uint64_t id = 0;
+    pthread_threadid_np(nullptr, &id);
+    return int64_t(id);
+}
+#else
 int64_t threadId() { return int64_t(syscall(SYS_gettid)); }
+#endif
 
 namespace {
+/** A pipe whose ends are not inherited by children (macOS has no pipe2). */
+int pipeCloexec(int fds[2]) {
+#ifdef __APPLE__
+    if (pipe(fds) != 0) return -1;
+    fcntl(fds[0], F_SETFD, FD_CLOEXEC);
+    fcntl(fds[1], F_SETFD, FD_CLOEXEC);
+    return 0;
+#else
+    return pipe2(fds, O_CLOEXEC);
+#endif
+}
+
 [[noreturn]] void execIn(const std::string& exe, const std::vector<std::string>& args, const Child& how) {
     for (auto& [k, v] : how.env) setEnv(k.c_str(), v ? v->c_str() : nullptr);
     if (!how.output.empty()) {
@@ -397,7 +440,9 @@ int run(const std::string& exe, const std::vector<std::string>& args, const Chil
     pid_t pid = fork();
     if (pid < 0) return -1;
     if (pid == 0) {
-        if (how.diesWithUs) prctl(PR_SET_PDEATHSIG, SIGTERM);
+#ifndef __APPLE__
+        if (how.diesWithUs) prctl(PR_SET_PDEATHSIG, SIGTERM);   // macOS: no such thing (children outlive a crash)
+#endif
         execIn(exe, args, how);
     }
     auto start = std::chrono::steady_clock::now();
@@ -428,12 +473,12 @@ std::optional<std::vector<uint8_t>> filter(const std::vector<std::string>& args,
                                            bool* missing) {
     if (missing) *missing = false;
     int in[2], out[2], err[2];
-    if (pipe2(in, O_CLOEXEC) != 0) return std::nullopt;
-    if (pipe2(out, O_CLOEXEC) != 0) {
+    if (pipeCloexec(in) != 0) return std::nullopt;
+    if (pipeCloexec(out) != 0) {
         close(in[0]), close(in[1]);
         return std::nullopt;
     }
-    if (pipe2(err, O_CLOEXEC) != 0) {
+    if (pipeCloexec(err) != 0) {
         close(in[0]), close(in[1]), close(out[0]), close(out[1]);
         return std::nullopt;
     }
@@ -483,6 +528,50 @@ std::optional<std::vector<uint8_t>> filter(const std::vector<std::string>& args,
     return result;
 }
 
+#ifdef __APPLE__
+namespace {
+/** Text as an AppleScript string literal. */
+std::string appleScriptString(const std::string& s) {
+    std::string q = "\"";
+    for (char c : s) {
+        if (c == '"' || c == '\\') q += '\\';
+        q += c;
+    }
+    return q + "\"";
+}
+}  // namespace
+
+std::vector<std::string> askForFiles(const std::string& title, const std::string& message, const std::string& pattern) {
+    // the system's own dialogs, through osascript: the message, then a file chooser
+    // (pattern "*.jar": only those can be picked)
+    std::string ext = pattern.rfind("*.", 0) == 0 ? pattern.substr(2) : std::string();
+    std::string script =
+        "set t to " + appleScriptString(title) + "\n"
+        "display dialog " + appleScriptString(message) + " with title t buttons {\"Cancel\", \"Choose...\"} "
+        "default button 2 with icon note\n"
+        "set fs to choose file with prompt t" + (ext.empty() ? "" : " of type {" + appleScriptString(ext) + "}") +
+        " with multiple selections allowed\n"
+        "set out to \"\"\n"
+        "repeat with f in fs\n"
+        "set out to out & POSIX path of f & linefeed\n"
+        "end repeat\n"
+        "return out";
+    auto result = filter({"osascript", "-"}, std::vector<uint8_t>(script.begin(), script.end()));
+    std::vector<std::string> files;
+    if (!result) return files;
+    std::string line;
+    for (uint8_t c : *result) {
+        if (c == '\n' || c == '\r') {
+            if (!line.empty()) files.push_back(line);
+            line.clear();
+        } else {
+            line += char(c);
+        }
+    }
+    if (!line.empty()) files.push_back(line);
+    return files;
+}
+#else
 std::vector<std::string> askForFiles(const std::string& title, const std::string& message, const std::string& pattern) {
     if (!getenv("DISPLAY") && !getenv("WAYLAND_DISPLAY")) return {};
     // a desktop file dialog (KDE's, else GTK's)
@@ -507,6 +596,7 @@ std::vector<std::string> askForFiles(const std::string& title, const std::string
     pclose(p);
     return files;
 }
+#endif
 
 void tee(int fd, int logFd) {
     int pipeFds[2];
@@ -533,9 +623,13 @@ std::string osName() {
     return std::string(u.sysname) + " " + u.release + " " + u.machine;
 }
 
+#ifdef __APPLE__
+std::string libcName() { return "libSystem"; }
+#else
 std::string libcName() { return std::string("glibc ") + gnu_get_libc_version(); }
+#endif
 
-bool pad(int, int*, int*) { return false; }   // Linux reads its joystick devices itself (input.cpp)
+bool pad(int, int*, int*) { return false; }   // Linux reads its joystick devices itself (input.cpp); macOS: GLFW's
 
 #endif
 

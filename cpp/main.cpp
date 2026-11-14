@@ -3,6 +3,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(__APPLE__)
+#include <cstdlib>
+#include <string>
 #else
 #include <X11/Xlib.h>
 #include <execinfo.h>
@@ -21,7 +24,7 @@ extern Ref<java::io::InputStream> (*gResourceHook)(const Ref<java::lang::String>
 using namespace org::deep3d;
 
 namespace {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
 /**
  * X errors are logged, not fatal (as in the Java build, whose toolkit
  * ignores them): Mesa's software GL under Xvfb trips over its own
@@ -182,7 +185,17 @@ int start(int argc, char** argv) {
         }
     }
     if (Det::BENCH) setvbuf(stdout, nullptr, _IOLBF, 0);   // a benchmark run: its log as it happens
-#ifndef _WIN32
+#ifdef __APPLE__
+    // started from Finder, the PATH is the system's: Homebrew's tools (ffmpeg
+    // for the sound effects) are looked for too
+    {
+        const char* path = getenv("PATH");
+        std::string p = path ? path : "/usr/bin:/bin:/usr/sbin:/sbin";
+        for (const char* d : {"/opt/homebrew/bin", "/usr/local/bin"})
+            if ((p + ":").find(std::string(d) + ":") == std::string::npos) p += std::string(":") + d;
+        setenv("PATH", p.c_str(), 1);
+    }
+#elif !defined(_WIN32)
     XInitThreads();
     XSetErrorHandler(xError);
 #endif

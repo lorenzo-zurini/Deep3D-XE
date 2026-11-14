@@ -3,7 +3,7 @@
 // whichever thread presents (the game thread, its loader thread), which
 // claims the context for the frame. The game's 2D output is a recorded
 // command stream replayed as batched quads; M3G passes arrive as shared
-// textures (GLX; Windows: WGL) and are spliced in.
+// textures (GLX; Windows: WGL; macOS: CGL) and are spliced in.
 #define GL_GLEXT_PROTOTYPES 1
 #include <GL/gl.h>
 #include <GL/glext.h>
@@ -12,11 +12,15 @@
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define GLFW_EXPOSE_NATIVE_WGL
+#elif defined(__APPLE__)
+#include <OpenGL/OpenGL.h>   // CGL: the window's context, for the engine's to share
 #else
 #define GLFW_EXPOSE_NATIVE_X11
 #define GLFW_EXPOSE_NATIVE_GLX
 #endif
+#ifndef __APPLE__
 #include <GLFW/glfw3native.h>
+#endif
 #ifdef _WIN32
 #undef DELETE   // windows.h's macros, not vk::DELETE or AlertType::ERROR
 #undef ERROR
@@ -28,7 +32,7 @@
 #include <png.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
 #include <fontconfig/fontconfig.h>
 #endif
 
@@ -815,10 +819,27 @@ public:
 // Present: sharp-bilinear scaling of the frame into the window
 // ---------------------------------------------------------------------
 
+#ifdef __APPLE__
+// macOS's compatibility context has GLSL 1.20 only: gl_VertexID from EXT_gpu_shader4
+#define PRESENT_HEADER "#version 120\n#extension GL_EXT_gpu_shader4 : require\n"
+#define PRESENT_OUT "varying"
+#define PRESENT_IN "varying"
+#define PRESENT_FRAG_OUT ""
+#define PRESENT_TEXTURE "texture2D"
+#define PRESENT_FRAG_COLOR "gl_FragColor"
+#else
+#define PRESENT_HEADER "#version 130\n"
+#define PRESENT_OUT "out"
+#define PRESENT_IN "in"
+#define PRESENT_FRAG_OUT "out vec4 fragColor;\n"
+#define PRESENT_TEXTURE "texture"
+#define PRESENT_FRAG_COLOR "fragColor"
+#endif
+
 const char* kVshPresent =
-    "#version 130\n"
+    PRESENT_HEADER
     "uniform vec4 uDst;\n"
-    "out vec2 vUV;\n"
+    PRESENT_OUT " vec2 vUV;\n"
     "void main() {\n"
     "  vec2 c = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1));\n"
     "  vUV = c;\n"
@@ -826,21 +847,21 @@ const char* kVshPresent =
     "}\n";
 
 const char* kFshPresent =
-    "#version 130\n"
+    PRESENT_HEADER
     "uniform sampler2D uTex;\n"
     "uniform vec2 uSrcSize;\n"
     "uniform vec2 uScale;\n"
     "uniform float uBright;\n"
-    "in vec2 vUV;\n"
-    "out vec4 fragColor;\n"
+    PRESENT_IN " vec2 vUV;\n"
+    PRESENT_FRAG_OUT
     "void main() {\n"
     "  vec2 texel = vUV * uSrcSize;\n"
     "  vec2 base = floor(texel);\n"
     "  vec2 d = fract(texel) - 0.5;\n"
     "  vec2 range = 0.5 - 0.5 / max(uScale, vec2(1.0));\n"
     "  vec2 f = (d - clamp(d, -range, range)) * max(uScale, vec2(1.0)) + 0.5;\n"
-    "  vec3 c = texture(uTex, (base + f) / uSrcSize).rgb;\n"
-    "  fragColor = vec4(min(c * uBright, vec3(1.0)), 1.0);\n"
+    "  vec3 c = " PRESENT_TEXTURE "(uTex, (base + f) / uSrcSize).rgb;\n"
+    "  " PRESENT_FRAG_COLOR " = vec4(min(c * uBright, vec3(1.0)), 1.0);\n"
     "}\n";
 
 class Present {
@@ -879,7 +900,17 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+#ifdef __APPLE__
+        // a compatibility context draws only with vertex array 0 enabled: the corners (the shader uses gl_VertexID)
+        static const float corners[8] = {0, 0, 1, 0, 0, 1, 1, 1};
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, corners);
+        glEnableVertexAttribArray(0);
+#endif
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+#ifdef __APPLE__
+        glDisableVertexAttribArray(0);
+#endif
         glBindTexture(GL_TEXTURE_2D, 0);
         glUseProgram(0);
     }
@@ -1134,8 +1165,8 @@ namespace {
    window's context there would stop the loading screen until the game
    thread let go, and it does not while it loads. Elsewhere (EGL, Wayland)
    the context follows the presenter as before. */
-bool gKeepContexts = false;           // Windows: never (the engine's contexts release to none)
-#ifndef _WIN32
+bool gKeepContexts = false;           // Windows, macOS: never (the engine's contexts release to none)
+#if !defined(_WIN32) && !defined(__APPLE__)
 Display* gGlxDpy = nullptr;
 GLXDrawable gGlxWin = 0;
 GLXContext gWinCtx = nullptr;
@@ -1148,7 +1179,7 @@ GLuint gFrameFbos[2], gUnderlayFbos[2];  // framebuffer objects are per context
 int gCtxIndex = 0;                       // the context in use (under gGlLock): 1 = the second
 thread_local bool tHome = false;
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
 GLXContext newSharedContext() {
     int id = 0;
     glXQueryContext(gGlxDpy, gWinCtx, GLX_FBCONFIG_ID, &id);
@@ -1164,7 +1195,7 @@ GLXContext newSharedContext() {
 /** The game presents from more than one thread: the context follows the presenter. */
 void claimContext() {
     auto me = std::this_thread::get_id();
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
     if (gKeepContexts) {
         bool home = jrt::onSafePointThread();   // the game loop's thread
         if (home && !tHome) {
@@ -1208,7 +1239,7 @@ void claimContext() {
 
 /** Always released (unless kept, GLX): a context stuck on a thread blocks every other presenter. */
 void releaseContext() {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
     if (gKeepContexts) {
         // while the second context is in use, the next section may be in the other one: it waits for this one
         bool other = gCtxIndex == 1;
@@ -1319,6 +1350,13 @@ private:
         std::string fonts = std::string(windir ? windir : "C:\\Windows") + "\\Fonts\\";
         for (const char* f : {"arialbd.ttf", "segoeuib.ttf", "tahomabd.ttf"})
             if (FT_New_Face(lib, (fonts + f).c_str(), 0, &face) == 0) break;
+            else face = nullptr;
+#elif defined(__APPLE__)
+        // macOS: its own bold sans, without fontconfig (an app carries no configuration for it)
+        if (FT_Init_FreeType(&lib) != 0) return;
+        for (const char* f : {"/System/Library/Fonts/Supplemental/Arial Bold.ttf", "/Library/Fonts/Arial Bold.ttf",
+                              "/System/Library/Fonts/Supplemental/Verdana Bold.ttf"})
+            if (FT_New_Face(lib, f, 0, &face) == 0) break;
             else face = nullptr;
 #else
         if (!FcInit() || FT_Init_FreeType(&lib) != 0) return;
@@ -1680,6 +1718,17 @@ void GLBackend::init() {
             javax::microedition::m3g::Platform::setShareContext(int64_t(reinterpret_cast<intptr_t>(dc)),
                                                                 int64_t(reinterpret_cast<intptr_t>(ctx)));
             printf("[gl] 3D engine shares the window's WGL context\n");
+        }
+    }
+#elif defined(__APPLE__)
+    // the engine's CGL contexts share the window's objects (deep3d_cgl.inc)
+    {
+        glfwMakeContextCurrent(gWindow);
+        CGLContextObj ctx = CGLGetCurrentContext();
+        glfwMakeContextCurrent(nullptr);
+        if (ctx) {
+            javax::microedition::m3g::Platform::setShareContext(0, int64_t(reinterpret_cast<intptr_t>(ctx)));
+            printf("[gl] 3D engine shares the window's CGL context\n");
         }
     }
 #else

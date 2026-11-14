@@ -213,7 +213,19 @@ static void m3gApplyBackground(RenderContext *ctx, Background *background)
 
             /* Load vertices */
             glEnableClientState(GL_VERTEX_ARRAY);
+#if defined(__APPLE__)
+            /* Deep3D-PC: macOS's OpenGL 2.1 has no GL_FIXED vertices: as floats */
+            GLfloat vertf[12];
+            {
+                int k;
+                for (k = 0; k < 12; k++) {
+                    vertf[k] = (GLfloat) vert[k] * (1.0f / 65536.0f);
+                }
+            }
+            glVertexPointer(3, GL_FLOAT, 0, vertf);
+#else
             glVertexPointer(3, GL_FIXED, 0, vert);
+#endif
         
             /* Set up an identity modelview and projection */
             m3gPushScreenSpace(ctx, M3G_FALSE);
