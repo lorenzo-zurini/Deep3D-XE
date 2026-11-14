@@ -150,7 +150,8 @@ int run(int argc, char** argv) {
     Runtime::halt(0);
 }
 
-int main(int argc, char** argv) {
+namespace {
+int start(int argc, char** argv) {
 #ifdef _WIN32
     // a windowed program: started from a terminal, it writes to that terminal
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -190,4 +191,11 @@ int main(int argc, char** argv) {
     } catch (const jrt::Thrown& t) {
         uncaught(t);
     }
+}
+}  // namespace
+
+int main(int argc, char** argv) {
+    // never through the C runtime's exit: global references must not be released after the
+    // runtime they need (Java's statics are never destroyed either); Runtime::halt flushes
+    Runtime::halt(start(argc, argv));
 }
