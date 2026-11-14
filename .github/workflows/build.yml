@@ -28,7 +28,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build g++ pkg-config file \
             libfluidsynth-dev libzip-dev libpng-dev zlib1g-dev libfreetype-dev libfontconfig-dev \
-            libgl-dev libegl-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+            libgl-dev libopengl-dev libglx-dev libegl-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
             libwayland-dev libxkbcommon-dev wayland-protocols \
             libasound2-dev libpulse-dev libpipewire-0.3-dev
 
@@ -109,17 +109,25 @@ jobs:
           ninja -C build
 
       - name: Package
-        run: |
-          packaging/windows.sh
-          cat build/ldd.txt
-          # with only Windows's own folders on the PATH: the zip's DLLs must be enough
-          cd dist/Deep3D-XE && PATH=/c/Windows/system32:/c/Windows ./Deep3D-XE.exe --help
+        run: packaging/windows.sh
 
       - uses: actions/upload-artifact@v4
         with:
           name: Deep3D-XE-windows-x64
           path: Deep3D-XE-windows-x64.zip
           if-no-files-found: error
+
+      # outside MSYS2, as a player starts it: the zip's DLLs must be enough
+      - name: Start it
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\Deep3D-XE\Deep3D-XE.exe -ArgumentList '--help' -NoNewWindow -PassThru `
+            -RedirectStandardOutput out.txt -RedirectStandardError err.txt
+          if (-not $p.WaitForExit(60000)) { $p.Kill(); throw 'no exit after 60 s' }
+          Get-Content out.txt, err.txt
+          Get-Content dist\Deep3D-XE\logs\deep3d.log -ErrorAction SilentlyContinue
+          '{0} (0x{0:X8})' -f $p.ExitCode
+          if ($p.ExitCode -ne 0) { exit 1 }
 
   release:
     name: Release
