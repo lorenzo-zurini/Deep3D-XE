@@ -129,6 +129,12 @@ jobs:
           '{0} (0x{0:X8})' -f $p.ExitCode
           if ($p.ExitCode -ne 0) { exit 1 }
 
+      - name: Where it stopped
+        if: failure()
+        run: |
+          pacman -S --noconfirm --needed mingw-w64-ucrt-x86_64-gdb
+          gdb -batch -ex run -ex bt -ex "info registers rip" --args build/bin/Deep3D-XE.exe --help
+
   release:
     name: Release
     if: startsWith(github.ref, 'refs/tags/v')

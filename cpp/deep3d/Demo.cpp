@@ -9,6 +9,7 @@
 // 64 passes a check of the game's state.
 #include "game.h"
 #include "build_info.h"
+#include "gl.h"
 #include "platform.h"
 
 #include <atomic>
@@ -113,6 +114,8 @@ bool getBlob(std::string& s) {
 std::atomic<float> gSpeed{1.0f};
 std::atomic<bool> gFast{true};
 double gAtSeconds = -1;
+std::string gStills;      // --stills: the folder for a still every STILL_EVERY_S, HUD hidden
+double gNextStill = 0;
 std::chrono::steady_clock::time_point gAnchor;
 double gWall = 0;         // seconds of real time this replay has reached, at its speed
 bool gShow = true;
@@ -120,7 +123,7 @@ std::chrono::steady_clock::time_point gLastShow;
 int32_t gMasterVolume = 0;
 bool gOutOfStep = false;
 
-constexpr double LATE_S = 0.002, SHOW_EVERY_S = 0.05, GIVE_UP_S = 0.25;
+constexpr double LATE_S = 0.002, SHOW_EVERY_S = 0.05, GIVE_UP_S = 0.25, STILL_EVERY_S = 0.5;
 
 void fastForwardDone() {
     gFast = false;
@@ -130,6 +133,8 @@ void fastForwardDone() {
     gWall = 0;
     media::AudioSettings::master = gMasterVolume;
     media::AudioSettings::refresh();
+    gNextStill = gTime;
+    if (!gStills.empty()) return;   // the stills: nothing over the picture
     const char* warning = getenv("DEEP3D_DEMO_WARNING");
     Overlay::showToast(warning ? warning : "C free camera, V follow, H HUD, Space pause, [ ] speed, Esc quit");
 }
@@ -141,6 +146,12 @@ void pace(double ms) {
         if (there) fastForwardDone();
         gShow = !gFast;
         return;
+    }
+    if (!gStills.empty() && gTime >= gNextStill) {
+        char name[32];
+        snprintf(name, sizeof name, "/%07.2f.png", gTime);   // the game's time: the same name in every mode
+        gl::GLBackend::screenshotTo(gStills + name);
+        gNextStill += STILL_EVERY_S;
     }
     gWall += ms / 1000.0 / gSpeed.load();
     auto now = std::chrono::steady_clock::now();
@@ -331,6 +342,10 @@ double Demo::pass(double measuredMs) {
         fseek(gFile, atol(getenv("DEEP3D_DEMO_START")), SEEK_SET);
         if (const char* at = getenv("DEEP3D_DEMO_AT")) gAtSeconds = atof(at);
         gFree = getenv("DEEP3D_DEMO_FREECAM") != nullptr;   // tests: the free camera from the start
+        if (const char* d = getenv("DEEP3D_DEMO_STILLS")) {
+            gStills = d;
+            gHideHud = true;
+        }
         gMasterVolume = media::AudioSettings::master;
         media::AudioSettings::master = 0;
         media::AudioSettings::refresh();
@@ -660,7 +675,8 @@ int32_t info(const std::string& name) {
     return 0;
 }
 
-int32_t play(const std::string& name, std::string at, std::vector<std::string> cfg, char** argv, const std::vector<char*>& rest) {
+int32_t play(const std::string& name, std::string at, const std::string& stills, std::vector<std::string> cfg, char** argv,
+             const std::vector<char*>& rest) {
     std::string path = demoPath(name);
     std::vector<std::pair<std::string, std::string>> files;
     long start = 0;
@@ -698,6 +714,10 @@ int32_t play(const std::string& name, std::string at, std::vector<std::string> c
                {"DEEP3D_DEMO_SEED", meta["seed"]}};
     if (!warning.empty()) how.env.push_back({"DEEP3D_DEMO_WARNING", warning});
     if (!at.empty()) how.env.push_back({"DEEP3D_DEMO_AT", at});
+    if (!stills.empty()) {
+        fs::create_directories(stills);
+        how.env.push_back({"DEEP3D_DEMO_STILLS", stills});
+    }
     std::vector<std::string> args = {argv[0]};
     args.insert(args.end(), rest.begin(), rest.end());
     int status = os::run(os::exePath(), args, how);
@@ -768,7 +788,7 @@ std::string Demo::exportSession(const std::string& diagnostics) {
 }
 
 int32_t Demo::main(int32_t argc, char** argv) {
-    std::string name, at;
+    std::string name, at, stills;
     bool recording = false, playing = false, showing = false;
     std::vector<std::string> cfg;
     std::vector<char*> rest;
@@ -785,6 +805,8 @@ int32_t Demo::main(int32_t argc, char** argv) {
             name = argv[++i];
         } else if (a == "--at" && i + 1 < argc) {
             at = argv[++i];
+        } else if (a == "--stills" && i + 1 < argc) {
+            stills = fs::absolute(argv[++i]).string();
         } else if (a == "--mode" && i + 1 < argc) {
             for (auto& l : Config::modeLines(argv[++i])) cfg.push_back(l);
         } else if (a == "--set" && i + 1 < argc) {
@@ -796,13 +818,14 @@ int32_t Demo::main(int32_t argc, char** argv) {
     if (int32_t(recording) + int32_t(playing) + int32_t(showing) != 1) {
         fprintf(stderr, "usage: Deep3D-XE --record [name]\n"
                         "       Deep3D-XE --play name [--at seconds] [--mode original|remastered|exact|enhanced] [--set key=value]...\n"
+                        "                         [--stills folder]\n"
                         "       Deep3D-XE --info name\n");
         return 2;
     }
     Config::load();
     if (!FirstRun::ensureAssets()) return 1;
     if (showing) return info(name);
-    return recording ? record(name, argv, rest) : play(name, at, cfg, argv, rest);
+    return recording ? record(name, argv, rest) : play(name, at, stills, cfg, argv, rest);
 }
 
 }  // namespace org::deep3d

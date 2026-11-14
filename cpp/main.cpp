@@ -54,7 +54,8 @@ int xError(Display* d, XErrorEvent* e) {
 
 int run(int argc, char** argv) {
     Config::load();
-    Diagnostics::init();
+    // the options first: --help and mistakes return before the log's threads start (Windows aborts
+    // a process whose exit tears down what running threads use)
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
         if (a == "--fullscreen") {
@@ -85,7 +86,7 @@ int run(int argc, char** argv) {
             printf("usage: deep3d [--fullscreen|--windowed] [--res WxH]\n");
             printf("       deep3d --bench [exact,original,remastered] [--frames N] [--fullscreen|--windowed|--size WxH]\n");
             printf("       deep3d --record [name]\n");
-            printf("       deep3d --play name [--at seconds] [--mode original|remastered|exact|enhanced] [--set key=value]\n");
+            printf("       deep3d --play name [--at seconds] [--mode original|remastered|exact|enhanced] [--set key=value] [--stills folder]\n");
             printf("       deep3d --info name\n");
             printf("settings persist in deep3d.cfg; press Esc in game for options\n");
             return 0;
@@ -94,6 +95,7 @@ int run(int argc, char** argv) {
             return 0;
         }
     }
+    Diagnostics::init();
     // SIGTERM/SIGINT/SIGHUP: Java's shutdown hook halted with status 0
 #ifdef SIGHUP
     for (int sig : {SIGTERM, SIGINT, SIGHUP}) signal(sig, [](int) { Runtime::halt(0); });
