@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from compare import unexplained, verdict  # noqa: E402
+from compare import deliberate, unexplained, verdict  # noqa: E402
 
 W, H, FPS, S = 1920, 1080, 30, 3
 BG, INK, DIM = (18, 18, 24), (233, 236, 239), (134, 142, 150)
@@ -39,6 +39,7 @@ def main():
     total = same = shift = 0
     for name, title in scenes:
         d = os.path.join(suite, name)
+        planned = deliberate(os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenes", name + ".keys"))
         shots = sorted(f for f in os.listdir(os.path.join(d, "ours")) if f.startswith("p") and f.endswith(".png"))
         shots = [f for f in shots if os.path.exists(os.path.join(d, "phone", f))]
         for f in shots:
@@ -63,7 +64,8 @@ def main():
             if mask is not None:
                 vis[mask] = MAGENTA
             frame.paste(Image.fromarray(vis.astype(np.uint8)), (px, y))
-            v = verdict(1.0 if ident else 0.0, 0.0 if ident else mask.mean(), a, b)
+            on_purpose = any(lo <= int(f[1:7]) <= hi for lo, hi, _ in planned)
+            v = verdict(1.0 if ident else 0.0, 0.0 if ident else mask.mean(), a, b, on_purpose)
             differs = v == "DIFFERENT"
             if differs:
                 v = f"{100 * mask.mean():.2f}% beyond a pixel's shift"

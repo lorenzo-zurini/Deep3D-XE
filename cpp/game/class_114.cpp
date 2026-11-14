@@ -48,10 +48,16 @@ void class_114::method_894() {
 void class_114::method_887() {
     this->class_112::field_1409->method_50();
     // Deep3D-PC: not while parked at x 50000 (unfired) in Enhanced and Remastered: the phone's
-    // far plane hid it there, theirs reach it. Original draws it, as the phone: each draw
-    // moves the chase camera on a step (class_42), so this is game state, as recorded
-    if ((this->class_112::field_1411 != nullptr) && (!org::deep3d::Demo::enhancedWorld() || this->class_112::field_1409->field_78->at(0)->field_37 != 50000)) {
+    // far plane hid it there, theirs reach it. Original queues it, as the phone: each queued
+    // object moves the chase camera on a step (class_42), so this is game state, as recorded.
+    // But it is never drawn (-1): the phone showed it as a green glow wherever its far plane
+    // reached x 50000 (in the intro, out of the first station)
+    bool deep3dParked = this->class_112::field_1409->field_78->at(0)->field_37 == 50000;
+    if ((this->class_112::field_1411 != nullptr) && (!org::deep3d::Demo::enhancedWorld() || !deep3dParked)) {
+        int32_t deep3dWas = class_4::deep3dKind;
+        if (deep3dParked) class_4::deep3dKind = -1;
         class_84::field_1110->method_25(jrt::Ref<class_102>(this->class_112::field_1411));
+        class_4::deep3dKind = deep3dWas;
     }
     if (this->class_112::field_1409->field_92) {
         class_84::field_1110->method_25(jrt::Ref<class_102>(this->field_1427));

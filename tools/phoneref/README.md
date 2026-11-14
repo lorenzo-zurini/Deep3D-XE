@@ -44,19 +44,26 @@ and `asm/asm-9.7.1.jar`, `asm/asm-tree-9.7.1.jar` (Maven Central).
 - Our side: `ours.sh` runs Original graphics on the phone's 240x320 screen with
   `DEEP3D_PHONE=1`: the phone build's own (Russian) text, and the PC's additions
   to its screens off (`Config::pcAdditions`).
-- `scenes/*.keys`: lines `<pass> p|r <MIDP key code>`; `# every` and `# end`.
+- `scenes/*.keys`: lines `<pass> p|r <MIDP key code>`; `# every`, `# end`,
+  `# saves`, `# deliberate`.
 
 What a comparison shows that is not a difference in drawing (compare.py's
 verdicts): "a pixel's shift", single texels where SwiftShader and our GL put a
 texel edge a pixel apart, and "loading screen", which the game draws from a
 thread of its own in real time, so which pass shows it is timing, and "before
 the first paint" (pass 1: the emulator's empty canvas is white, ours black).
+A scene may also name passes where we differ on purpose ("# deliberate
+<from>-<to> <why>"): those are "deliberate". The one so far: the phone draws the
+unfired torpedo parked at x 50000 as a green glow wherever its far plane reaches
+it (the intro, passes 1426-1445, out of the first station); Original queues it
+as the phone does (each queued object steps the chase camera) but never draws it.
 Left as DIFFERENT: now and then a frame where two crossing surfaces z-fight on
 one side only (the depth buffers round differently); it shows up on either side.
 
 The suite of 2026-11-13, a shot every pass: 22,195 shots, 12,960 identical,
 9,169 a pixel's shift, 59 loading screens, 5 before the first paint, and 2
 DIFFERENT, both such z-fighting at Veill (travel 5417 ours, 5437 the phone).
+(Before the torpedo glow was hidden; that makes 8 intro shots deliberate.)
 
 What it found in our Original graphics (all fixed): textures reworked to a
 guessed colour depth; no culling and a far plane 132x the phone's; a widened

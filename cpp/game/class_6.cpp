@@ -48,11 +48,14 @@ void class_6::method_34(int64_t var1) {
 }
 
 void class_6::method_35() {
+    // Deep3D-PC: kind -1 is queued (game state) but never drawn (class_114)
     for (int32_t var1 = 0; var1 < this->field_55; var1++) {
+        if (this->deep3dKind->at(var1) < 0) continue;
         org::deep3d::Remaster::object(this->deep3dKind->at(var1));
         this->field_54->at(var1)->method_887();
     }
     for (int32_t var2 = 0; var2 < this->field_55; var2++) {
+        if (this->deep3dKind->at(var2) < 0) continue;
         org::deep3d::Remaster::object(this->deep3dKind->at(var2));
         this->field_54->at(var2)->method_888();
     }

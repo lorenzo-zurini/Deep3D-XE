@@ -2,6 +2,7 @@
 # keep the settings, the story intro, the first flight and Mai's first line.
 # every 25
 # end 4500
+# deliberate 1426-1445 the phone draws the unfired torpedo parked at x 50000 (a green glow); ours queues it but never draws it
 40 p -5
 42 r -5
 260 p -5

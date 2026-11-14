@@ -19,9 +19,9 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from compare import unexplained  # noqa: E402
 
-ORDER = ["identical", "a pixel's shift", "loading screen", "before the first paint", "DIFFERENT"]
+ORDER = ["identical", "a pixel's shift", "loading screen", "before the first paint", "deliberate", "DIFFERENT"]
 COLOUR = {"identical": "#2f9e44", "a pixel's shift": "#5c7cfa", "loading screen": "#868e96",
-          "before the first paint": "#495057", "DIFFERENT": "#e03131"}
+          "before the first paint": "#495057", "deliberate": "#f59f00", "DIFFERENT": "#e03131"}
 
 
 def rows(scene_dir):

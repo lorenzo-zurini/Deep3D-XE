@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compares the phone reference's shots (fj.sh) with ours (ours.sh), pass by pass.
 
-  compare.py <reference dir> <our dir> [out dir]
+  compare.py <reference dir> <our dir> [out dir] [scene.keys]
 
 Per pass: the share of identical pixels, the mean and largest channel
 difference, and the share that differs even allowing a pixel's shift: a pixel
@@ -12,9 +12,12 @@ differently is. The out dir gets report.tsv and sheet_*.png (reference | ours |
 difference x4). A pair where one is the loading screen is marked so: the game
 draws it from a thread of its own, in real time, so which pass shows it is a
 matter of timing on either side. A pair of blank screens is before the game's
-first paint: the emulator's empty canvas is white, ours black.
+first paint: the emulator's empty canvas is white, ours black. A scene may
+name passes where we differ on purpose ("# deliberate <from>-<to> <why>"): a
+difference there is "deliberate".
 """
 import os
+import re
 import sys
 
 import numpy as np
@@ -32,7 +35,17 @@ def blank(im):
     return len(im.getcolors(1) or ()) == 1
 
 
-def verdict(same, off, a, b):
+def deliberate(keys):
+    """the scene's "# deliberate <from>-<to> <why>" lines: [(from, to, why)]"""
+    out = []
+    for line in open(keys) if keys else ():
+        m = re.match(r"# deliberate (\d+)-(\d+) (.*)", line)
+        if m:
+            out.append((int(m.group(1)), int(m.group(2)), m.group(3).strip()))
+    return out
+
+
+def verdict(same, off, a, b, on_purpose=False):
     if same == 1.0:
         return "identical"
     if off < 0.001:
@@ -41,7 +54,7 @@ def verdict(same, off, a, b):
         return "loading screen"
     if blank(a) and blank(b):
         return "before the first paint"
-    return "DIFFERENT"
+    return "deliberate" if on_purpose else "DIFFERENT"
 
 
 def unexplained(a, b):
@@ -70,6 +83,7 @@ def stats(a, b):
 def main():
     ref, ours = sys.argv[1], sys.argv[2]
     out = sys.argv[3] if len(sys.argv) > 3 else ours
+    planned = deliberate(sys.argv[4] if len(sys.argv) > 4 else None)
     os.makedirs(out, exist_ok=True)
     passes = sorted(set(f for f in os.listdir(ref) if f.startswith("p") and f.endswith(".png"))
                     & set(f for f in os.listdir(ours) if f.startswith("p") and f.endswith(".png")))
@@ -81,7 +95,9 @@ def main():
             rows.append((f[1:7], "size", a.size, b.size))
             continue
         diff, same, mean, worst, q_off = stats(a, b)
-        rows.append((f[1:7], same, mean, worst, q_off, verdict(same, q_off, a, b)))
+        n = int(f[1:7])
+        on_purpose = any(lo <= n <= hi for lo, hi, _ in planned)
+        rows.append((f[1:7], same, mean, worst, q_off, verdict(same, q_off, a, b, on_purpose)))
         tiles.append((f[1:7], a, b, diff.point(lambda v: min(255, v * 4))))
     with open(os.path.join(out, "report.tsv"), "w") as w:
         w.write("pass\tidentical\tmean diff\tmax diff\tdiffers beyond a pixel's shift\tverdict\n")
