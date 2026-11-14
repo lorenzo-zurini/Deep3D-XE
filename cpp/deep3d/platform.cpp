@@ -324,8 +324,16 @@ std::string osName() {
 std::string libcName() { return "UCRT"; }
 
 bool pad(int i, int buttons[8], int axes[8]) {
+    // found at run time: an import would tie the game to one XInput DLL (1.3 is DirectX's
+    // redistributable, missing from most systems)
+    using GetState = DWORD(WINAPI*)(DWORD, XINPUT_STATE*);
+    static GetState getState = [] {
+        for (const wchar_t* dll : {L"xinput1_4.dll", L"xinput1_3.dll", L"xinput9_1_0.dll"})
+            if (HMODULE m = LoadLibraryW(dll)) return (GetState) (void*) GetProcAddress(m, "XInputGetState");
+        return (GetState) nullptr;
+    }();
     XINPUT_STATE st{};
-    if (XInputGetState(DWORD(i), &st) != ERROR_SUCCESS) return false;
+    if (!getState || getState(DWORD(i), &st) != ERROR_SUCCESS) return false;
     const XINPUT_GAMEPAD& g = st.Gamepad;
     const WORD order[8] = {XINPUT_GAMEPAD_A, XINPUT_GAMEPAD_B, XINPUT_GAMEPAD_X, XINPUT_GAMEPAD_Y,
                            XINPUT_GAMEPAD_LEFT_SHOULDER, XINPUT_GAMEPAD_RIGHT_SHOULDER, XINPUT_GAMEPAD_BACK,

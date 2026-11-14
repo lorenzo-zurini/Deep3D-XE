@@ -24,7 +24,7 @@ if(WIN32)
     # MSYS2 (UCRT64): the engine's contexts are WGL's (native/m3g/win32), and
     # windows.h stays lean (its "interface" macro would break the engine)
     pkg_check_modules(DEPS REQUIRED IMPORTED_TARGET glfw3 sdl3 fluidsynth libzip libpng zlib freetype2)
-    set(PLATFORM_LIBS opengl32 gdi32 comdlg32 xinput)
+    set(PLATFORM_LIBS opengl32 gdi32 comdlg32)
     add_compile_definitions(WIN32_LEAN_AND_MEAN NOMINMAX)
 else()
     pkg_check_modules(DEPS REQUIRED IMPORTED_TARGET glfw3 sdl3 fluidsynth libzip libpng zlib freetype2 fontconfig)

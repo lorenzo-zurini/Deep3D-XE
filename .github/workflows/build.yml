@@ -51,7 +51,7 @@ jobs:
           cmake -S /tmp/sdl -B /tmp/sdl/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/deps \
             -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
             -DSDL_VIDEO=OFF -DSDL_RENDER=OFF -DSDL_GPU=OFF -DSDL_CAMERA=OFF -DSDL_JOYSTICK=OFF \
-            -DSDL_HAPTIC=OFF -DSDL_SENSOR=OFF -DSDL_HIDAPI=OFF -DSDL_DIALOG=OFF
+            -DSDL_HAPTIC=OFF -DSDL_SENSOR=OFF -DSDL_HIDAPI=OFF -DSDL_DIALOG=OFF -DSDL_UNIX_CONSOLE_BUILD=ON
           cmake --build /tmp/sdl/build && cmake --install /tmp/sdl/build
 
       - name: Build
@@ -111,7 +111,9 @@ jobs:
       - name: Package
         run: |
           packaging/windows.sh
-          dist/Deep3D-XE/Deep3D-XE.exe --help
+          cat build/ldd.txt
+          # with only Windows's own folders on the PATH: the zip's DLLs must be enough
+          cd dist/Deep3D-XE && PATH=/c/Windows/system32:/c/Windows ./Deep3D-XE.exe --help
 
       - uses: actions/upload-artifact@v4
         with:

@@ -7,7 +7,7 @@ OUT=dist/Deep3D-XE
 rm -rf dist
 mkdir -p "$OUT"
 strip -o "$OUT/Deep3D-XE.exe" build/bin/Deep3D-XE.exe
-ldd "$OUT/Deep3D-XE.exe" | awk '$3 ~ /^\/ucrt64\// {print $3}' | sort -u | xargs -r cp -t "$OUT"
+ldd "$OUT/Deep3D-XE.exe" | tee build/ldd.txt | awk '$3 ~ /^\/ucrt64\// {print $3}' | sort -u | xargs -r cp -t "$OUT"
 cp LICENSE "$OUT/LICENSE.txt"
 cat > "$OUT/README.txt" <<'TXT'
 Deep3D-XE for Windows
