@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from compare import unexplained  # noqa: E402
+from compare import unexplained, verdict  # noqa: E402
 
 W, H, FPS, S = 1920, 1080, 30, 3
 BG, INK, DIM = (18, 18, 24), (233, 236, 239), (134, 142, 150)
@@ -63,9 +63,11 @@ def main():
             if mask is not None:
                 vis[mask] = MAGENTA
             frame.paste(Image.fromarray(vis.astype(np.uint8)), (px, y))
-            verdict = "identical" if ident else ("a pixel's shift" if mask.mean() < 0.001 else
-                                                 f"{100 * mask.mean():.2f}% beyond a pixel's shift")
-            dr.text((px, y + 336), verdict, font=f_small, fill=INK if ident else MAGENTA)
+            v = verdict(1.0 if ident else 0.0, 0.0 if ident else mask.mean(), a, b)
+            differs = v == "DIFFERENT"
+            if differs:
+                v = f"{100 * mask.mean():.2f}% beyond a pixel's shift"
+            dr.text((px, y + 336), v, font=f_small, fill=MAGENTA if differs else INK)
             dr.text((px, y + 380), f"so far: {total} frames", font=f_small, fill=DIM)
             dr.text((px, y + 410), f"{100 * same / total:.1f}% identical", font=f_small, fill=DIM)
             dr.text((px, y + 440), f"{100 * shift / total:.1f}% a pixel's shift", font=f_small, fill=DIM)

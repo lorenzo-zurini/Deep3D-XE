@@ -11,7 +11,8 @@ texel edges a pixel apart now and then; that is not counted, a thing drawn
 differently is. The out dir gets report.tsv and sheet_*.png (reference | ours |
 difference x4). A pair where one is the loading screen is marked so: the game
 draws it from a thread of its own, in real time, so which pass shows it is a
-matter of timing on either side.
+matter of timing on either side. A pair of blank screens is before the game's
+first paint: the emulator's empty canvas is white, ours black.
 """
 import os
 import sys
@@ -27,6 +28,10 @@ def loading(im):
     return (np.asarray(im) == LOADING_BACKGROUND).all(axis=2).mean() > 0.75
 
 
+def blank(im):
+    return len(im.getcolors(1) or ()) == 1
+
+
 def verdict(same, off, a, b):
     if same == 1.0:
         return "identical"
@@ -34,6 +39,8 @@ def verdict(same, off, a, b):
         return "a pixel's shift"
     if loading(a) or loading(b):
         return "loading screen"
+    if blank(a) and blank(b):
+        return "before the first paint"
     return "DIFFERENT"
 
 

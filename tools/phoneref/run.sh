@@ -8,8 +8,8 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 KEYS=$(realpath "$1"); OUT=$(realpath -m "$2")
 EVERY=${3:-$(sed -n 's/^# every \([0-9]*\).*/\1/p' "$KEYS" | head -1)}; EVERY=${EVERY:-30}
 END=${4:-$(sed -n 's/^# end \([0-9]*\).*/\1/p' "$KEYS" | head -1)}; END=${END:-600}
-# "# saves <dir>" (relative to the repository): start both from those saves
-SAVEDIR=$(sed -n 's/^# saves \(.*\)/\1/p' "$KEYS" | head -1)
+# "# saves <dir>" (relative to the repository, or ~/...): start both from those saves
+SAVEDIR=$(sed -n 's/^# saves \(.*\)/\1/p' "$KEYS" | head -1); SAVEDIR=${SAVEDIR/#\~/$HOME}
 [ -n "$SAVEDIR" ] && export SAVES=$(cd "$HERE/../.." && realpath "$SAVEDIR")
 mkdir -p "$OUT"
 "$HERE/fj.sh" "$OUT/phone" "$KEYS" "$EVERY" "$END" > "$OUT/phone.out" &
