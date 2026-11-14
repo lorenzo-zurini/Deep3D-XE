@@ -6,7 +6,7 @@ on its own thread, one frame at a time: waits end when the game is where the
 script wants it (title, station, flight), and the game's popups are dismissed
 on the way, so runs are reliable rather than timed.
 
-    tools/scenarios/run.sh flight.scn out/flight_rm graphics.enhanced=true graphics.remastered=true
+    tools/scenarios/run.sh flight.scn out/flight_rm graphics.mode=remastered
     tools/scenarios/suite.sh full.suite out/suite        # every run, then the report
     python3 tools/scenarios/report.py out/suite          # the report again
     SAVES=saves tools/scenarios/run.sh cannon.scn out/c  # from copies of your saves
@@ -63,13 +63,13 @@ One per line, `#` comments, `include <file>` (relative to the script).
 | `move <dx> <dy> <dz>`, `moveto <x> <y> <z>` | move the sub and its camera by, or to, world units (Open Sea tests: far from the origin) |
 | `mouse on\|off`, `mouse <dx> <dy>` | mouse flight (on: without the window's focus), its motion |
 | `god on\|off`, `setf <class> <field> <value>` | cheats, game state (`setf class_21 field_209 12`: story step, cutscenes skippable) |
-| `mode original\|enhanced\|remastered`, `set <Config field> <value>` | graphics |
+| `mode exact\|original\|remastered` (presets: Config::setGraphicsMode), `set <Config field> <value>` | graphics |
 | `depth <game depth>\|off` | Remastered: show any depth |
 | `burst <frames> <name>` | every presented frame from now (quarter size), with its mean colour in the log |
 | `record <frames> <name> [skip]` | every presented frame from now (after `skip` frames) at full size (`<name>_00000.png`...): with `DEEP3D_DET=1` each is 33 ms of game time, so they make a video |
 | `hover <row text>` | the mouse onto a menu row |
 | `shot <name>` | a screenshot, logged to metrics.tsv with state, FPS and the sub's heading |
-| `pair <name>` | the same moment in Remastered and Enhanced (`<name>__alt`), without particles |
+| `pair <name>` | the same moment in Remastered and Original with the same settings (`<name>__alt`), without particles |
 | `describe` | log what the UI layer sees (rows, buttons, bar) |
 | `clock <ms>` | deterministic runs: the frame time from now on, as `DEEP3D_STEP_MS` (2: as at 500 FPS; 33: back to the original step) |
 | `bench <label> <frames>`, `benchdone` | time the next frames (`<out>/bench.tsv`, frame times as CSV); wait until done (`Deep3D-XE --bench` uses them) |

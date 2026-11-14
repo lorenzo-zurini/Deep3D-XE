@@ -22,21 +22,23 @@ official English text from the international release.
   engine shares the window's GL context, so each 3D pass reaches the
   screen as a texture with no CPU read-back; with VSync and the FPS limit
   off it runs at well over a thousand FPS at 1080p on a GTX 1070.
-- **Original, Enhanced or Remastered graphics** (Options > Display > Graphics). By default the
-  game looks as it did on the phone: the whole frame is rendered at the
-  phone's resolution (its 320 lines, widened to your screen's aspect
-  ratio so pixels stay square, or the 240x320 phone screen itself — the
-  Screen option, applied on restart, as the game lays out its interface
-  once), scaled
-  up sharply, with the phones' 16-bit textures (the banding in
-  real-hardware footage) and crisp texture filtering.
-  **Enhanced graphics** turns on, each with its own toggle:
-  - native resolution (the same layout rendered at the next integer
-    multiple of the window's scale and downsampled),
-  - full texture colours,
-  - smooth textures (trilinear + 16x anisotropic filtering),
-  - 4x MSAA antialiasing.
-- **Remastered**: Enhanced plus a new underwater renderer, keeping the
+- **Original or Remastered graphics** (Options > Display > Graphics). Original
+  is the phone game's graphics, drawn the way the phone build draws them (checked
+  frame by frame against it: tools/phoneref), with a PC's options, each its own
+  toggle and on by default:
+  - Resolution: Native (the same layout rendered at the next integer multiple
+    of the window's scale and downsampled) or Phone (the phone's 320 lines,
+    widened to your screen's aspect ratio so pixels stay square, or the
+    240x320 phone screen itself: the Screen option, applied on restart, as
+    the game lays out its interface once), scaled up sharply;
+  - Textures: Smooth (trilinear + 16x anisotropic filtering) or Crisp;
+  - Texture colours: Full, Exact (the phone build's own texels) or 16-bit
+    (the coarse banding of real phones' 4-bit texture levels);
+  - Antialiasing: 4x MSAA or off;
+  - View distance: Far (the PC's, with Open Sea as an option) or Phone (the
+    phone's far plane and culling).
+  "All as the phone build" sets every one to the phone's.
+- **Remastered**: the same options plus a new underwater renderer, keeping the
   original's art direction. The game's own skydome palette (pale zenith,
   the station's tint band, teal horizon, black below) becomes the water
   itself: things melt into it with distance, structures stay as hazy
@@ -161,7 +163,7 @@ the earlier Java build.
 ### Benchmark
 
 ```sh
-./Deep3D-XE --bench                      # every mode: original, enhanced, remastered
+./Deep3D-XE --bench                      # every mode: exact, original, remastered
 ./Deep3D-XE --bench remastered --frames 6000
 ./Deep3D-XE --bench --fullscreen         # or --windowed, --size 2560x1440, --set key=value
 ```
@@ -343,7 +345,7 @@ every station tint and depth, flight manoeuvres, creatures and ships up
 close and far off, menus, each graphics mode and setting variants),
 photographs them and writes a report that flags crashes, freezes,
 shader failures, black / blown-out frames and differences between
-Remastered and Enhanced at the same moment (lost textures, NaNs,
+Remastered and Original at the same moment (lost textures, NaNs,
 missing structure). The game runs with its own config and saves.
 
     tools/scenarios/suite.sh tools/scenarios/full.suite out/suite

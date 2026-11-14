@@ -1,15 +1,15 @@
 # The whole game in each graphics mode, plus setting variants
-flight_remastered   flight.scn    graphics.enhanced=true graphics.remastered=true
-flight_enhanced     flight.scn    graphics.enhanced=true graphics.remastered=false
-flight_original     flight.scn    graphics.enhanced=false
-stations_remastered stations.scn  graphics.enhanced=true graphics.remastered=true
-# stations_original   stations.scn  graphics.enhanced=false
-ui_remastered       ui.scn        graphics.enhanced=true graphics.remastered=true
-ui_phone_original   ui.scn        graphics.enhanced=false graphics.original_screen=phone
-flight_rm_noaa_16bit flight.scn   graphics.enhanced=true graphics.remastered=true graphics.antialiasing=false graphics.full_colour=false display.texture_filter=false
-flight_rm_fov100    flight.scn    graphics.enhanced=true graphics.remastered=true display.fov=100
-art_remastered      art.scn       graphics.enhanced=true graphics.remastered=true
-reach_remastered    reach.scn     graphics.enhanced=true graphics.remastered=true
-mouse_remastered    mouse.scn     graphics.enhanced=true graphics.remastered=true
-mouse_original      mouse.scn     graphics.enhanced=false
-lights_remastered   lights.scn    graphics.enhanced=true graphics.remastered=true
+flight_remastered   flight.scn    graphics.mode=remastered
+flight_original     flight.scn    graphics.mode=original
+flight_exact        flight.scn    graphics.mode=exact
+stations_remastered stations.scn  graphics.mode=remastered
+# stations_exact      stations.scn  graphics.mode=exact
+ui_remastered       ui.scn        graphics.mode=remastered
+ui_phone_exact      ui.scn        graphics.mode=exact graphics.original_screen=phone
+flight_rm_noaa_16bit flight.scn   graphics.mode=remastered graphics.antialiasing=false graphics.texture_colours=16bit display.texture_filter=false
+flight_rm_fov100    flight.scn    graphics.mode=remastered display.fov=100
+art_remastered      art.scn       graphics.mode=remastered
+reach_remastered    reach.scn     graphics.mode=remastered
+mouse_remastered    mouse.scn     graphics.mode=remastered
+mouse_exact         mouse.scn     graphics.mode=exact
+lights_remastered   lights.scn    graphics.mode=remastered

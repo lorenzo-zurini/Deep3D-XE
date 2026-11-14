@@ -169,8 +169,8 @@ public:
     // settings and debug options that are game state: as recorded, whatever is shown
     /** Remastered's wider ring of creatures. */
     static bool remasteredWorld();
-    /** Enhanced or Remastered: the PC's longer view (what is drawn steers the camera). */
-    static bool enhancedWorld();
+    /** The PC's longer view (Config::farViewOn): what is drawn steers the camera. */
+    static bool farViewWorld();
     static bool openSea();
     static int32_t fov();
     static bool god();
@@ -203,15 +203,17 @@ public:
 class Config {
 public:
     static bool vsync;
-    static bool enhanced;
     static bool remastered;
+    /** The PC's view distance: the phone's far plane and culling when off (Remastered: always) */
+    static bool farView;
     static bool mouseFlight;
     static std::string originalScreen;
     static int32_t originalLines;
     static bool nativeResolution;
     static bool textureFilter;
     static bool antialiasing;
-    static bool fullColour;
+    /** "full" (faint alpha cleared), "exact" (as the phone build) or "16bit" (a phone's 4-bit levels) */
+    static std::string textureColours;
     static std::string resolutionMode;
     static int32_t internalWidth;
     static int32_t internalHeight;
@@ -232,17 +234,24 @@ public:
     static bool gamepadEnabled;
     static int32_t fov;
 
-    static bool remasteredOn() { return enhanced && remastered; }
+    static bool remasteredOn() { return remastered; }
+    /** "remastered", "exact" (Original with every option as the phone build) or "original" */
     static std::string graphicsMode();
+    /** A preset: "original" (or the old "enhanced": Original, every PC option), "remastered"
+        (the same, Remastered) or "exact" (Original as the phone build: what tools/phoneref compares) */
     static void setGraphicsMode(const std::string& mode);
-    static bool nativeResolutionOn() { return enhanced && nativeResolution; }
-    static bool smoothTexturesOn() { return enhanced && textureFilter; }
-    static bool antialiasingOn() { return enhanced && antialiasing; }
-    static bool fullColourOn() { return enhanced && fullColour; }
+    /** setGraphicsMode(mode)'s settings as deep3d.cfg lines */
+    static std::vector<std::string> modeLines(const std::string& mode);
+    static bool farViewOn() { return remastered || farView; }
+    static bool nativeResolutionOn() { return nativeResolution; }
+    static bool smoothTexturesOn() { return textureFilter; }
+    static bool antialiasingOn() { return antialiasing; }
+    static bool rawTexturesOn() { return !remastered && textureColours == "exact"; }
+    static bool phoneTexturesOn() { return textureColours == "16bit"; }
     /** The PC's additions to the game's own screens (the key hints' bar, the
         depth label, the corner arrow, no music question); off with DEEP3D_PHONE */
     static bool pcAdditions() { return !Det::PHONE; }
-    static bool openSeaLive() { return enhanced && openSea; }
+    static bool openSeaLive() { return farViewOn() && openSea; }
     static bool openSeaOn() { return Det::DEMO ? Demo::openSea() : openSeaLive(); }
     static int32_t flightFovLive() { return int32_t(float(fov) * 4096.0f / 360.0f); }
     static int32_t flightFov() { return Det::DEMO ? Demo::fov() : flightFovLive(); }

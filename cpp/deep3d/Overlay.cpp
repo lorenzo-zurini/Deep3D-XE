@@ -94,27 +94,14 @@ void cycleFps(int d) {
 }
 
 void addGraphicsItems(std::vector<Item>& items) {
-    static const char* modes[] = {"original", "enhanced", "remastered"};
-    static const char* names[] = {"Original", "Enhanced", "Remastered"};
-    auto index = [] {
-        std::string m = Config::graphicsMode();
-        for (int i = 0; i < 3; i++)
-            if (m == modes[i]) return i;
-        return 0;
-    };
-    items.push_back(Item::choice("Graphics", [index] { return std::string(names[index()]); }, [index](int d) {
-        Config::setGraphicsMode(modes[((index() + d) % 3 + 3) % 3]);
-        Overlay::applyGraphics();
-    }));
-    if (!Config::enhanced) return;
+    items.push_back(Item::choice("Graphics", [] { return std::string(Config::remastered ? "Remastered" : "Original"); },
+                                 [](int) {
+                                     Config::remastered = !Config::remastered;
+                                     Overlay::applyGraphics();
+                                 }));
     items.push_back(Item::choice("Resolution", [] { return std::string(Config::nativeResolution ? "Native" : "Phone"); },
                                  [](int) {
                                      Config::nativeResolution = !Config::nativeResolution;
-                                     Overlay::applyGraphics();
-                                 }));
-    items.push_back(Item::choice("Texture colours", [] { return std::string(Config::fullColour ? "Full" : "16-bit"); },
-                                 [](int) {
-                                     Config::fullColour = !Config::fullColour;
                                      Overlay::applyGraphics();
                                  }));
     items.push_back(Item::choice("Textures", [] { return std::string(Config::textureFilter ? "Smooth" : "Crisp"); },
@@ -122,8 +109,28 @@ void addGraphicsItems(std::vector<Item>& items) {
                                      Config::textureFilter = !Config::textureFilter;
                                      Overlay::applyGraphics();
                                  }));
+    // exact: the phone build's own texels (Remastered keeps its own)
+    static const char* colours[] = {"full", "exact", "16bit"};
+    static const char* colourNames[] = {"Full", "Exact", "16-bit"};
+    auto colour = [] {
+        for (int i = 0; i < 3; i++)
+            if (Config::textureColours == colours[i]) return i;
+        return 0;
+    };
+    items.push_back(Item::choice("Texture colours", [colour] { return std::string(colourNames[colour()]); }, [colour](int d) {
+        Config::textureColours = colours[((colour() + d) % 3 + 3) % 3];
+        Overlay::applyGraphics();
+    }));
     items.push_back(Item::choice("Antialiasing", [] { return std::string(Config::antialiasing ? "4x" : "Off"); },
                                  [](int) { Config::antialiasing = !Config::antialiasing; }));
+    // the phone's far plane and culling (Remastered always sees far)
+    if (!Config::remastered)
+        items.push_back(Item::choice("View distance", [] { return std::string(Config::farView ? "Far" : "Phone"); },
+                                     [](int) { Config::farView = !Config::farView; }));
+    items.push_back(Item::button("All as the phone build", [] {
+        Config::setGraphicsMode("exact");
+        Overlay::applyGraphics();
+    }));
 }
 
 std::vector<Item> buildItems() {
@@ -171,7 +178,7 @@ std::vector<Item> buildItems() {
             items.push_back(Item::choice("Field of view", [] { return std::to_string(Config::fov); }, cycleFov));
             items.push_back(Item::choice("Scale", [] { return std::string(Config::believableScale ? "Believable" : "Original"); },
                                          [](int) { Config::believableScale = !Config::believableScale; }));
-            if (Config::enhanced)
+            if (Config::farViewOn())
                 items.push_back(Item::choice("World", [] { return std::string(Config::openSea ? "Open Sea" : "Sectors"); },
                                              [](int) { Config::openSea = !Config::openSea; }));
             items.push_back(Item::toggle("Fullscreen", [] { return Config::fullscreen; }, [] { Runtime::toggleFullscreen(); }));
@@ -416,8 +423,8 @@ void Overlay::showToast(const std::string& message) {
 
 void Overlay::applyGraphics() {
     javax::microedition::m3g::Platform::setTextureFilter(Config::smoothTexturesOn());
-    javax::microedition::m3g::Platform::setPhoneTextures(!Config::fullColourOn());
-    javax::microedition::m3g::Platform::setRawTextures(!Config::enhanced);   // Original: as the phone build
+    javax::microedition::m3g::Platform::setPhoneTextures(Config::phoneTexturesOn());
+    javax::microedition::m3g::Platform::setRawTextures(Config::rawTexturesOn());   // as the phone build
     if (gl::GLBackend::isActive()) gl::GLBackend::updateVirtualSize();
 }
 

@@ -36,7 +36,7 @@ int32_t gCalm = 0;
 int gNewGameStage = 0;
 bool gAutoCalm = true;
 int gCalmPress = 0;
-std::string gPairMode = "remastered";
+bool gPairRemastered = false;
 
 /* fuzz: seeded random presses of the game's keys, held and spaced in frames */
 const int32_t kFuzzKeys[] = {-1, -2, -3, -4, -5, -6, -7, 48, 49, 51, 55, 57, 42, 35};
@@ -552,7 +552,6 @@ bool run(const Args& s) {
         return true;
     }
     if (c == "pair") {
-        std::string mode = Config::graphicsMode();
         if (gStepFrame == 1) {
             Remaster::testClean(true);
             return false;
@@ -562,8 +561,8 @@ bool run(const Args& s) {
             return false;
         }
         if (gStepFrame == 5) {
-            gPairMode = mode;
-            Config::setGraphicsMode(mode == "remastered" ? "enhanced" : "remastered");
+            gPairRemastered = Config::remastered;   // the other mode, the same settings
+            Config::remastered = !Config::remastered;
             Overlay::applyGraphics();
             return false;
         }
@@ -572,7 +571,7 @@ bool run(const Args& s) {
             return false;
         }
         if (gStepFrame >= 9) {
-            Config::setGraphicsMode(gPairMode);
+            Config::remastered = gPairRemastered;
             Overlay::applyGraphics();
             Remaster::testClean(false);
             return true;

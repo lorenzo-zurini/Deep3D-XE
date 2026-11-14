@@ -41,9 +41,11 @@ and `asm/asm-9.7.1.jar`, `asm/asm-tree-9.7.1.jar` (Maven Central).
   features only, so no lambdas).
 - `fieldmap.py`: the original names for the decompiled ones (commit 17525f6's
   `$VF: renamed from` comments), so the reference's state dump uses our names.
-- Our side: `ours.sh` runs Original graphics on the phone's 240x320 screen with
-  `DEEP3D_PHONE=1`: the phone build's own (Russian) text, and the PC's additions
-  to its screens off (`Config::pcAdditions`).
+- Our side: `ours.sh` runs Original graphics with every option as the phone
+  build (`graphics.mode=exact`: phone resolution, crisp textures, exact texture
+  colours, no antialiasing, the phone's view distance) on the phone's 240x320
+  screen with `DEEP3D_PHONE=1`: the phone build's own (Russian) text, and the
+  PC's additions to its screens off (`Config::pcAdditions`).
 - `scenes/*.keys`: lines `<pass> p|r <MIDP key code>`; `# every`, `# end`,
   `# saves`, `# deliberate`.
 

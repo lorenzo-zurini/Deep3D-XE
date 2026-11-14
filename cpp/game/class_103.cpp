@@ -32,9 +32,9 @@ void class_103::method_879(jrt::Ref<class_102> var1) {
 void class_103::method_837(jrt::Ref<class_106> var1, jrt::Ref<class_4> var2) {
     if (this->class_102::field_1338) {
         {
-            // Deep3D-PC: Enhanced and Remastered draw all of it (their view is
-            // longer and wider); Original culls against the camera, as the phone
-            switch (org::deep3d::Config::enhanced ? int8_t(2) : var1->method_884(this->class_102::field_1343)) {
+            // Deep3D-PC: the far view draws all of it (it is longer and wider);
+            // the phone's view culls against the camera, as the phone
+            switch (org::deep3d::Config::farViewOn() ? int8_t(2) : var1->method_884(this->class_102::field_1343)) {
             case 1:
                 for (jrt::Ref<class_102> var5 = this->field_1345; var5 != nullptr; var5 = var5->field_1337) {
                     var5->method_837(var1, var2);

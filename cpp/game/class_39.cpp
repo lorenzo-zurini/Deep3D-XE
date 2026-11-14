@@ -8,7 +8,7 @@ void class_39::__clinit() {
 }
 
 void class_39::__init(int32_t var1, int32_t var2, int32_t var3) {
-    this->field_388 = class_106::method_886(class_84::field_1120, class_84::field_1121, 800, 100, org::deep3d::Config::enhanced ? 4194304 : 31768);
+    this->field_388 = class_106::method_886(class_84::field_1120, class_84::field_1121, 800, 100, org::deep3d::Config::farViewOn() ? 4194304 : 31768);
     this->field_388->method_859(int16_t(2));
     this->field_389 = jrt::New<class_13>(class_39::field_390, var3, int64_t(class_39::field_390->at(var3)->at((class_39::field_390->at(var3)->length - 8))));
 }

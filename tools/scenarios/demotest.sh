@@ -20,7 +20,7 @@ run() {   # name, game arguments, mode's setting
   case "$line" in *"out of step"*) FAILED=1;; "") case "$2" in --play*) echo "  (no result)"; FAILED=1;; esac;; esac
 }
 run rec-original "--record $OUT/original.demo" graphics.remastered=false
-run rec-remastered "--record $OUT/remastered.demo" "graphics.enhanced=true graphics.remastered=true"
+run rec-remastered "--record $OUT/remastered.demo" graphics.mode=remastered
 run original-in-remastered "--play $OUT/original.demo --mode remastered" graphics.remastered=false
 run remastered-in-original "--play $OUT/remastered.demo --mode original" graphics.remastered=false
 PLAYENV=DEEP3D_DEMO_FREECAM=1 run free-camera "--play $OUT/remastered.demo" graphics.remastered=false

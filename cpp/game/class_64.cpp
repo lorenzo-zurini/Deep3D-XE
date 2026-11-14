@@ -98,7 +98,7 @@ void class_64::method_560() {
     this->field_787 = this->field_799->field_272;
     this->field_802 = jrt::New<class_34>();
     this->field_802->method_298(this->field_799->field_280);
-    this->field_788 = class_106::method_886(class_84::field_1120, class_84::field_1121, org::deep3d::Config::flightFov(), 100, org::deep3d::Config::enhanced ? 4194304 : 31768);
+    this->field_788 = class_106::method_886(class_84::field_1120, class_84::field_1121, org::deep3d::Config::flightFov(), 100, org::deep3d::Config::farViewOn() ? 4194304 : 31768);
     this->deep3dFov = org::deep3d::Config::flightFov();
     this->field_798 = this->deep3dFov;
     this->field_789 = jrt::New<class_104>();

@@ -10,7 +10,9 @@ SCN=$(realpath "$1"); OUT=$(realpath -m "$2"); shift 2
 mkdir -p "$OUT/home"; rm -f "$OUT"/*.png "$OUT/metrics.tsv"
 # SAVES=<dir>: start from copies of those saves (never the originals)
 if [ -n "${SAVES:-}" ]; then rm -rf "$OUT/home/saves"; mkdir -p "$OUT/home/saves"; cp "$SAVES"/*.rms "$OUT/home/saves/"; fi
+# Original as the phone build unless the lines say otherwise (graphics.mode=original|remastered)
 {
+  echo "graphics.mode=exact"
   echo "input.gamepad=false"; echo "input.mouse_flight=false"
   echo "display.fullscreen=false"; echo "display.window_width=1920"; echo "display.window_height=1080"
   for l in "$@"; do echo "$l"; done

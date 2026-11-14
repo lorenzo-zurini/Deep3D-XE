@@ -80,12 +80,12 @@ void class_106::method_881(int32_t var1, int32_t var2, int32_t var3) {
     this->field_1352->at(3)->method_10((-var5), 0, (-var4));
     this->field_1352->at(4)->method_10(0, (-var5), (-var4));
     this->field_1352->at(5)->method_10(0, var5, (-var4));
-    // Deep3D-PC: the side planes as wide as the screen is, and in Enhanced and
-    // Remastered 0.2 radians beyond (no pop-in at the edges); Original culls as
+    // Deep3D-PC: the side planes as wide as the screen is, and with the far view
+    // 0.2 radians beyond (no pop-in at the edges); the phone's view culls as
     // the phone did, only widened to a screen wider than it is tall
     double var90 = (double((var1 >> 1)) * 3.141592653589793) / 2048.0;
     double var91 = (this->field_1359 > 0) ? (double(this->field_1358) / double(this->field_1359)) : 1.0;
-    bool deep3dPhone = !org::deep3d::Config::enhanced;
+    bool deep3dPhone = !org::deep3d::Config::farViewOn();
     if (deep3dPhone && var91 <= 1.0) {
         this->field_1360 = jrt::div((var4 << 12), var5);
         this->field_1361 = (this->field_1360 * jrt::div((this->field_1358 << 12), this->field_1359)) >> 12;

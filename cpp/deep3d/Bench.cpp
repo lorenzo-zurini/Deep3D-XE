@@ -159,8 +159,7 @@ std::string runMode(const std::string& exe, const std::string& tmp, const std::s
         cfg << "config.version=2\n";
         cfg << "display.vsync=false\ndisplay.fps_cap=0\ndisplay.show_fps=false\n";
         cfg << "input.mouse_flight=false\ninput.gamepad=false\n";
-        cfg << "graphics.enhanced=" << (mode != "original" ? "true" : "false") << "\n";
-        cfg << "graphics.remastered=" << (mode == "remastered" ? "true" : "false") << "\n";
+        for (auto& l : Config::modeLines(mode)) cfg << l << "\n";
         for (auto& l : extraCfg) cfg << l << "\n";
     }
     std::string scn = replaceAll(replaceAll(kScenario, "%LABEL%", mode), "%FRAMES%", std::to_string(frames));
@@ -250,7 +249,7 @@ void Bench::presented() {
 }
 
 int Bench::main(int argc, char** argv) {
-    std::vector<std::string> modes = {"original", "enhanced", "remastered"};
+    std::vector<std::string> modes = {"exact", "original", "remastered"};
     int frames = 3000;
     std::vector<std::string> extraCfg;
     for (int i = 1; i < argc; i++) {
@@ -273,14 +272,14 @@ int Bench::main(int argc, char** argv) {
         } else if (a == "--set" && i + 1 < argc) {
             extraCfg.push_back(argv[++i]);   // any setting, key=value
         } else {
-            fprintf(stderr, "usage: Deep3D-XE --bench [original,enhanced,remastered] [--frames N] "
+            fprintf(stderr, "usage: Deep3D-XE --bench [exact,original,remastered] [--frames N] "
                             "[--fullscreen|--windowed|--size WxH] [--set key=value]...\n");
             return 2;
         }
     }
     for (auto& m : modes) {
-        if (m != "original" && m != "enhanced" && m != "remastered") {
-            fprintf(stderr, "[bench] unknown mode %s (original, enhanced, remastered)\n", m.c_str());
+        if (m != "exact" && m != "original" && m != "remastered") {
+            fprintf(stderr, "[bench] unknown mode %s (exact, original, remastered)\n", m.c_str());
             return 2;
         }
     }

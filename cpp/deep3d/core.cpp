@@ -86,15 +86,15 @@ std::string AppDirs::dir(const std::string& name) {
 // ---------------------------------------------------------------------
 
 bool Config::vsync = true;
-bool Config::enhanced = false;
 bool Config::remastered = false;
+bool Config::farView = true;
 bool Config::mouseFlight = true;
 std::string Config::originalScreen = "widescreen";
 int32_t Config::originalLines = 320;
 bool Config::nativeResolution = true;
 bool Config::textureFilter = true;
 bool Config::antialiasing = true;
-bool Config::fullColour = true;
+std::string Config::textureColours = "full";
 std::string Config::resolutionMode = "auto";
 int32_t Config::internalWidth = 480;
 int32_t Config::internalHeight = 640;
@@ -385,11 +385,25 @@ int32_t clampVol(int32_t v) { return std::max(0, std::min(100, v)); }
 
 }  // namespace
 
-std::string Config::graphicsMode() { return !enhanced ? "original" : remastered ? "remastered" : "enhanced"; }
+std::string Config::graphicsMode() {
+    if (remastered) return "remastered";
+    bool exact = !farView && !nativeResolution && !textureFilter && !antialiasing && textureColours == "exact";
+    return exact ? "exact" : "original";
+}
+
+std::vector<std::string> Config::modeLines(const std::string& mode) {
+    bool pc = mode != "exact";
+    std::string on = pc ? "true" : "false";
+    return {std::string("graphics.remastered=") + (mode == "remastered" ? "true" : "false"), "graphics.far_view=" + on,
+            "graphics.native_resolution=" + on, "display.texture_filter=" + on, "graphics.antialiasing=" + on,
+            std::string("graphics.texture_colours=") + (pc ? "full" : "exact")};
+}
 
 void Config::setGraphicsMode(const std::string& mode) {
-    enhanced = mode != "original";
+    bool pc = mode != "exact";
     remastered = mode == "remastered";
+    farView = nativeResolution = textureFilter = antialiasing = pc;
+    textureColours = pc ? "full" : "exact";
 }
 
 void Config::load() {
@@ -415,15 +429,21 @@ void Config::load() {
         gProps.erase("display.internal_width");
         gProps.erase("display.internal_height");
     }
+    // "graphics.mode=<preset>" (setGraphicsMode; tests): the settings it names say otherwise
+    if (gProps.count("graphics.mode")) setGraphicsMode(getStr("graphics.mode", "original"));
+    gProps.erase("graphics.mode");
     vsync = getBool("display.vsync", vsync);
     fov = std::max(30, std::min(110, getInt("display.fov", fov)));
-    enhanced = getBool("graphics.enhanced", enhanced);
     remastered = getBool("graphics.remastered", remastered);
+    farView = getBool("graphics.far_view", farView);
     originalScreen = getStr("graphics.original_screen", originalScreen);
     originalLines = std::max(120, std::min(1080, getInt("graphics.original_lines", originalLines)));
     nativeResolution = getBool("graphics.native_resolution", nativeResolution);
     antialiasing = getBool("graphics.antialiasing", antialiasing);
-    fullColour = getBool("graphics.full_colour", fullColour);
+    if (gProps.count("graphics.full_colour"))   // before texture_colours (2026-11)
+        textureColours = getBool("graphics.full_colour", true) ? "full" : "16bit";
+    textureColours = getStr("graphics.texture_colours", textureColours);
+    if (textureColours != "exact" && textureColours != "16bit") textureColours = "full";
     resolutionMode = getStr("display.resolution_mode", resolutionMode);
     internalWidth = getInt("display.internal_width", internalWidth);
     internalHeight = getInt("display.internal_height", internalHeight);
@@ -442,6 +462,19 @@ void Config::load() {
     showFps = getBool("display.show_fps", showFps);
     believableScale = getBool("display.believable_scale", believableScale);
     openSea = getBool("world.open_sea", openSea);
+    // Before 2026-11 Original and Enhanced were two modes: Original was the phone build's
+    // look, and what were Enhanced's settings are Original's own. Each keeps its look.
+    if (gProps.count("graphics.enhanced") && !gProps.count("graphics.far_view")) {
+        if (!getBool("graphics.enhanced", false)) {   // Remastered was Enhanced's too
+            remastered = false;
+            farView = nativeResolution = textureFilter = antialiasing = false;
+            textureColours = "exact";
+        } else {
+            farView = true;
+        }
+    }
+    gProps.erase("graphics.enhanced");
+    gProps.erase("graphics.full_colour");
 }
 
 void Config::save() {
@@ -451,13 +484,13 @@ void Config::save() {
     gProps["config.version"] = "2";
     gProps["display.vsync"] = b(vsync);
     gProps["display.fov"] = i(fov);
-    gProps["graphics.enhanced"] = b(enhanced);
     gProps["graphics.remastered"] = b(remastered);
+    gProps["graphics.far_view"] = b(farView);
     gProps["graphics.original_screen"] = originalScreen;
     gProps["graphics.original_lines"] = i(originalLines);
     gProps["graphics.native_resolution"] = b(nativeResolution);
     gProps["graphics.antialiasing"] = b(antialiasing);
-    gProps["graphics.full_colour"] = b(fullColour);
+    gProps["graphics.texture_colours"] = textureColours;
     gProps["display.resolution_mode"] = resolutionMode;
     gProps["display.texture_filter"] = b(textureFilter);
     gProps["display.show_fps"] = b(showFps);
@@ -527,16 +560,16 @@ bool Config::setField(const std::string& name, const std::string& value) {
     struct B { const char* n; bool* p; };
     struct I { const char* n; int32_t* p; };
     struct S { const char* n; std::string* p; };
-    static const B bools[] = {{"vsync", &vsync}, {"enhanced", &enhanced}, {"remastered", &remastered},
+    static const B bools[] = {{"vsync", &vsync}, {"farView", &farView}, {"remastered", &remastered},
         {"mouseFlight", &mouseFlight}, {"nativeResolution", &nativeResolution}, {"textureFilter", &textureFilter},
-        {"antialiasing", &antialiasing}, {"fullColour", &fullColour}, {"fullscreen", &fullscreen},
+        {"antialiasing", &antialiasing}, {"fullscreen", &fullscreen},
         {"integerScaling", &integerScaling}, {"showFps", &showFps}, {"gamepadEnabled", &gamepadEnabled},
         {"believableScale", &believableScale}, {"openSea", &openSea}};
     static const I ints[] = {{"originalLines", &originalLines}, {"internalWidth", &internalWidth},
         {"internalHeight", &internalHeight}, {"windowWidth", &windowWidth}, {"windowHeight", &windowHeight},
         {"fpsCap", &fpsCap}, {"brightness", &brightness}, {"masterVolume", &masterVolume},
         {"musicVolume", &musicVolume}, {"sfxVolume", &sfxVolume}, {"fov", &fov}};
-    static const S strs[] = {{"originalScreen", &originalScreen},
+    static const S strs[] = {{"originalScreen", &originalScreen}, {"textureColours", &textureColours},
         {"resolutionMode", &resolutionMode}};
     for (auto& b : bools)
         if (name == b.n) { *b.p = toBool(); return true; }

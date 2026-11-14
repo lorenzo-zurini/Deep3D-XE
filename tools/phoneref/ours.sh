@@ -8,7 +8,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 OUT=$(realpath -m "$1"); KEYS=$2; EVERY=$3; END=$4; shift 4
 rm -rf "$OUT"; mkdir -p "$OUT/home"
 {
-  echo "graphics.enhanced=false"; echo "graphics.remastered=false"; echo "graphics.original_screen=phone"
+  echo "graphics.mode=exact"; echo "graphics.original_screen=phone"
   echo "display.fullscreen=false"; echo "display.window_width=240"; echo "display.window_height=320"
   echo "display.believable_scale=false"; echo "display.show_fps=false"
   echo "input.gamepad=false"; echo "input.mouse_flight=false"

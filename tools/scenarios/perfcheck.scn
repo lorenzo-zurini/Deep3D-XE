@@ -13,10 +13,10 @@ depart
 until flight 14000
 wait 120
 steer 0.6 0.2 60
-shot original
-mode enhanced
+shot exact
+mode original
 wait 4
-shot enhanced
+shot original
 mode remastered
 wait 4
 shot remastered
@@ -24,15 +24,15 @@ steer -0.6 0 60
 pin creature 1500
 wait 10
 shot remastered_creature
-mode enhanced
-wait 4
-shot enhanced_creature
 mode original
 wait 4
 shot original_creature
+mode exact
+wait 4
+shot exact_creature
 pin off
 overlay settings
 wait 10
-shot original_menu
+shot exact_menu
 overlay back
 wait 10

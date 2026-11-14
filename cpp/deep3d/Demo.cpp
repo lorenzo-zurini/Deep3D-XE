@@ -57,7 +57,7 @@ constexpr double LAST_S = 60;
 
 struct Held {
     bool active = false, steering = false;
-    bool remastered = false, openSea = false, god = false, enhanced = false;
+    bool remastered = false, openSea = false, god = false, farView = false;
     int32_t fov = 0;
     float x = 0, y = 0, thrust = 1;
     bool pointer = false;
@@ -177,7 +177,7 @@ bool readPass(uint32_t& us) {
         gIn.remastered = bits & 1;
         gIn.openSea = bits & 2;
         gIn.god = bits & 4;
-        gIn.enhanced = bits & 8;
+        gIn.farView = bits & 8;
     }
     if ((flags & F_THRUST) && !get(gIn.thrust)) return false;
     if (flags & F_POINTER) {
@@ -216,7 +216,7 @@ void writePass(uint32_t us) {
     uint8_t flags = 0;
     bool analog = gIn.active != gWritten.active || gIn.steering != gWritten.steering || gIn.x != gWritten.x || gIn.y != gWritten.y;
     bool world = gPass == 1 || gIn.remastered != gWritten.remastered || gIn.openSea != gWritten.openSea || gIn.god != gWritten.god ||
-                 gIn.enhanced != gWritten.enhanced || gIn.fov != gWritten.fov;
+                 gIn.farView != gWritten.farView || gIn.fov != gWritten.fov;
     bool pointer = gIn.pointer != gWritten.pointer || gIn.px != gWritten.px || gIn.py != gWritten.py;
     std::u16string typed = GameUi::heldTyped();
     if (analog) flags |= F_ANALOG;
@@ -236,7 +236,7 @@ void writePass(uint32_t us) {
         put(gIn.y);
     }
     if (world) {
-        uint8_t bits = (gIn.remastered ? 1 : 0) | (gIn.openSea ? 2 : 0) | (gIn.god ? 4 : 0) | (gIn.enhanced ? 8 : 0);
+        uint8_t bits = (gIn.remastered ? 1 : 0) | (gIn.openSea ? 2 : 0) | (gIn.god ? 4 : 0) | (gIn.farView ? 8 : 0);
         put(bits);
         put(gIn.fov);
     }
@@ -272,7 +272,7 @@ uint32_t gUs = 0;
 void sample() {
     AnalogInput::live(gIn.active, gIn.steering, gIn.x, gIn.y);
     gIn.remastered = Remaster::on();
-    gIn.enhanced = Config::enhanced;
+    gIn.farView = Config::farViewOn();
     gIn.openSea = Config::openSeaLive();
     gIn.god = Cheats::god;
     gIn.fov = Config::flightFovLive();
@@ -366,7 +366,7 @@ void Demo::passDone() {
 }
 
 bool Demo::remasteredWorld() { return Det::DEMO ? gIn.remastered : Remaster::on(); }
-bool Demo::enhancedWorld() { return Det::DEMO ? gIn.enhanced : Config::enhanced; }
+bool Demo::farViewWorld() { return Det::DEMO ? gIn.farView : Config::farViewOn(); }
 bool Demo::openSea() { return gPass == 0 ? Config::openSeaLive() : gIn.openSea; }
 int32_t Demo::fov() { return gPass == 0 ? Config::flightFovLive() : gIn.fov; }
 bool Demo::god() { return Det::DEMO ? gIn.god : bool(Cheats::god); }
@@ -815,9 +815,7 @@ int32_t Demo::main(int32_t argc, char** argv) {
         } else if (a == "--at" && i + 1 < argc) {
             at = argv[++i];
         } else if (a == "--mode" && i + 1 < argc) {
-            std::string m = argv[++i];
-            cfg.push_back(std::string("graphics.enhanced=") + (m != "original" ? "true" : "false"));
-            cfg.push_back(std::string("graphics.remastered=") + (m == "remastered" ? "true" : "false"));
+            for (auto& l : Config::modeLines(argv[++i])) cfg.push_back(l);
         } else if (a == "--set" && i + 1 < argc) {
             cfg.push_back(argv[++i]);   // any setting, key=value
         } else {
@@ -826,7 +824,7 @@ int32_t Demo::main(int32_t argc, char** argv) {
     }
     if (int32_t(recording) + int32_t(playing) + int32_t(showing) != 1) {
         fprintf(stderr, "usage: Deep3D-XE --record [name]\n"
-                        "       Deep3D-XE --play name [--at seconds] [--mode original|enhanced|remastered] [--set key=value]...\n"
+                        "       Deep3D-XE --play name [--at seconds] [--mode original|remastered|exact|enhanced] [--set key=value]...\n"
                         "       Deep3D-XE --info name\n");
         return 2;
     }

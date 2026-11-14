@@ -78,9 +78,9 @@ int run(int argc, char** argv) {
             Config::internalHeight = java::lang::Integer::parseInt(java::lang::String::of(p[1]));
         } else if (a == "--help") {
             printf("usage: deep3d [--fullscreen|--windowed] [--res WxH]\n");
-            printf("       deep3d --bench [original,enhanced,remastered] [--frames N] [--fullscreen|--windowed|--size WxH]\n");
+            printf("       deep3d --bench [exact,original,remastered] [--frames N] [--fullscreen|--windowed|--size WxH]\n");
             printf("       deep3d --record [name]\n");
-            printf("       deep3d --play name [--at seconds] [--mode original|enhanced|remastered] [--set key=value]\n");
+            printf("       deep3d --play name [--at seconds] [--mode original|remastered|exact|enhanced] [--set key=value]\n");
             printf("       deep3d --info name\n");
             printf("settings persist in deep3d.cfg; press Esc in game for options\n");
             return 0;
@@ -98,8 +98,8 @@ int run(int argc, char** argv) {
     jrt::gResourceHook = [](const jrt::Ref<java::lang::String>& name) { return Assets::open(name); };
 
     javax::microedition::m3g::Platform::setTextureFilter(Config::smoothTexturesOn());
-    javax::microedition::m3g::Platform::setPhoneTextures(!Config::fullColourOn());
-    javax::microedition::m3g::Platform::setRawTextures(!Config::enhanced);   // Original: as the phone build
+    javax::microedition::m3g::Platform::setPhoneTextures(Config::phoneTexturesOn());
+    javax::microedition::m3g::Platform::setRawTextures(Config::rawTexturesOn());   // as the phone build
     media::AudioSettings::master = Config::masterVolume;
     media::AudioSettings::music = Config::musicVolume;
     media::AudioSettings::sfx = Config::sfxVolume;
