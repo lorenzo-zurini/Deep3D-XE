@@ -14,7 +14,7 @@ see past about 680 m, and neighbouring stations are 80+ kilometres apart, so no 
 one station is ever loaded at once. Crossing the sea is the old level at its true map
 position, whose station changes when you get close to another one.
 
-It is an option with the far view (Original's View distance: Far, and Remastered): **World: Sectors / Open Sea**. The phone's view stays
+It is a Remastered option: **World: Sectors / Open Sea**. Original stays
 exactly as it is (and `detcheck` with it).
 
 ## Scale and the planet
@@ -150,7 +150,7 @@ station's waters does count as a visit (discovered, and added to the map's trail
 1. **Big coordinates in one sector.** *Done:* the option `world.open_sea` (Display: World),
    64-bit products in `class_57::method_471/473/503/506/511` and `class_106::method_883`, no
    snap, and the renderer origin (cells of 65,536 units; `followOrigin` in
-   `deep3d_remaster.cpp`). Tested at 50, 400 and 1,800 km out: Original (far view) and Remastered draw
+   `deep3d_remaster.cpp`). Tested at 50, 400 and 1,800 km out: Remastered draws
    normally, 30 s of boosted flight across an origin step shows no seam, and `detcheck` is
    identical.
 2. **Every station on one planet.** *Done:* `cpp/deep3d/OpenSea.cpp`. The game flies in a

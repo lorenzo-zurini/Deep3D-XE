@@ -251,7 +251,7 @@ public:
     /** The PC's additions to the game's own screens (the key hints' bar, the
         depth label, the corner arrow, no music question); off with DEEP3D_PHONE */
     static bool pcAdditions() { return !Det::PHONE; }
-    static bool openSeaLive() { return farViewOn() && openSea; }
+    static bool openSeaLive() { return remastered && openSea; }
     static bool openSeaOn() { return Det::DEMO ? Demo::openSea() : openSeaLive(); }
     static int32_t flightFovLive() { return int32_t(float(fov) * 4096.0f / 360.0f); }
     static int32_t flightFov() { return Det::DEMO ? Demo::fov() : flightFovLive(); }

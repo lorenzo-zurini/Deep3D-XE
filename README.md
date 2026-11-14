@@ -35,8 +35,8 @@ official English text from the international release.
   - Texture colours: Full, Exact (the phone build's own texels) or 16-bit
     (the coarse banding of real phones' 4-bit texture levels);
   - Antialiasing: 4x MSAA or off;
-  - View distance: Far (the PC's, with Open Sea as an option) or Phone (the
-    phone's far plane and culling).
+  - View distance: Far (the PC's) or Phone (the phone's far plane and
+    culling).
   "All as the phone build" sets every one to the phone's.
 - **Remastered**: the same options plus a new underwater renderer, keeping the
   original's art direction. The game's own skydome palette (pale zenith,
