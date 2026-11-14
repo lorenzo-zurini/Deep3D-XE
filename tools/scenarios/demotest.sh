@@ -4,7 +4,8 @@
 # the free camera. A replay checks itself against the recording every 64 passes
 # (the game's randoms and the sub's place) and says so if it leaves it. The
 # script presses F9 near its end: that export must open at its last minute, and
-# replay on a CPU with another C library path (no FMA, no AVX2).
+# replay on a CPU with another C library path (no FMA, no AVX2). Then F8: the
+# clip is the same export without the diagnostics.
 #   tools/scenarios/demotest.sh [out dir]
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -28,5 +29,8 @@ BUG=$(ls "$OUT"/rec-remastered/home/demos/bug-*.demo | head -1)
 run bug-report "--play $BUG" graphics.remastered=false
 grep -a '\[demo\] at ' "$OUT/bug-report/game.log" | tail -1
 PLAYENV="GLIBC_TUNABLES=glibc.cpu.hwcaps=-AVX2,-FMA,-AVX2_Usable,-FMA_Usable,-AVX512F" run other-cpu "--play $BUG" graphics.remastered=false
+CLIP=$(ls "$OUT"/rec-remastered/home/demos/clip-*.demo | head -1)
+run clip "--play $CLIP --mode original" graphics.remastered=false
+grep -a '\[demo\] at ' "$OUT/clip/game.log" | tail -1
 [ $FAILED = 0 ] && echo "all replays stayed with their recordings"
 exit $FAILED

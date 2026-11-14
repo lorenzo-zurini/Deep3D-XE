@@ -192,9 +192,15 @@ void Input::handleKey(int32_t code, char16_t keyChar, bool pressed, bool altDown
         }
         if (code == vk::F9) {
             std::string f = Diagnostics::dump("manual", "F9 pressed");
-            std::string demo = Demo::exportSession(f);
+            std::string demo = Demo::exportSession("bug", f);
             Overlay::showToast(!demo.empty() ? "Saved for a bug report: demos/" + demo.substr(demo.rfind('/') + 1)
                                              : "Diagnostics saved: logs/" + f.substr(f.rfind('/') + 1));
+            return;
+        }
+        if (code == vk::F8) {
+            std::string demo = Demo::exportSession("clip", "");
+            Overlay::showToast(!demo.empty() ? "Saved the last minute: demos/" + demo.substr(demo.rfind('/') + 1)
+                                             : "Not recording: nothing to save");
             return;
         }
         if (code == vk::ESCAPE && !Overlay::isOpen()) {
@@ -223,7 +229,7 @@ void Input::handleKey(int32_t code, char16_t keyChar, bool pressed, bool altDown
             GameUi::action(*ui, false, false);
             return;
         }
-        if (code == vk::ESCAPE || code == vk::F9 || code == vk::F10 || code == vk::F11 || code == vk::F12) return;
+        if (code == vk::ESCAPE || code == vk::F8 || code == vk::F9 || code == vk::F10 || code == vk::F11 || code == vk::F12) return;
     }
 
     if (Overlay::isOpen()) {
