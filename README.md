@@ -160,6 +160,30 @@ overrides that folder, and `DEEP3D_SAVE_DIR` and `DEEP3D_CONFIG` override
 the saves and the settings file. Settings and saves are compatible with
 the earlier Java build.
 
+### macOS
+
+Built on Apple Silicon (an Intel Mac is untested), with the Xcode command-line tools and Homebrew:
+
+```sh
+brew install cmake ninja pkgconf glfw sdl3 fluid-synth libzip libpng freetype opencore-amr
+./build.sh                                   # -> build/bin/Deep3D-XE, as on Linux
+BUILD_TYPE=Release ./build.sh && packaging/macos.sh            # -> dist/Deep3D-XE.app
+BUILD_TYPE=Release ./build.sh && JARS=. packaging/macos.sh     # ... with the JARs inside it
+```
+
+`Deep3D-XE.app` stands on its own: the libraries it needs are inside it and
+it is signed ad hoc, so it can go in `/Applications`. It keeps its settings,
+saves, screenshots and logs in `~/Library/Application Support/Deep3D-XE`, and
+reads the game JARs from there, from its own `Contents/Resources/jars`
+(`JARS=dir`), or asks for them on the first launch. An app built with the JARs
+inside is for your own use only: they are copyrighted.
+
+The 3D engine runs on Apple's OpenGL 2.1 compatibility context, the only one
+macOS offers with the fixed-function pipeline; its contexts are CGL contexts
+sharing objects with the window's, and since CGL's pbuffers no longer work,
+its surfaces are framebuffer objects (`native/m3g/macos`). The AMR sound
+effects are decoded in the game with opencore-amr rather than by ffmpeg.
+
 ### Benchmark
 
 ```sh
@@ -372,7 +396,10 @@ Off-screen runs (`HEADLESS=1`) render under Xvfb's software GL; add
 - The camera-photo gimmick (`capture://video`) is stubbed out — the feature
   degrades gracefully in-game.
 - Controller rumble and non-Linux controller backends are not implemented
-  (the backend is isolated in `Gamepad`, cpp/deep3d/input.cpp).
+  (the backend is isolated in `Gamepad`, cpp/deep3d/input.cpp); on macOS
+  there is no controller support yet, only keyboard and mouse.
+- macOS: the scenario scripts (`tools/scenarios/*.sh`) use GNU tools
+  (`realpath -m`, Xvfb) and do not run there as they are.
 - Reference cycles between game objects are never freed (no garbage
   collector); the game's object graph is mostly static.
 - The zero-copy 3D path needs an X11 (or XWayland) GLX window; native

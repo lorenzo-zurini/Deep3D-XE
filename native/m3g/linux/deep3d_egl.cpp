@@ -9,6 +9,7 @@
  * are read back to memory.
  *
  * Windows: WGL mode (win32/deep3d_wgl.inc), as the GLX mode.
+ * macOS: CGL mode (macos/deep3d_cgl.inc), as the GLX mode.
  *
  * All engine calls happen on the game's threads; state is guarded by one
  * mutex where it is shared.
@@ -22,6 +23,9 @@
 #ifdef _WIN32
 #include <GL/gl.h>
 #include <GL/wglext.h>
+#elif defined(__APPLE__)
+#include <GL/gl.h>
+#include <pthread.h>
 #else
 #include <GL/glx.h>
 #include <GL/gl.h>
@@ -60,6 +64,8 @@ extern "C" void *deep3d_underlay_fence = NULL;
 
 #ifdef _WIN32
 #include "../win32/deep3d_wgl.inc"
+#elif defined(__APPLE__)
+#include "../macos/deep3d_cgl.inc"
 #else
 
 static Display *glxDisplay = NULL;       /* the window's X display (GLX mode) */
@@ -597,7 +603,7 @@ static void deep3d_set_share(jlong display, jlong context) {
     glxShare = (GLXContext) (intptr_t) context;
 }
 
-#endif /* _WIN32 */
+#endif /* _WIN32, __APPLE__ */
 
 /* ------------------------------------------------------------------ */
 /* JNI                                                                 */

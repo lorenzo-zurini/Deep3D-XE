@@ -1,6 +1,9 @@
 // The PC layer's core: folders, settings, game data, the event thread,
 // pacing, quitting, diagnostics (Java: AppDirs, Config, Assets, FirstRun,
 // Runtime, Diagnostics).
+#ifdef DEEP3D_OPENCORE_AMR
+#include <opencore-amrnb/interf_dec.h>
+#endif
 #include "deep3d.h"
 #include "platform.h"
 
@@ -40,6 +43,17 @@ std::string AppDirs::exeDir() {
     return dir;
 }
 
+#ifdef __APPLE__
+namespace {
+/** Running as Something.app/Contents/MacOS/<exe>. */
+bool insideAppBundle() {
+    fs::path exe = AppDirs::exeDir();
+    return exe.filename() == "MacOS" && exe.parent_path().filename() == "Contents" &&
+           exe.parent_path().parent_path().extension() == ".app";
+}
+}  // namespace
+#endif
+
 const std::string& AppDirs::base() {
     // never destroyed: threads may still ask while the process exits
     static const std::string& b = *new std::string([] {
@@ -52,6 +66,16 @@ const std::string& AppDirs::base() {
         // the AppImage runs from a mount: its user files go next to the file
         const char* appimage = getenv("APPIMAGE");
         if (appimage && *appimage) return fs::path(appimage).parent_path().string();
+#ifdef __APPLE__
+        // a macOS app (Deep3D-XE.app/Contents/MacOS): its user files in Application Support
+        if (insideAppBundle()) {
+            const char* home = getenv("HOME");
+            std::string d = std::string(home && *home ? home : "/tmp") + "/Library/Application Support/Deep3D-XE";
+            std::error_code ec;
+            fs::create_directories(d, ec);
+            return d;
+        }
+#endif
         // a build tree (build/cpp/bin): the source folder, like run.sh
         fs::path exe = exeDir();
         if (exe.filename() == "bin" && exe.parent_path().filename() == "cpp" &&
@@ -652,7 +676,52 @@ void fixWavSizes(std::vector<uint8_t>& wav) {
     }
 }
 
+#ifdef DEEP3D_OPENCORE_AMR
+/* macOS: decoded in the game with opencore-amr (a self-contained app has no
+   ffmpeg), to 16-bit mono PCM at the codec's 8 kHz; SDL resamples it. */
+std::optional<std::vector<uint8_t>> amrDecode(const std::vector<uint8_t>& amr) {
+    static const char MAGIC[] = "#!AMR\n";
+    if (amr.size() < 6 || memcmp(amr.data(), MAGIC, 6) != 0) return std::nullopt;
+    // speech bytes per frame by mode (after the frame's header byte); 15: no data
+    static const int SIZES[16] = {12, 13, 15, 17, 19, 20, 26, 31, 5, 0, 0, 0, 0, 0, 0, 0};
+    void* dec = Decoder_Interface_init();
+    if (!dec) return std::nullopt;
+    std::vector<int16_t> pcm;
+    size_t pos = 6;
+    while (pos < amr.size()) {
+        int size = SIZES[(amr[pos] >> 3) & 15];
+        if (pos + 1 + size_t(size) > amr.size()) break;
+        int16_t out[160];
+        Decoder_Interface_Decode(dec, amr.data() + pos, out, 0);
+        pcm.insert(pcm.end(), out, out + 160);
+        pos += 1 + size_t(size);
+    }
+    Decoder_Interface_exit(dec);
+    if (pcm.empty()) return std::nullopt;
+    const uint32_t rate = 8000, bytes = uint32_t(pcm.size() * 2);
+    std::vector<uint8_t> wav(44 + bytes);
+    memcpy(&wav[0], "RIFF", 4);
+    putLe32(wav, 4, 36 + bytes);
+    memcpy(&wav[8], "WAVEfmt ", 8);
+    putLe32(wav, 16, 16);
+    putLe32(wav, 20, 1 | 1 << 16);         // PCM, mono
+    putLe32(wav, 24, rate);
+    putLe32(wav, 28, rate * 2);
+    putLe32(wav, 32, 2 | 16 << 16);        // block align 2, 16 bits
+    memcpy(&wav[36], "data", 4);
+    putLe32(wav, 40, bytes);
+    for (size_t i = 0; i < pcm.size(); i++) {
+        wav[44 + i * 2] = uint8_t(uint16_t(pcm[i]));
+        wav[45 + i * 2] = uint8_t(uint16_t(pcm[i]) >> 8);
+    }
+    return wav;
+}
+#endif
+
 std::optional<std::vector<uint8_t>> amrToWav(const std::vector<uint8_t>& amr) {
+#ifdef DEEP3D_OPENCORE_AMR
+    if (auto wav = amrDecode(amr)) return wav;
+#endif
     if (gFfmpeg == 0) return std::nullopt;
     bool missing = false;
     auto wav = os::filter({"ffmpeg", "-loglevel", "error", "-f", "amr", "-i", "pipe:0", "-ar", "22050", "-f", "wav", "pipe:1"},
@@ -675,6 +744,10 @@ std::optional<std::string> remembered(const std::string& key, Assets::Kind kind)
 
 std::vector<std::string> candidates() {
     std::vector<std::string> dirs = {AppDirs::base(), AppDirs::base() + "/jars", fs::current_path().string()};
+#ifdef __APPLE__
+    // a macOS app can carry them itself: Contents/Resources/jars
+    if (insideAppBundle()) dirs.push_back((fs::path(AppDirs::exeDir()).parent_path() / "Resources" / "jars").string());
+#endif
     std::vector<std::string> jars;
     for (auto& d : dirs) {
         std::vector<std::string> found;
