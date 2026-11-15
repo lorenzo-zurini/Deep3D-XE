@@ -49,12 +49,12 @@ const ActionInfo kActions[] = {
     {"BACK", "Back", -7, {vk::BACK_SPACE, vk::X}},
     {"CLEAR", "Clear", -8, {vk::DELETE}},
     {"GAME_PAUSE", "Pause (in-game)", -11, {vk::P}},
-    {"KEY1", "Key 1", '1', {vk::K1}},
+    {"KEY1", "Next weapon (1)", '1', {vk::K1}},
     {"BOOST", "Booster (3)", '3', {vk::K3, 81}},   // 81: Q
     {"DOCK", "Dock / interact (0)", '0', {vk::E, vk::K0}},
-    {"KEY7", "Key 7", '7', {vk::K7}},
+    {"KEY7", "Auto-fire (7)", '7', {vk::K7}},
     {"AUTOPILOT", "Autopilot (9)", '9', {vk::TAB, vk::K9}},
-    {"STAR", "Key *", '*', {vk::C}},
+    {"STAR", "Side view (*)", '*', {vk::C}},
     {"HASH", "Key #", '#', {vk::H}},
     {"THRUST_UP", "Thrust up", 0, {vk::SHIFT}},
     {"THRUST_DOWN", "Thrust down", 0, {vk::CONTROL}},
@@ -382,7 +382,7 @@ void Input::sendMidpKey(int32_t code, bool pressed) {
 namespace {
 
 constexpr int BTN_A = Gamepad::A, BTN_B = Gamepad::B, BTN_X = Gamepad::X, BTN_Y = Gamepad::Y, BTN_LB = Gamepad::LB,
-              BTN_RB = Gamepad::RB, BTN_SELECT = Gamepad::BACK, BTN_START = Gamepad::START, BTN_R3 = Gamepad::R3,
+              BTN_RB = Gamepad::RB, BTN_START = Gamepad::START, BTN_R3 = Gamepad::R3,
               BTN_SHARE = Gamepad::SHARE;
 constexpr int AXIS_LX = 0, AXIS_LY = 1, AXIS_LT = 2, AXIS_RX = 3, AXIS_RY = 4, AXIS_RT = 5, AXIS_HATX = 6, AXIS_HATY = 7;
 constexpr int STICK_PRESS = 12000, STICK_RELEASE = 9000, TRIGGER_PRESS = 16000, TRIGGER_RELEASE = 8000;
@@ -394,7 +394,6 @@ SDL_Gamepad* gLastPad = nullptr;
 using Labels = std::array<std::string, 14>;
 const Labels XBOX = {"A", "B", "X", "Y", "LB", "RB", "Back", "Start", "Guide", "LS", "RS", "Share", "LT", "RT"};
 Labels gLabels = XBOX;
-bool gFlightHeld[16];
 
 void setStatus(const std::string& s) {
     std::lock_guard<std::mutex> g(gPadLock);
@@ -413,17 +412,23 @@ bool axial(bool held, int value, Input::Action a) {
     return held;
 }
 
-bool trigger(bool held, int value, Input::Action a) {
-    if (!held && value > TRIGGER_PRESS) {
-        Input::handleAction(a, true);
-        return true;
+/** A button's action in flight (the triggers count as buttons); menus have their own. */
+std::optional<Input::Action> flightAction(int number) {
+    switch (number) {
+        case Gamepad::RT: return Input::Action::FIRE;
+        case Gamepad::LT: return Input::Action::BOOST;
+        case Gamepad::A: return Input::Action::DOCK;
+        case Gamepad::Y: return Input::Action::AUTOPILOT;
+        case Gamepad::LB:
+        case Gamepad::RB: return Input::Action::KEY1;   // the next weapon
+        case Gamepad::X: return Input::Action::KEY7;    // auto-fire on/off
+        case Gamepad::BACK: return Input::Action::STAR;   // the side view
+        default: return std::nullopt;
     }
-    if (held && value < TRIGGER_RELEASE) {
-        Input::handleAction(a, false);
-        return false;
-    }
-    return held;
 }
+
+/* the flight actions the buttons hold, let go with the button whatever opened meanwhile */
+std::optional<Input::Action> gFlightHeld[16];
 
 void handleButton(int number, bool pressed) {
     GameUi::padUsed();
@@ -433,13 +438,11 @@ void handleButton(int number, bool pressed) {
         else if (number == BTN_B) GameUi::action(GameUi::Action::BACK, false, true);
         else if (number == BTN_X) GameUi::action(GameUi::Action::SECONDARY, false, true);
         if (number < 16 && gFlightHeld[number]) {
-            gFlightHeld[number] = false;
-            Input::Action a = number == BTN_A ? Input::Action::FIRE
-                              : number == BTN_LB ? Input::Action::KEY1
-                              : number == BTN_SELECT ? Input::Action::AUTOPILOT : Input::Action::BOOST;
-            Input::sendMidpKey(Input::midpCode(a), false);
+            Input::Action a = *gFlightHeld[number];
+            gFlightHeld[number].reset();
+            if (a == Input::Action::DOCK) Input::handleAction(a, false);
+            else Input::sendMidpKey(Input::midpCode(a), false);
         }
-        if (number == BTN_Y) Input::handleAction(Input::Action::DOCK, false);
         return;
     }
     if (Overlay::isOpen()) {
@@ -454,9 +457,6 @@ void handleButton(int number, bool pressed) {
     switch (number) {
         case BTN_START:
             if (!GameUi::pausePressed()) Overlay::toggle();
-            return;
-        case BTN_Y:
-            Input::handleAction(Input::Action::DOCK, true);
             return;
         case BTN_R3:
         case BTN_SHARE:
@@ -476,16 +476,8 @@ void handleButton(int number, bool pressed) {
         }
         return;
     }
-    std::optional<Input::Action> a;
-    switch (number) {
-        case BTN_A: a = Input::Action::FIRE; break;
-        case BTN_LB: a = Input::Action::KEY1; break;
-        case BTN_RB: a = Input::Action::BOOST; break;
-        case BTN_SELECT: a = Input::Action::AUTOPILOT; break;
-        default: break;
-    }
-    if (a) {
-        gFlightHeld[number] = true;
+    if (auto a = flightAction(number)) {
+        gFlightHeld[number] = a;
         Input::handleAction(*a, true);
     }
 }
@@ -495,7 +487,6 @@ struct PadState {
     bool buttons[16] = {};
     bool dir[4] = {};
     bool thrust[2] = {};
-    bool lt = false, rt = false;
     float stickX = 0, stickY = 0;
     int hatX = 0, hatY = 0;
 };
@@ -530,8 +521,14 @@ void padEvent(PadState& p, int type, int number, int value) {
                 p.thrust[0] = axial(p.thrust[0], -value, Input::Action::THRUST_UP);
                 p.thrust[1] = axial(p.thrust[1], value, Input::Action::THRUST_DOWN);
                 break;
-            case AXIS_LT: p.lt = trigger(p.lt, value, Input::Action::KEY7); break;
-            case AXIS_RT: p.rt = trigger(p.rt, value, Input::Action::AUTOPILOT); break;
+            case AXIS_LT:
+            case AXIS_RT: {
+                // a trigger is a button: pressed past half way, let go below a quarter
+                int b = number == AXIS_LT ? Gamepad::LT : Gamepad::RT;
+                bool down = p.buttons[b] ? value >= TRIGGER_RELEASE : value > TRIGGER_PRESS;
+                if (down != p.buttons[b]) handleButton(b, p.buttons[b] = down);
+                break;
+            }
             default: break;
         }
     }
@@ -549,8 +546,6 @@ void padGone(PadState& p) {
     if (p.dir[3]) Input::handleAction(Input::Action::RIGHT, false);
     if (p.thrust[0]) Input::handleAction(Input::Action::THRUST_UP, false);
     if (p.thrust[1]) Input::handleAction(Input::Action::THRUST_DOWN, false);
-    if (p.lt) Input::handleAction(Input::Action::KEY7, false);
-    if (p.rt) Input::handleAction(Input::Action::AUTOPILOT, false);
     p = PadState();
 }
 
@@ -755,12 +750,13 @@ std::string Gamepad::label(int32_t button) {
 
 std::string Gamepad::buttonFor(Input::Action a) {
     switch (a) {
-        case Input::Action::FIRE: return label(A);
-        case Input::Action::DOCK: return label(Y);
-        case Input::Action::KEY1: return label(LB);
-        case Input::Action::BOOST: return label(RB);
-        case Input::Action::KEY7: return label(LT);
-        case Input::Action::AUTOPILOT: return label(BACK);
+        case Input::Action::FIRE: return label(RT);
+        case Input::Action::BOOST: return label(LT);
+        case Input::Action::DOCK: return label(A);
+        case Input::Action::AUTOPILOT: return label(Y);
+        case Input::Action::KEY1: return label(RB);
+        case Input::Action::KEY7: return label(X);
+        case Input::Action::STAR: return label(BACK);
         default: return "";
     }
 }

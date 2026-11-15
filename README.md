@@ -103,10 +103,15 @@ official English text from the international release.
   teleporting to one station of each sector tint and depth band.
 - **A steady targeting crosshair**: pinned where it rests in level
   flight instead of jittering with the chase camera.
-- **Controller support** (Linux, zero dependencies) — standard gamepads via
-  `/dev/input/js*`, hot-plugged. In flight: left stick / d-pad steer
-  (analogue), A fires, Y docks, LB weapon, RB boost, LT auto-fire,
-  Back or RT autopilot, Start the pause menu. In menus A / B / X as below.
+- **Full controller support** — any pad SDL knows (Xbox, PlayStation,
+  Switch and most others, on Linux and Windows), hot-plugged, its own
+  button names on screen (Cross / Circle on a PlayStation pad) and rumble
+  where the phone vibrated. In flight the left stick steers (analogue), the
+  right stick sets the throttle, RT fires, LT boosts, A docks, Y targets /
+  autopilot, LB / RB switch weapon, X auto-fire, View the side view, Start
+  the pause menu; R3 keeps the last minute as a demo and Share takes a
+  screenshot. In menus A / B / X as below. A `gamecontrollerdb.txt` next to
+  the game adds mappings for unusual pads.
 - **Rebindable keyboard controls** with sensible PC defaults (WASD +
   arrows, Space fire, Enter confirm, E dock, Shift boost, Tab autopilot).
 - **Volume mixer** — master / music / effects sliders applied live.
@@ -249,17 +254,27 @@ spells them (up/down change the letter, right adds one, left deletes).
 On the map the cursor follows the mouse and a click zooms in; the wheel
 picks a station in the depth view and sets amounts in the trade screens.
 
-| In flight (defaults — rebindable in Settings > Controls) | Keyboard | Controller |
+| In flight (keys rebindable in Settings > Controls) | Keyboard | Controller |
 |--------------------------|----------------------|------------------|
 | Steer                    | WASD / Arrows        | Left stick / d-pad |
-| Fire harpoon             | Space / Ctrl         | A                |
-| Dock / interact (0)      | E / 0                | Y                |
-| Booster (3)              | Shift / 3            | RB               |
-| Autopilot / targets (9)  | Tab / 9              | Back (Select) / RT |
-| Key 1 / Key 7            | 1 / 7                | LB / LT          |
+| Throttle                 | Shift / Ctrl         | Right stick up / down |
+| Fire harpoon             | Space                | RT               |
+| Booster (3)              | Q / 3                | LT               |
+| Dock / interact (0)      | E / 0                | A                |
+| Targets / autopilot (9)  | Tab / 9              | Y                |
+| Next weapon (1)          | 1                    | LB / RB          |
+| Auto-fire on / off (7)   | 7                    | X                |
+| Side view (*)            | C                    | View (Back)      |
 | Pause / menu             | Esc                  | Start            |
 | Settings                 | F10 (or Options in the pause menu) | Start on the title / station |
-| Fullscreen / Screenshot  | F11 / F12            | —                |
+| Keep the last minute as a demo | F9             | R3 (right stick click) |
+| Screenshot               | F12                  | Share / Touchpad / Capture |
+| Fullscreen               | F11 / Alt+Enter      | —                |
+
+Controller buttons are named here as on an Xbox pad; on a PlayStation pad
+A, B, X, Y are Cross, Circle, Square, Triangle and the shoulders L1 / R1 /
+L2 / R2, and the game's hints always name the buttons of the pad you use.
+In open water the game's 0 (A) toggles the rear view.
 
 "Options" in the game's menus (title, station, pause) opens the settings:
 display and graphics, audio, controls and the game's inverted pitch.
@@ -371,8 +386,6 @@ Off-screen runs (`HEADLESS=1`) render under Xvfb's software GL; add
 
 - The camera-photo gimmick (`capture://video`) is stubbed out — the feature
   degrades gracefully in-game.
-- Controller rumble and non-Linux controller backends are not implemented
-  (the backend is isolated in `Gamepad`, cpp/deep3d/input.cpp).
 - Reference cycles between game objects are never freed (no garbage
   collector); the game's object graph is mostly static.
 - The zero-copy 3D path needs an X11 (or XWayland) GLX window; native
